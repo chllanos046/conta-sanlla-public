@@ -33,9 +33,12 @@ node_modules/
 # ✅ .claude/settings.json → shared project-level Claude config
 
 # IGNORE (personal/local only):
-.claude/settings.local.json   # Your personal local Claude overrides
-.claude/todos/                # Local task tracking by Claude
-.claude/cache/                # Claude's local cache
+# Your personal local Claude overrides
+.claude/settings.local.json
+# Local task tracking by Claude
+.claude/todos/
+# Claude's local cache
+.claude/cache/
 
 # IGNORE these AI-generated scratch files if you don't want them in git:
 # (remove lines below if you DO want them versioned)
@@ -62,8 +65,10 @@ Thumbs.db
 *.swp
 *.swo
 .idea/
-.vscode/settings.json        # Personal editor settings (keep .vscode/extensions.json if desired)
-.vscode/mcp.json             # Personal MCP server config (local paths)
+# Personal editor settings (keep .vscode/extensions.json if desired)
+.vscode/settings.json
+# Personal MCP server config (local paths)
+.vscode/mcp.json
 
 # ========================
 # Testing
