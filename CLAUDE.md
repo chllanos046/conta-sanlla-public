@@ -29,6 +29,22 @@ This is a **full-stack personal finance app** (Conta Sanlla) where the Next.js a
 - /src/app/api/     → route handlers (thin, delegate to services)
 - /src/components/  → React components
 
+## Branch Strategy
+- Feature branches: `feature/<short-description>` (e.g., `feature/user-auth`)
+- Bug fixes: `fix/<short-description>`
+- Never commit directly to `main`
+
+## PR Guidelines
+- PR title must follow Conventional Commits: `feat:`, `fix:`, `chore:`
+- Include a description of what changed and why
+- Every PR must target `main`
+
+## Review Criteria
+- Check for React best practices (memoization, key props, effect deps)
+- Verify no hardcoded secrets or API keys
+- Ensure no unused imports or dead code
+- Confirm proper error handling on async functions
+
 ## Authentication — NextAuth (Auth.js v5)
 
 ### Setup & Configuration
