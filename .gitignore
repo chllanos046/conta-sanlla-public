@@ -1,0 +1,91 @@
+# ========================
+# Next.js Build Output
+# ========================
+.next/
+out/
+build/
+dist/
+
+# ========================
+# Dependencies
+# ========================
+node_modules/
+.pnp
+.pnp.js
+.yarn/install-state.gz
+
+# ========================
+# Environment Variables (CRITICAL — never commit these)
+# ========================
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.env*.local
+
+# ========================
+# Claude Code — What to Keep vs. Ignore
+# ========================
+
+# KEEP in git (shared with team / useful for the repo):
+# ✅ CLAUDE.md         → project standards, commit this
+# ✅ .claude/settings.json → shared project-level Claude config
+
+# IGNORE (personal/local only):
+.claude/settings.local.json   # Your personal local Claude overrides
+.claude/todos/                # Local task tracking by Claude
+.claude/cache/                # Claude's local cache
+
+# IGNORE these AI-generated scratch files if you don't want them in git:
+# (remove lines below if you DO want them versioned)
+FIXES.md
+SUMMARY.md
+# Keep CLAUDE.md versioned — it's your project standard
+
+# ========================
+# Logs
+# ========================
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+logs/
+
+# ========================
+# OS & Editor Files
+# ========================
+.DS_Store
+**/.DS_Store
+Thumbs.db
+*.swp
+*.swo
+.idea/
+.vscode/settings.json        # Personal editor settings (keep .vscode/extensions.json if desired)
+.vscode/mcp.json             # Personal MCP server config (local paths)
+
+# ========================
+# Testing
+# ========================
+coverage/
+.nyc_output/
+
+# ========================
+# Compiler Cache
+# ========================
+.swc/
+
+# ========================
+# User-uploaded Files (runtime data, not source)
+# ========================
+public/account-images/*
+!public/account-images/.gitkeep
+
+# ========================
+# Misc
+# ========================
+*.tsbuildinfo
+next-env.d.ts
+.vercel
+.turbo

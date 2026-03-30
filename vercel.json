@@ -1,0 +1,13 @@
+{
+  "functions": {
+    "app/api/**/*.js": {
+      "runtime": "nodejs18.x"
+    }
+  },
+  "env": {
+    "DB_HOST": "@db-host",
+    "DB_USER": "@db-user",
+    "DB_PASSWORD": "@db-password",
+    "JWT_SECRET": "@jwt-secret"
+  }
+}

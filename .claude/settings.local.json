@@ -1,0 +1,30 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install:*)",
+      "Bash(npm test:*)",
+      "Bash(node_modules/.bin/next build:*)",
+      "Bash(node -e \":*)",
+      "Bash(node -e \"const pkg=require\\(''''./node_modules/next/package.json''''\\);console.log\\(pkg.version\\)\")",
+      "Bash(node -e \"console.log\\(require\\(''''./node_modules/react/package.json''''\\).version\\)\")",
+      "Bash(ls -la \"/Users/christianllanos/Projects/conta-sanlla/frontend/src/app/\\(auth\\)/\")",
+      "Bash(ls /Users/christianllanos/Projects/conta-sanlla/frontend/src/app/\\\\\\(auth\\\\\\)/)",
+      "Bash(ls /Users/christianllanos/Projects/conta-sanlla/frontend/src/app/*.jsx)",
+      "Bash(cp /Users/christianllanos/Projects/conta-sanlla/frontend/src/app/TopBar.jsx /Users/christianllanos/Projects/conta-sanlla/frontend/src/components/TopBar.jsx)",
+      "Bash(cp /Users/christianllanos/Projects/conta-sanlla/frontend/src/app/Sidebar.jsx /Users/christianllanos/Projects/conta-sanlla/frontend/src/components/Sidebar.jsx)",
+      "Bash(cp /Users/christianllanos/Projects/conta-sanlla/frontend/src/app/Footer.jsx /Users/christianllanos/Projects/conta-sanlla/frontend/src/components/Footer.jsx)",
+      "Bash(cp /Users/christianllanos/Projects/conta-sanlla/frontend/src/app/Providers.jsx /Users/christianllanos/Projects/conta-sanlla/frontend/src/components/Providers.jsx)",
+      "Bash(ls /Users/christianllanos/Projects/conta-sanlla/frontend/src/components/*.js)",
+      "Bash(mv AccountsList.js AccountsList.jsx)",
+      "Bash(mv CategoriesList.js CategoriesList.jsx)",
+      "Bash(mv DashboardCharts.js DashboardCharts.jsx)",
+      "Bash(mv TransactionsTable.js TransactionsTable.jsx)",
+      "WebFetch(domain:mui.com)",
+      "Bash(find /Users/christianllanos/Projects/conta-sanlla/frontend/__tests__/ -type f -name *.js -o -name *.jsx -o -name *.ts -o -name *.tsx)",
+      "Bash(ls -la /Users/christianllanos/Projects/conta-sanlla/src/app/\\\\\\(auth\\\\\\)/)",
+      "Bash(npm list:*)",
+      "Bash(npm uninstall:*)",
+      "Bash(NEXT_TURBOPACK=false npx next build)"
+    ]
+  }
+}
