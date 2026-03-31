@@ -19,11 +19,11 @@ import Checkbox from "@mui/material/Checkbox";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
 import AddIcon from "@mui/icons-material/Add";
-import PhotoCameraIcon from "@mui/icons-material/PhotoCamera";
-import CancelIcon from "@mui/icons-material/Cancel";
 import AccountTypeIcon from "@/components/AccountTypeIcon";
 import Snackbar from "@mui/material/Snackbar";
 import Alert from "@mui/material/Alert";
+import Tooltip from "@mui/material/Tooltip";
+import { useTheme } from "@mui/material/styles";
 import axios from "axios";
 
 const schema = z.object({
@@ -32,17 +32,17 @@ const schema = z.object({
   type: z.enum(["bank", "cash", "investment", "credit"], { message: "Select a valid type" }),
   balance: z.coerce.number({ invalid_type_error: "Balance must be a number" }),
   createTransaction: z.boolean().optional(),
+  image_path: z.string().nullable().optional(),
 });
 
-const EMPTY_FORM = { name: "", currency: "USD", type: "bank", balance: 0, createTransaction: false };
+const EMPTY_FORM = { name: "", currency: "USD", type: "bank", balance: 0, createTransaction: false, image_path: null };
 
 export default function AccountsList() {
+  const theme = useTheme();
   const [accounts, setAccounts] = useState([]);
+  const [availableImages, setAvailableImages] = useState([]);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editAccount, setEditAccount] = useState(null);
-  const [imageFile, setImageFile] = useState(null);
-  const [imagePreview, setImagePreview] = useState(null);
-  const [removeImage, setRemoveImage] = useState(false);
   const [submitError, setSubmitError] = useState(null);
 
   const {
@@ -58,14 +58,21 @@ export default function AccountsList() {
   });
 
   const balance = watch("balance");
+  const selectedImage = watch("image_path");
 
   const loadAccounts = async () => {
     const { data } = await axios.get("/api/accounts");
     setAccounts(data);
   };
 
+  const loadImages = async () => {
+    const { data } = await axios.get("/api/account-images");
+    setAvailableImages(data);
+  };
+
   useEffect(() => {
     loadAccounts();
+    loadImages();
   }, []);
 
   const columns = [
@@ -132,10 +139,8 @@ export default function AccountsList() {
       type: account.type,
       balance: parseFloat(account.balance) || 0,
       createTransaction: false,
+      image_path: account.image_path || null,
     });
-    setImageFile(null);
-    setImagePreview(null);
-    setRemoveImage(false);
     setDialogOpen(true);
   };
 
@@ -146,40 +151,13 @@ export default function AccountsList() {
     }
   };
 
-  const handleImageChange = (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    setImageFile(file);
-    setRemoveImage(false);
-    setImagePreview(URL.createObjectURL(file));
-    e.target.value = "";
-  };
-
-  const handleRemoveImage = () => {
-    setRemoveImage(true);
-    setImageFile(null);
-    setImagePreview(null);
-  };
-
   const onSubmit = async (data) => {
     try {
-      let accountId;
       if (editAccount) {
         await axios.put(`/api/accounts/${editAccount.id}`, data);
-        accountId = editAccount.id;
       } else {
-        const { data: created } = await axios.post("/api/accounts", data);
-        accountId = created.id;
+        await axios.post("/api/accounts", data);
       }
-
-      if (removeImage) {
-        await axios.delete(`/api/accounts/${accountId}/image`);
-      } else if (imageFile) {
-        const fd = new FormData();
-        fd.append("image", imageFile);
-        await axios.post(`/api/accounts/${accountId}/image`, fd);
-      }
-
       handleClose();
       loadAccounts();
     } catch (err) {
@@ -191,12 +169,8 @@ export default function AccountsList() {
     setDialogOpen(false);
     setEditAccount(null);
     reset(EMPTY_FORM);
-    setImageFile(null);
-    setImagePreview(null);
-    setRemoveImage(false);
+    setSubmitError(null);
   };
-
-  const currentImage = imagePreview || (editAccount?.image_path && !removeImage ? editAccount.image_path : null);
 
   return (
     <>
@@ -231,138 +205,169 @@ export default function AccountsList() {
           {editAccount ? "Edit Account" : "New Account"}
         </DialogTitle>
         <DialogContent>
-          <Controller
-            name="name"
-            control={control}
-            render={({ field }) => (
-              <TextField
-                {...field}
-                fullWidth
-                label="Name"
-                error={!!errors.name}
-                helperText={errors.name?.message}
-                sx={{ mt: 2 }}
-              />
-            )}
-          />
-          <Controller
-            name="currency"
-            control={control}
-            render={({ field }) => (
-              <TextField
-                {...field}
-                fullWidth
-                select
-                label="Currency"
-                error={!!errors.currency}
-                helperText={errors.currency?.message}
-                sx={{ mt: 2 }}
-              >
-                <MenuItem value="USD">USD</MenuItem>
-                <MenuItem value="EUR">EUR</MenuItem>
-                <MenuItem value="ARS">ARS</MenuItem>
-                <MenuItem value="BRL">BRL</MenuItem>
-              </TextField>
-            )}
-          />
-          <Controller
-            name="type"
-            control={control}
-            render={({ field }) => (
-              <TextField
-                {...field}
-                fullWidth
-                select
-                label="Type"
-                error={!!errors.type}
-                helperText={errors.type?.message}
-                sx={{ mt: 2 }}
-              >
-                <MenuItem value="bank">Bank</MenuItem>
-                <MenuItem value="cash">Cash</MenuItem>
-                <MenuItem value="investment">Investment</MenuItem>
-                <MenuItem value="credit">Credit</MenuItem>
-              </TextField>
-            )}
-          />
-          <Controller
-            name="balance"
-            control={control}
-            render={({ field }) => (
-              <TextField
-                {...field}
-                fullWidth
-                label="Balance"
-                type="number"
-                error={!!errors.balance}
-                helperText={errors.balance?.message}
-                onChange={(e) => {
-                  field.onChange(e);
-                  if (parseFloat(e.target.value) === 0) {
-                    setValue("createTransaction", false);
-                  }
-                }}
-                sx={{ mt: 2 }}
-              />
-            )}
-          />
-          {Number(balance) !== 0 && (
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 2, pt: 1 }}>
+            {submitError && <Alert severity="error">{submitError}</Alert>}
+
             <Controller
-              name="createTransaction"
+              name="name"
               control={control}
               render={({ field }) => (
-                <FormControlLabel
-                  sx={{ mt: 1 }}
-                  control={
-                    <Checkbox
-                      checked={!!field.value}
-                      onChange={(e) => field.onChange(e.target.checked)}
-                    />
-                  }
-                  label="Record as transaction"
+                <TextField
+                  {...field}
+                  fullWidth
+                  label="Name"
+                  error={!!errors.name}
+                  helperText={errors.name?.message}
                 />
               )}
             />
-          )}
-
-          {/* Image upload */}
-          <Box sx={{ mt: 2 }}>
-            {currentImage && (
-              <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 1 }}>
-                <Box
-                  component="img"
-                  src={currentImage}
-                  alt="Account icon"
-                  sx={{ width: 48, height: 48, borderRadius: 1, objectFit: "cover", border: "1px solid rgba(0,0,0,0.12)" }}
-                />
-                <Button
-                  size="small"
-                  color="error"
-                  startIcon={<CancelIcon fontSize="small" />}
-                  onClick={handleRemoveImage}
+            <Controller
+              name="currency"
+              control={control}
+              render={({ field }) => (
+                <TextField
+                  {...field}
+                  fullWidth
+                  select
+                  label="Currency"
+                  error={!!errors.currency}
+                  helperText={errors.currency?.message}
                 >
-                  Remove
-                </Button>
+                  <MenuItem value="USD">USD</MenuItem>
+                  <MenuItem value="EUR">EUR</MenuItem>
+                  <MenuItem value="ARS">ARS</MenuItem>
+                  <MenuItem value="BRL">BRL</MenuItem>
+                </TextField>
+              )}
+            />
+            <Controller
+              name="type"
+              control={control}
+              render={({ field }) => (
+                <TextField
+                  {...field}
+                  fullWidth
+                  select
+                  label="Type"
+                  error={!!errors.type}
+                  helperText={errors.type?.message}
+                >
+                  <MenuItem value="bank">Bank</MenuItem>
+                  <MenuItem value="cash">Cash</MenuItem>
+                  <MenuItem value="investment">Investment</MenuItem>
+                  <MenuItem value="credit">Credit</MenuItem>
+                </TextField>
+              )}
+            />
+            <Controller
+              name="balance"
+              control={control}
+              render={({ field }) => (
+                <TextField
+                  {...field}
+                  fullWidth
+                  label="Balance"
+                  type="number"
+                  error={!!errors.balance}
+                  helperText={errors.balance?.message}
+                  onChange={(e) => {
+                    field.onChange(e);
+                    if (parseFloat(e.target.value) === 0) {
+                      setValue("createTransaction", false);
+                    }
+                  }}
+                />
+              )}
+            />
+            {Number(balance) !== 0 && (
+              <Controller
+                name="createTransaction"
+                control={control}
+                render={({ field }) => (
+                  <FormControlLabel
+                    control={
+                      <Checkbox
+                        checked={!!field.value}
+                        onChange={(e) => field.onChange(e.target.checked)}
+                      />
+                    }
+                    label="Record as transaction"
+                  />
+                )}
+              />
+            )}
+
+            {/* Image picker */}
+            {availableImages.length > 0 && (
+              <Box>
+                <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: "block" }}>
+                  Icon
+                </Typography>
+                <Box sx={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 1 }}>
+                  {/* None option */}
+                  <Tooltip title="No icon">
+                    <Box
+                      onClick={() => setValue("image_path", null)}
+                      sx={{
+                        width: 56,
+                        height: 56,
+                        borderRadius: 1,
+                        border: "2px dashed",
+                        borderColor: !selectedImage ? "primary.main" : "divider",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        cursor: "pointer",
+                        color: "text.disabled",
+                        fontSize: 10,
+                        "&:hover": { borderColor: "primary.main" },
+                      }}
+                    >
+                      None
+                    </Box>
+                  </Tooltip>
+
+                  {availableImages.map((src) => {
+                    const isSelected = selectedImage === src;
+                    const label = src.split("/").pop().replace(/\.[^.]+$/, "");
+                    return (
+                      <Tooltip key={src} title={label}>
+                        <Box
+                          onClick={() => setValue("image_path", src)}
+                          sx={{
+                            width: 56,
+                            height: 56,
+                            borderRadius: 1,
+                            border: "2px solid",
+                            borderColor: isSelected ? "primary.main" : "divider",
+                            overflow: "hidden",
+                            cursor: "pointer",
+                            boxShadow: isSelected ? `0 0 0 2px ${theme.palette.primary.main}` : "none",
+                            "&:hover": { borderColor: "primary.main" },
+                          }}
+                        >
+                          <Box
+                            component="img"
+                            src={src}
+                            alt={label}
+                            sx={{ width: "100%", height: "100%", objectFit: "cover" }}
+                          />
+                        </Box>
+                      </Tooltip>
+                    );
+                  })}
+                </Box>
               </Box>
             )}
-            <Button
-              component="label"
-              variant="outlined"
-              size="small"
-              startIcon={<PhotoCameraIcon />}
-            >
-              {currentImage ? "Change image" : "Upload image"}
-              <input type="file" hidden accept="image/*" onChange={handleImageChange} />
-            </Button>
-          </Box>
 
-          <Box sx={{ mt: 3, display: "flex", gap: 2 }}>
-            <Button variant="outlined" onClick={handleClose}>
-              Cancel
-            </Button>
-            <Button variant="contained" onClick={handleSubmit(onSubmit)} disabled={isSubmitting}>
-              Save
-            </Button>
+            <Box sx={{ display: "flex", gap: 2, justifyContent: "flex-end" }}>
+              <Button variant="outlined" onClick={handleClose}>
+                Cancel
+              </Button>
+              <Button variant="contained" onClick={handleSubmit(onSubmit)} disabled={isSubmitting}>
+                Save
+              </Button>
+            </Box>
           </Box>
         </DialogContent>
       </Dialog>

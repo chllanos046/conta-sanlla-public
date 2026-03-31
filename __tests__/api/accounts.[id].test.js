@@ -10,7 +10,6 @@ jest.mock('@/lib/db', () => ({
   withTransaction: jest.fn(),
 }))
 jest.mock('@/auth', () => ({ auth: jest.fn() }))
-jest.mock('fs/promises', () => ({ unlink: jest.fn().mockResolvedValue(undefined) }))
 
 import { query, queryConn, withTransaction } from '@/lib/db'
 import { auth } from '@/auth'
@@ -95,8 +94,7 @@ describe('PUT /api/accounts/[id]', () => {
 
 describe('DELETE /api/accounts/[id]', () => {
   it('returns 200 when account is deleted', async () => {
-    query.mockResolvedValueOnce([{ image_path: null }]) // SELECT image_path
-    query.mockResolvedValueOnce({ affectedRows: 1 })    // DELETE
+    query.mockResolvedValueOnce({ affectedRows: 1 })
 
     const res = await DELETE(makeRequest('DELETE'), { params })
 
@@ -106,7 +104,7 @@ describe('DELETE /api/accounts/[id]', () => {
   })
 
   it('returns 404 when account does not exist', async () => {
-    query.mockResolvedValueOnce([]) // SELECT returns empty array
+    query.mockResolvedValueOnce({ affectedRows: 0 })
 
     const res = await DELETE(makeRequest('DELETE'), { params })
     expect(res.status).toBe(404)

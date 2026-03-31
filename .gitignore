@@ -82,12 +82,6 @@ coverage/
 .swc/
 
 # ========================
-# User-uploaded Files (runtime data, not source)
-# ========================
-public/account-images/*
-!public/account-images/.gitkeep
-
-# ========================
 # Misc
 # ========================
 *.tsbuildinfo

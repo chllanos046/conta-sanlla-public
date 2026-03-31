@@ -1,8 +1,6 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { query, queryConn, withTransaction } from "@/lib/db";
-import { unlink } from "fs/promises";
-import path from "path";
 
 export async function PUT(request, { params }) {
   try {
@@ -12,7 +10,7 @@ export async function PUT(request, { params }) {
     const userId = session.user.id;
 
     const { id } = await params;
-    const { name, currency, type, balance, createTransaction = false } = await request.json();
+    const { name, currency, type, balance, createTransaction = false, image_path = null } = await request.json();
 
     if (balance !== undefined && createTransaction) {
       const rows = await query(
@@ -30,8 +28,8 @@ export async function PUT(request, { params }) {
         await withTransaction(async (conn) => {
           await queryConn(
             conn,
-            "UPDATE accounts SET name = ?, currency = ?, type = ?, balance = ? WHERE id = ? AND user_id = ?",
-            [name, currency, type, newBalance, id, userId],
+            "UPDATE accounts SET name = ?, currency = ?, type = ?, balance = ?, image_path = ? WHERE id = ? AND user_id = ?",
+            [name, currency, type, newBalance, image_path, id, userId],
           );
 
           const amount = Math.abs(diff);
@@ -47,23 +45,23 @@ export async function PUT(request, { params }) {
         });
       } else {
         const result = await query(
-          "UPDATE accounts SET name = ?, currency = ?, type = ? WHERE id = ? AND user_id = ?",
-          [name, currency, type, id, userId],
+          "UPDATE accounts SET name = ?, currency = ?, type = ?, image_path = ? WHERE id = ? AND user_id = ?",
+          [name, currency, type, image_path, id, userId],
         );
         if (result.affectedRows === 0)
           return NextResponse.json({ error: "Account not found" }, { status: 404 });
       }
     } else if (balance !== undefined) {
       const result = await query(
-        "UPDATE accounts SET name = ?, currency = ?, type = ?, balance = ? WHERE id = ? AND user_id = ?",
-        [name, currency, type, parseFloat(balance), id, userId],
+        "UPDATE accounts SET name = ?, currency = ?, type = ?, balance = ?, image_path = ? WHERE id = ? AND user_id = ?",
+        [name, currency, type, parseFloat(balance), image_path, id, userId],
       );
       if (result.affectedRows === 0)
         return NextResponse.json({ error: "Account not found" }, { status: 404 });
     } else {
       const result = await query(
-        "UPDATE accounts SET name = ?, currency = ?, type = ? WHERE id = ? AND user_id = ?",
-        [name, currency, type, id, userId],
+        "UPDATE accounts SET name = ?, currency = ?, type = ?, image_path = ? WHERE id = ? AND user_id = ?",
+        [name, currency, type, image_path, id, userId],
       );
       if (result.affectedRows === 0)
         return NextResponse.json({ error: "Account not found" }, { status: 404 });
@@ -87,13 +85,6 @@ export async function DELETE(_request, { params }) {
 
     const { id } = await params;
 
-    const rows = await query(
-      "SELECT image_path FROM accounts WHERE id = ? AND user_id = ?",
-      [id, userId],
-    );
-    if (!rows.length)
-      return NextResponse.json({ error: "Account not found" }, { status: 404 });
-
     const result = await query(
       "DELETE FROM accounts WHERE id = ? AND user_id = ?",
       [id, userId],
@@ -101,12 +92,6 @@ export async function DELETE(_request, { params }) {
 
     if (result.affectedRows === 0)
       return NextResponse.json({ error: "Account not found" }, { status: 404 });
-
-    if (rows[0].image_path) {
-      try {
-        await unlink(path.join(process.cwd(), "public", rows[0].image_path));
-      } catch {}
-    }
 
     return NextResponse.json({ message: "Account deleted" });
   } catch (error) {
