@@ -9,6 +9,9 @@ import Typography from "@mui/material/Typography";
 import Alert from "@mui/material/Alert";
 import Card from "@mui/material/Card";
 import CardContent from "@mui/material/CardContent";
+import Divider from "@mui/material/Divider";
+import GoogleIcon from "@mui/icons-material/Google";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { signIn } from "next-auth/react";
 
@@ -43,24 +46,31 @@ export default function LoginPage() {
   };
 
   return (
-    <Box
-      sx={{
-        display: "flex",
-        justifyContent: "center",
-        alignItems: "center",
-        minHeight: "80vh",
-      }}
-    >
+    <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: "80vh" }}>
       <Card sx={{ p: 4, minWidth: 400 }}>
         <CardContent>
           <Typography variant="h4" align="center" gutterBottom>
-            Login
+            Sign In
           </Typography>
+
           {errors.root && (
             <Alert severity="error" sx={{ mb: 2 }}>
               {errors.root.message}
             </Alert>
           )}
+
+          <Button
+            fullWidth
+            variant="outlined"
+            startIcon={<GoogleIcon />}
+            onClick={() => signIn("google", { callbackUrl: "/dashboard" })}
+            sx={{ mt: 1, mb: 2 }}
+          >
+            Sign in with Google
+          </Button>
+
+          <Divider sx={{ mb: 2 }}>or</Divider>
+
           <Box component="form" onSubmit={handleSubmit(onSubmit)}>
             <Controller
               name="email"
@@ -73,7 +83,7 @@ export default function LoginPage() {
                   type="email"
                   error={!!errors.email}
                   helperText={errors.email?.message}
-                  sx={{ mt: 2 }}
+                  sx={{ mb: 2 }}
                 />
               )}
             />
@@ -88,7 +98,7 @@ export default function LoginPage() {
                   type="password"
                   error={!!errors.password}
                   helperText={errors.password?.message}
-                  sx={{ mt: 2 }}
+                  sx={{ mb: 2 }}
                 />
               )}
             />
@@ -97,11 +107,18 @@ export default function LoginPage() {
               variant="contained"
               type="submit"
               disabled={isSubmitting}
-              sx={{ mt: 3 }}
+              sx={{ mt: 1 }}
             >
-              {isSubmitting ? "Signing in..." : "Login"}
+              {isSubmitting ? "Signing in…" : "Sign In"}
             </Button>
           </Box>
+
+          <Typography align="center" variant="body2" sx={{ mt: 2 }}>
+            Don&apos;t have an account?{" "}
+            <Link href="/register" style={{ color: "inherit", fontWeight: 600 }}>
+              Create one
+            </Link>
+          </Typography>
         </CardContent>
       </Card>
     </Box>
