@@ -29,7 +29,7 @@ export async function POST(request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     const userId = session.user.id;
 
-    const { name, currency, type, balance = 0, createTransaction = false } = await request.json();
+    const { name, currency, type, balance = 0, createTransaction = false, image_path = null } = await request.json();
 
     if (!name || !currency || !type) {
       return NextResponse.json(
@@ -45,8 +45,8 @@ export async function POST(request) {
       await withTransaction(async (conn) => {
         const insertResult = await queryConn(
           conn,
-          "INSERT INTO accounts (user_id, name, currency, type, balance) VALUES (?, ?, ?, ?, 0)",
-          [userId, name, currency, type],
+          "INSERT INTO accounts (user_id, name, currency, type, balance, image_path) VALUES (?, ?, ?, ?, 0, ?)",
+          [userId, name, currency, type, image_path],
         );
         newId = insertResult.insertId;
         const amount = Math.abs(numericBalance);
@@ -70,8 +70,8 @@ export async function POST(request) {
       });
     } else {
       const result = await query(
-        "INSERT INTO accounts (user_id, name, currency, type, balance) VALUES (?, ?, ?, ?, ?)",
-        [userId, name, currency, type, numericBalance],
+        "INSERT INTO accounts (user_id, name, currency, type, balance, image_path) VALUES (?, ?, ?, ?, ?, ?)",
+        [userId, name, currency, type, numericBalance, image_path],
       );
       newId = result.insertId;
     }

@@ -49,9 +49,16 @@ export default function Sidebar({
   const [accounts, setAccounts] = useState([]);
   const [rates, setRates] = useState({});
 
-  useEffect(() => {
+  const loadAccounts = () => {
     axios.get("/api/accounts").then(({ data }) => setAccounts(data)).catch(() => {});
+  };
+
+  useEffect(() => {
+    loadAccounts();
     axios.get("/api/exchange-rates").then(({ data }) => setRates(data)).catch(() => {});
+
+    window.addEventListener("accounts-updated", loadAccounts);
+    return () => window.removeEventListener("accounts-updated", loadAccounts);
   }, []);
 
   const groupedAccounts = ACCOUNT_TYPE_ORDER.reduce((acc, type) => {

@@ -160,6 +160,7 @@ export default function AccountsList() {
       }
       handleClose();
       loadAccounts();
+      window.dispatchEvent(new CustomEvent("accounts-updated"));
     } catch (err) {
       setSubmitError(err.response?.data?.error || "Failed to save account");
     }
