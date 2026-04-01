@@ -15,12 +15,12 @@ import { DatePicker } from "@mui/x-date-pickers/DatePicker";
 import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { LineChart } from "@mui/x-charts/LineChart";
+import { useTheme } from "@mui/material/styles";
 import { format } from "date-fns";
 import axios from "axios";
 import StatCard from "@/components/StatCard";
-import { convertToUSD } from "@/lib/currency";
+import { convertToUSD, getCurrencySymbol } from "@/lib/currency";
 import QuickAddTransaction, { QuickAddFab } from "@/components/QuickAddTransaction";
-
 
 const PERIODS = [
   { value: "day",    label: "Day"    },
@@ -30,6 +30,8 @@ const PERIODS = [
 ];
 
 export default function Dashboard() {
+  const theme = useTheme();
+
   const [data, setData] = useState({
     accounts: [],
     transactions: [],
@@ -87,7 +89,6 @@ export default function Dashboard() {
     ? rates.ARS > prevArsRef.current
     : null;
 
-  // Map account id → currency for transaction conversion
   const accountCurrencyMap = Object.fromEntries(
     data.accounts.map((a) => [String(a.id), a.currency])
   );
@@ -114,7 +115,6 @@ export default function Dashboard() {
       const d = new Date(dateStr);
       if (period === "day") return `${String(d.getHours()).padStart(2, "0")}:00`;
       if (period === "year") return String(d.getMonth() + 1).padStart(2, "0");
-      // month and custom: group by day-of-month
       return String(d.getDate()).padStart(2, "0");
     };
 
@@ -134,38 +134,49 @@ export default function Dashboard() {
       buckets[key][t.type] += convertToUSD(parseFloat(t.amount || 0), txCurrency(t), rates);
     }
 
+    let runningBalance = 0;
     return Object.values(buckets)
       .sort((a, b) => a.key.localeCompare(b.key))
-      .map(({ key, income, expense }) => ({
-        name: getLabel(key),
-        income: parseFloat(income.toFixed(2)),
-        expense: parseFloat(expense.toFixed(2)),
-      }));
+      .map(({ key, income, expense }) => {
+        runningBalance += income - expense;
+        return {
+          name:    getLabel(key),
+          income:  parseFloat(income.toFixed(2)),
+          expense: parseFloat(expense.toFixed(2)),
+          balance: parseFloat(runningBalance.toFixed(2)),
+        };
+      });
   })();
 
   const summaryCards = [
     {
-      label: "Income",
-      value: income,
-      color: "success.main",
-      iconBg: "success.main",
-      icon: <TrendingUpIcon sx={{ fontSize: 28, color: "#fff" }} />,
+      label:   "Income",
+      value:   `$${income.toFixed(2)}`,
+      color:   "income.main",
+      iconBg:  "income.main",
+      icon:    <TrendingUpIcon sx={{ fontSize: 28, color: "#fff" }} />,
     },
     {
-      label: "Expenses",
-      value: expenses,
-      color: "error.main",
-      iconBg: "error.main",
-      icon: <TrendingDownIcon sx={{ fontSize: 28, color: "#fff" }} />,
+      label:   "Expenses",
+      value:   `$${expenses.toFixed(2)}`,
+      color:   "expense.main",
+      iconBg:  "expense.main",
+      icon:    <TrendingDownIcon sx={{ fontSize: 28, color: "#fff" }} />,
     },
     {
-      label: "Balance",
-      value: balance,
-      color: "primary.main",
-      iconBg: "primary.main",
-      icon: <BalanceIcon sx={{ fontSize: 28, color: "#fff" }} />,
+      label:   "Balance",
+      value:   `$${balance.toFixed(2)}`,
+      color:   "balance.main",
+      iconBg:  "balance.light",
+      icon:    <BalanceIcon sx={{ fontSize: 28, color: "#fff" }} />,
     },
   ];
+
+  const balanceColor = (val) => {
+    if (val > 0) return "income.main";
+    if (val < 0) return "expense.main";
+    return "balance.main";
+  };
 
   return (
     <LocalizationProvider dateAdapter={AdapterDateFns}>
@@ -254,58 +265,53 @@ export default function Dashboard() {
             </Typography>
             {arsUp !== null && (
               arsUp
-                ? <TrendingUpIcon fontSize="small" sx={{ color: "success.main" }} />
-                : <TrendingDownIcon fontSize="small" sx={{ color: "error.main" }} />
+                ? <TrendingUpIcon fontSize="small" sx={{ color: "income.main" }} />
+                : <TrendingDownIcon fontSize="small" sx={{ color: "expense.main" }} />
             )}
           </Box>
         )}
       </Box>
 
-      {/* Summary cards: 3 cols → 2 cols → 1 col */}
+      {/* Summary stat cards */}
       <Grid container spacing={3} sx={{ mb: 3 }}>
         {summaryCards.map(({ label, value, color, iconBg, icon }) => (
-          <Grid key={label} size={{ xs: 12, sm: 6, md: 4 }}>
-            <StatCard
-              label={label}
-              value={`$${value.toFixed(2)}`}
-              valueColor={color}
-              icon={icon}
-              iconBg={iconBg}
-            />
+          <Grid key={label} size={{ xs: 12, sm: 4 }}>
+            <StatCard label={label} value={value} valueColor={color} icon={icon} iconBg={iconBg} />
           </Grid>
         ))}
       </Grid>
 
-      {/* Account cards: 4 cols → 2 cols → 1 col */}
-      <Typography variant="h6" gutterBottom>
-        Account Balances
-      </Typography>
-      {data.accounts.length === 0 ? (
-        <Typography color="text.secondary" sx={{ mb: 3 }}>
-          No accounts yet.
-        </Typography>
-      ) : (
-        <Grid container spacing={2} sx={{ mb: 3 }}>
-          {data.accounts.map((acc) => (
-            <Grid key={acc.id} size={{ xs: 12, sm: 6, md: 3 }}>
-              <StatCard
-                label={acc.name}
-                value={`$${parseFloat(acc.balance).toFixed(2)}`}
-                valueColor={parseFloat(acc.balance) > 0 ? "success.main" : parseFloat(acc.balance) < 0 ? "error.main" : "primary.main"}
-                icon={
-                  acc.image_path
-                    ? <Box component="img" src={acc.image_path} alt={acc.name} sx={{ width: 48, height: 48, objectFit: "cover" }} />
-                    : <AccountTypeIcon type={acc.type} sx={{ fontSize: 22, color: "grey.600" }} />
-                }
-                iconBg="grey.300"
-                href={`/transactions?account=${acc.id}`}
-              />
-            </Grid>
-          ))}
-        </Grid>
+      {/* Account balance cards — original currency */}
+      {data.accounts.length > 0 && (
+        <>
+          <Typography variant="h6" gutterBottom>
+            Account Balances
+          </Typography>
+          <Grid container spacing={2} sx={{ mb: 3 }}>
+            {data.accounts.map((acc) => {
+              const bal = parseFloat(acc.balance);
+              return (
+                <Grid key={acc.id} size={{ xs: 12, sm: 6, md: 4 }}>
+                  <StatCard
+                    label={acc.name}
+                    value={`${getCurrencySymbol(acc.currency)}${bal.toFixed(2)}`}
+                    valueColor={balanceColor(bal)}
+                    icon={
+                      acc.image_path
+                        ? <Box component="img" src={acc.image_path} alt={acc.name} sx={{ width: 48, height: 48, objectFit: "cover" }} />
+                        : <AccountTypeIcon type={acc.type} sx={{ fontSize: 22, color: "grey.600" }} />
+                    }
+                    iconBg="grey.200"
+                    href={`/transactions?account=${acc.id}`}
+                  />
+                </Grid>
+              );
+            })}
+          </Grid>
+        </>
       )}
 
-      {/* Income vs Expenses chart */}
+      {/* Income / Expenses / Balance — area line chart */}
       <Card>
         <CardContent>
           <Typography variant="h6" gutterBottom>
@@ -314,8 +320,9 @@ export default function Dashboard() {
           <LineChart
             xAxis={[{ data: chartData.map((d) => d.name), scaleType: "point" }]}
             series={[
-              { data: chartData.map((d) => d.income), label: "Income", color: "#2e7d32", showMark: false },
-              { data: chartData.map((d) => d.expense), label: "Expenses", color: "#d32f2f", showMark: false },
+              { data: chartData.map((d) => d.income),  label: "Income",   color: theme.palette.income.main,  showMark: false, area: true },
+              { data: chartData.map((d) => d.expense), label: "Expenses", color: theme.palette.expense.main, showMark: false, area: true },
+              { data: chartData.map((d) => d.balance), label: "Balance",  color: theme.palette.balance.main, showMark: false, area: true },
             ]}
             height={320}
             sx={{ width: "100%" }}

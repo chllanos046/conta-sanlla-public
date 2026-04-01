@@ -11,18 +11,24 @@ import Divider from "@mui/material/Divider";
 import Collapse from "@mui/material/Collapse";
 import Typography from "@mui/material/Typography";
 import Box from "@mui/material/Box";
+import Avatar from "@mui/material/Avatar";
+import IconButton from "@mui/material/IconButton";
+import Menu from "@mui/material/Menu";
+import MenuItem from "@mui/material/MenuItem";
 import DashboardIcon from "@mui/icons-material/Dashboard";
 import AccountBalanceIcon from "@mui/icons-material/AccountBalance";
 import AccountTypeIcon from "@/components/AccountTypeIcon";
 import ReceiptLongIcon from "@mui/icons-material/ReceiptLong";
 import CategoryIcon from "@mui/icons-material/Category";
 import SettingsIcon from "@mui/icons-material/Settings";
-import LogoutIcon from "@mui/icons-material/Logout";
+import MoreVertIcon from "@mui/icons-material/MoreVert";
 import ExpandLessIcon from "@mui/icons-material/ExpandLess";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
+import PersonIcon from "@mui/icons-material/Person";
+import LogoutIcon from "@mui/icons-material/Logout";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { signOut } from "next-auth/react";
+import { signOut, useSession } from "next-auth/react";
 import axios from "axios";
 import { convertToUSD, getCurrencySymbol } from "@/lib/currency";
 
@@ -41,6 +47,7 @@ export default function Sidebar({
   const pathname = usePathname();
   const width = open ? drawerWidth : miniWidth;
   const expanded = open || isMobile;
+  const { data: session } = useSession();
 
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [openGroups, setOpenGroups] = useState(
@@ -48,6 +55,7 @@ export default function Sidebar({
   );
   const [accounts, setAccounts] = useState([]);
   const [rates, setRates] = useState({});
+  const [profileMenuAnchor, setProfileMenuAnchor] = useState(null);
 
   const loadAccounts = () => {
     axios.get("/api/accounts").then(({ data }) => setAccounts(data)).catch(() => {});
@@ -70,234 +78,275 @@ export default function Sidebar({
   const navItemSx = { minHeight: 48, px: 2.5, justifyContent: expanded ? "initial" : "center" };
   const iconSx = { minWidth: 0, mr: expanded ? 2 : "auto", justifyContent: "center" };
 
+  const userInitial = session?.user?.name?.charAt(0)?.toUpperCase() ?? "U";
+
   const drawerContent = (
-    <List sx={{ pt: 1, pb: 1 }} disablePadding>
-      {/* Dashboard */}
-      <Tooltip title={!expanded ? "Dashboard" : ""} placement="right">
-        <ListItem disablePadding>
-          <ListItemButton
-            component={Link}
-            href="/dashboard"
-            selected={pathname === "/dashboard"}
-            onClick={isMobile ? onMobileClose : undefined}
-            sx={navItemSx}
-          >
-            <ListItemIcon sx={iconSx}><DashboardIcon /></ListItemIcon>
-            {expanded && <ListItemText primary="Dashboard" />}
-          </ListItemButton>
-        </ListItem>
-      </Tooltip>
+    <Box sx={{ display: "flex", flexDirection: "column", height: "100%" }}>
+      <List sx={{ pt: 1, flex: 1 }} disablePadding>
+        {/* Dashboard */}
+        <Tooltip title={!expanded ? "Dashboard" : ""} placement="right">
+          <ListItem disablePadding>
+            <ListItemButton
+              component={Link}
+              href="/dashboard"
+              selected={pathname === "/dashboard"}
+              onClick={isMobile ? onMobileClose : undefined}
+              sx={navItemSx}
+            >
+              <ListItemIcon sx={iconSx}><DashboardIcon /></ListItemIcon>
+              {expanded && <ListItemText primary="Dashboard" />}
+            </ListItemButton>
+          </ListItem>
+        </Tooltip>
 
-      {/* Transactions */}
-      <Tooltip title={!expanded ? "Transactions" : ""} placement="right">
-        <ListItem disablePadding>
-          <ListItemButton
-            component={Link}
-            href="/transactions"
-            selected={pathname === "/transactions"}
-            onClick={isMobile ? onMobileClose : undefined}
-            sx={navItemSx}
-          >
-            <ListItemIcon sx={iconSx}><ReceiptLongIcon /></ListItemIcon>
-            {expanded && <ListItemText primary="Transactions" />}
-          </ListItemButton>
-        </ListItem>
-      </Tooltip>
+        {/* Transactions */}
+        <Tooltip title={!expanded ? "Transactions" : ""} placement="right">
+          <ListItem disablePadding>
+            <ListItemButton
+              component={Link}
+              href="/transactions"
+              selected={pathname === "/transactions"}
+              onClick={isMobile ? onMobileClose : undefined}
+              sx={navItemSx}
+            >
+              <ListItemIcon sx={iconSx}><ReceiptLongIcon /></ListItemIcon>
+              {expanded && <ListItemText primary="Transactions" />}
+            </ListItemButton>
+          </ListItem>
+        </Tooltip>
 
-      <Divider sx={{ my: 1 }} />
+        <Divider sx={{ my: 1 }} />
 
-      {/* Accounts grouped by type */}
-      {Object.entries(groupedAccounts).map(([type, items]) => {
-        const groupBalance = items.reduce((sum, a) => sum + convertToUSD(parseFloat(a.balance || 0), a.currency, rates), 0);
-        const isOpen = openGroups[type];
+        {/* Accounts grouped by type */}
+        {Object.entries(groupedAccounts).map(([type, items]) => {
+          const groupBalance = items.reduce((sum, a) => sum + convertToUSD(parseFloat(a.balance || 0), a.currency, rates), 0);
+          const isOpen = openGroups[type];
 
-        return (
-          <Box key={type}>
-            {expanded ? (
-              <>
-                {/* Group header */}
-                <ListItemButton
-                  onClick={() => setOpenGroups((prev) => ({ ...prev, [type]: !prev[type] }))}
-                  sx={{
-                    bgcolor: "grey.100",
-                    borderTop: "1px solid rgba(0,0,0,0.08)",
-                    borderBottom: "1px solid rgba(0,0,0,0.08)",
-                    px: 2,
-                    py: 0.75,
-                    minHeight: 36,
-                    "&:hover": { bgcolor: "grey.200" },
-                  }}
-                >
-                  {isOpen ? (
-                    <ExpandLessIcon fontSize="small" sx={{ mr: 1, color: "text.secondary", flexShrink: 0 }} />
-                  ) : (
-                    <ExpandMoreIcon fontSize="small" sx={{ mr: 1, color: "text.secondary", flexShrink: 0 }} />
-                  )}
-                  <Typography
-                    variant="caption"
-                    sx={{ flex: 1, fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5, color: "text.secondary" }}
-                  >
-                    {ACCOUNT_TYPE_LABELS[type]}
-                  </Typography>
-                  <Typography
-                    variant="caption"
+          return (
+            <Box key={type}>
+              {expanded ? (
+                <>
+                  <ListItemButton
+                    onClick={() => setOpenGroups((prev) => ({ ...prev, [type]: !prev[type] }))}
                     sx={{
-                      fontWeight: 600,
-                      color: groupBalance > 0 ? "success.main" : groupBalance < 0 ? "error.main" : "text.disabled",
+                      bgcolor: "grey.100",
+                      borderTop: "1px solid rgba(0,0,0,0.08)",
+                      borderBottom: "1px solid rgba(0,0,0,0.08)",
+                      px: 2,
+                      py: 0.75,
+                      minHeight: 36,
+                      "&:hover": { bgcolor: "grey.200" },
                     }}
                   >
-                    ${groupBalance.toFixed(2)}
-                  </Typography>
-                </ListItemButton>
-
-                {/* Account items */}
-                <Collapse in={isOpen} timeout="auto" unmountOnExit>
-                  {items.map((acc) => {
-                    const bal = parseFloat(acc.balance || 0);
-                    return (
-                      <ListItem key={acc.id} disablePadding>
-                        <ListItemButton
-                          component={Link}
-                          href={`/transactions?account=${acc.id}`}
-                          onClick={isMobile ? onMobileClose : undefined}
-                          sx={{
-                            px: 2,
-                            py: 1,
-                            borderBottom: "1px solid rgba(0,0,0,0.06)",
-                          }}
-                        >
-                          <ListItemIcon sx={{ minWidth: 0, mr: 1.5, flexShrink: 0 }}>
-                            {acc.image_path ? (
-                              <Box
-                                component="img"
-                                src={acc.image_path}
-                                alt={acc.name}
-                                sx={{ width: 40, height: 40, borderRadius: "50%", objectFit: "cover" }}
-                              />
-                            ) : (
-                              <AccountTypeIcon type={acc.type} />
-                            )}
-                          </ListItemIcon>
-                          <Box sx={{ flex: 1, overflow: "hidden", textAlign: "right" }}>
-                            <Typography variant="body2" noWrap>{acc.name}</Typography>
-                            <Typography
-                              variant="caption"
-                              sx={{
-                                display: "block",
-                                color: bal > 0 ? "success.main" : bal < 0 ? "error.main" : "text.disabled",
-                              }}
-                            >
-                              {getCurrencySymbol(acc.currency)}{bal.toFixed(2)}
-                            </Typography>
-                          </Box>
-                        </ListItemButton>
-                      </ListItem>
-                    );
-                  })}
-                </Collapse>
-              </>
-            ) : (
-              /* Mini mode: icons only with tooltips */
-              items.map((acc) => (
-                <Tooltip
-                  key={acc.id}
-                  title={`${acc.name} · ${getCurrencySymbol(acc.currency)}${parseFloat(acc.balance || 0).toFixed(2)}`}
-                  placement="right"
-                >
-                  <ListItem disablePadding>
-                    <ListItemButton
-                      component={Link}
-                      href={`/transactions?account=${acc.id}`}
-                      onClick={isMobile ? onMobileClose : undefined}
-                      sx={{ minHeight: 48, justifyContent: "center", px: 2.5 }}
+                    {isOpen ? (
+                      <ExpandLessIcon fontSize="small" sx={{ mr: 1, color: "text.secondary", flexShrink: 0 }} />
+                    ) : (
+                      <ExpandMoreIcon fontSize="small" sx={{ mr: 1, color: "text.secondary", flexShrink: 0 }} />
+                    )}
+                    <Typography
+                      variant="caption"
+                      sx={{ flex: 1, fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5, color: "text.secondary" }}
                     >
-                      <ListItemIcon sx={{ minWidth: 0, justifyContent: "center" }}>
-                        {acc.image_path ? (
-                          <Box
-                            component="img"
-                            src={acc.image_path}
-                            alt={acc.name}
-                            sx={{ width: 40, height: 40, borderRadius: "50%", objectFit: "cover" }}
-                          />
-                        ) : (
-                          <AccountTypeIcon type={acc.type} />
-                        )}
-                      </ListItemIcon>
-                    </ListItemButton>
-                  </ListItem>
-                </Tooltip>
-              ))
-            )}
-          </Box>
-        );
-      })}
+                      {ACCOUNT_TYPE_LABELS[type]}
+                    </Typography>
+                    <Typography
+                      variant="caption"
+                      sx={{
+                        fontWeight: 600,
+                        color: groupBalance > 0 ? "income.main" : groupBalance < 0 ? "expense.main" : "text.disabled",
+                      }}
+                    >
+                      ${groupBalance.toFixed(2)}
+                    </Typography>
+                  </ListItemButton>
 
-      {Object.keys(groupedAccounts).length > 0 && <Divider sx={{ my: 1 }} />}
+                  <Collapse in={isOpen} timeout="auto" unmountOnExit>
+                    {items.map((acc) => {
+                      const bal = parseFloat(acc.balance || 0);
+                      return (
+                        <ListItem key={acc.id} disablePadding>
+                          <ListItemButton
+                            component={Link}
+                            href={`/transactions?account=${acc.id}`}
+                            onClick={isMobile ? onMobileClose : undefined}
+                            sx={{
+                              px: 2,
+                              py: 1,
+                              borderBottom: "1px solid rgba(0,0,0,0.06)",
+                            }}
+                          >
+                            <ListItemIcon sx={{ minWidth: 0, mr: 1.5, flexShrink: 0 }}>
+                              {acc.image_path ? (
+                                <Box
+                                  component="img"
+                                  src={acc.image_path}
+                                  alt={acc.name}
+                                  sx={{ width: 40, height: 40, borderRadius: "50%", objectFit: "cover" }}
+                                />
+                              ) : (
+                                <AccountTypeIcon type={acc.type} />
+                              )}
+                            </ListItemIcon>
+                            <Box sx={{ flex: 1, overflow: "hidden", textAlign: "right" }}>
+                              <Typography variant="body2" noWrap>{acc.name}</Typography>
+                              <Typography
+                                variant="caption"
+                                sx={{
+                                  display: "block",
+                                  color: bal > 0 ? "income.main" : bal < 0 ? "expense.main" : "text.disabled",
+                                }}
+                              >
+                                {getCurrencySymbol(acc.currency)}{bal.toFixed(2)}
+                              </Typography>
+                            </Box>
+                          </ListItemButton>
+                        </ListItem>
+                      );
+                    })}
+                  </Collapse>
+                </>
+              ) : (
+                items.map((acc) => (
+                  <Tooltip
+                    key={acc.id}
+                    title={`${acc.name} · ${getCurrencySymbol(acc.currency)}${parseFloat(acc.balance || 0).toFixed(2)}`}
+                    placement="right"
+                  >
+                    <ListItem disablePadding>
+                      <ListItemButton
+                        component={Link}
+                        href={`/transactions?account=${acc.id}`}
+                        onClick={isMobile ? onMobileClose : undefined}
+                        sx={{ minHeight: 48, justifyContent: "center", px: 2.5 }}
+                      >
+                        <ListItemIcon sx={{ minWidth: 0, justifyContent: "center" }}>
+                          {acc.image_path ? (
+                            <Box
+                              component="img"
+                              src={acc.image_path}
+                              alt={acc.name}
+                              sx={{ width: 40, height: 40, borderRadius: "50%", objectFit: "cover" }}
+                            />
+                          ) : (
+                            <AccountTypeIcon type={acc.type} />
+                          )}
+                        </ListItemIcon>
+                      </ListItemButton>
+                    </ListItem>
+                  </Tooltip>
+                ))
+              )}
+            </Box>
+          );
+        })}
 
-      {/* Settings collapsible */}
-      <Tooltip title={!expanded ? "Settings" : ""} placement="right">
-        <ListItem disablePadding>
-          <ListItemButton
-            onClick={() => expanded && setSettingsOpen((prev) => !prev)}
-            sx={navItemSx}
+        {Object.keys(groupedAccounts).length > 0 && <Divider sx={{ my: 1 }} />}
+
+        {/* Settings collapsible */}
+        <Tooltip title={!expanded ? "Settings" : ""} placement="right">
+          <ListItem disablePadding>
+            <ListItemButton
+              onClick={() => expanded && setSettingsOpen((prev) => !prev)}
+              sx={navItemSx}
+            >
+              <ListItemIcon sx={iconSx}><SettingsIcon /></ListItemIcon>
+              {expanded && (
+                <>
+                  <ListItemText primary="Settings" />
+                  {settingsOpen ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+                </>
+              )}
+            </ListItemButton>
+          </ListItem>
+        </Tooltip>
+
+        {expanded && (
+          <Collapse in={settingsOpen} timeout="auto" unmountOnExit>
+            <List disablePadding>
+              <ListItem disablePadding>
+                <ListItemButton
+                  component={Link}
+                  href="/accounts"
+                  selected={pathname.startsWith("/accounts")}
+                  onClick={isMobile ? onMobileClose : undefined}
+                  sx={{ ...navItemSx, pl: 4 }}
+                >
+                  <ListItemIcon sx={iconSx}><AccountBalanceIcon /></ListItemIcon>
+                  <ListItemText primary="Accounts" />
+                </ListItemButton>
+              </ListItem>
+              <ListItem disablePadding>
+                <ListItemButton
+                  component={Link}
+                  href="/categories"
+                  selected={pathname.startsWith("/categories")}
+                  onClick={isMobile ? onMobileClose : undefined}
+                  sx={{ ...navItemSx, pl: 4 }}
+                >
+                  <ListItemIcon sx={iconSx}><CategoryIcon /></ListItemIcon>
+                  <ListItemText primary="Categories" />
+                </ListItemButton>
+              </ListItem>
+            </List>
+          </Collapse>
+        )}
+      </List>
+
+      {/* Profile section */}
+      <Divider />
+      <Box sx={{ p: expanded ? 1.5 : 1, display: "flex", alignItems: "center", gap: 1 }}>
+        <Tooltip title={!expanded ? (session?.user?.name ?? "Profile") : ""} placement="right">
+          <Avatar
+            sx={{ width: 36, height: 36, bgcolor: "primary.main", fontSize: 14, flexShrink: 0, cursor: "pointer" }}
+            onClick={(e) => setProfileMenuAnchor(e.currentTarget)}
           >
-            <ListItemIcon sx={iconSx}><SettingsIcon /></ListItemIcon>
-            {expanded && (
-              <>
-                <ListItemText primary="Settings" />
-                {settingsOpen ? <ExpandLessIcon /> : <ExpandMoreIcon />}
-              </>
-            )}
-          </ListItemButton>
-        </ListItem>
-      </Tooltip>
+            {userInitial}
+          </Avatar>
+        </Tooltip>
 
-      {expanded && (
-        <Collapse in={settingsOpen} timeout="auto" unmountOnExit>
-          <List disablePadding>
-            <ListItem disablePadding>
-              <ListItemButton
-                component={Link}
-                href="/accounts"
-                selected={pathname.startsWith("/accounts")}
-                onClick={isMobile ? onMobileClose : undefined}
-                sx={{ ...navItemSx, pl: 4 }}
-              >
-                <ListItemIcon sx={iconSx}><AccountBalanceIcon /></ListItemIcon>
-                <ListItemText primary="Accounts" />
-              </ListItemButton>
-            </ListItem>
-            <ListItem disablePadding>
-              <ListItemButton
-                component={Link}
-                href="/categories"
-                selected={pathname.startsWith("/categories")}
-                onClick={isMobile ? onMobileClose : undefined}
-                sx={{ ...navItemSx, pl: 4 }}
-              >
-                <ListItemIcon sx={iconSx}><CategoryIcon /></ListItemIcon>
-                <ListItemText primary="Categories" />
-              </ListItemButton>
-            </ListItem>
-          </List>
-        </Collapse>
-      )}
+        {expanded && (
+          <>
+            <Box sx={{ flex: 1, overflow: "hidden" }}>
+              <Typography variant="body2" fontWeight={600} noWrap>
+                {session?.user?.name ?? ""}
+              </Typography>
+              <Typography variant="caption" color="text.secondary" noWrap sx={{ display: "block" }}>
+                {session?.user?.email ?? ""}
+              </Typography>
+            </Box>
+            <IconButton
+              size="small"
+              onClick={(e) => setProfileMenuAnchor(e.currentTarget)}
+              aria-label="Profile menu"
+            >
+              <MoreVertIcon fontSize="small" />
+            </IconButton>
+          </>
+        )}
+      </Box>
 
-      <Divider sx={{ my: 1 }} />
-
-      {/* Logout */}
-      <Tooltip title={!expanded ? "Logout" : ""} placement="right">
-        <ListItem disablePadding>
-          <ListItemButton
-            onClick={() => signOut({ callbackUrl: "/login" })}
-            sx={navItemSx}
-          >
-            <ListItemIcon sx={iconSx}><LogoutIcon /></ListItemIcon>
-            {expanded && <ListItemText primary="Logout" />}
-          </ListItemButton>
-        </ListItem>
-      </Tooltip>
-    </List>
+      {/* Profile dropdown menu */}
+      <Menu
+        anchorEl={profileMenuAnchor}
+        open={Boolean(profileMenuAnchor)}
+        onClose={() => setProfileMenuAnchor(null)}
+        anchorOrigin={{ vertical: "top", horizontal: "right" }}
+        transformOrigin={{ vertical: "bottom", horizontal: "right" }}
+      >
+        <MenuItem
+          component={Link}
+          href="/profile"
+          onClick={() => { setProfileMenuAnchor(null); if (isMobile) onMobileClose(); }}
+        >
+          <ListItemIcon><PersonIcon fontSize="small" /></ListItemIcon>
+          <ListItemText>Profile</ListItemText>
+        </MenuItem>
+        <MenuItem onClick={() => { setProfileMenuAnchor(null); signOut({ callbackUrl: "/login" }); }}>
+          <ListItemIcon><LogoutIcon fontSize="small" /></ListItemIcon>
+          <ListItemText>Logout</ListItemText>
+        </MenuItem>
+      </Menu>
+    </Box>
   );
 
   if (isMobile) {

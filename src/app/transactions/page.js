@@ -4,8 +4,6 @@ import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { DataGrid, GridActionsCellItem } from "@mui/x-data-grid";
-import Card from "@mui/material/Card";
-import CardContent from "@mui/material/CardContent";
 import Typography from "@mui/material/Typography";
 import Select from "@mui/material/Select";
 import MenuItem from "@mui/material/MenuItem";
@@ -278,9 +276,8 @@ export default function TransactionsPage() {
         </Button>
       </Box>
 
-      <Card sx={{ mb: 3 }}>
-        <CardContent>
-          <Box sx={{ display: "flex", gap: 2, flexWrap: "wrap", alignItems: "center" }}>
+      <Box sx={{ mb: 3, p: 2, bgcolor: "background.paper", border: 1, borderColor: "divider", borderRadius: 1 }}>
+        <Box sx={{ display: "flex", gap: 2, flexWrap: "wrap", alignItems: "center" }}>
             <FormControl sx={{ minWidth: 120 }}>
               <InputLabel>Type</InputLabel>
               <Select
@@ -348,11 +345,10 @@ export default function TransactionsPage() {
             >
               Clear
             </Button>
-          </Box>
-        </CardContent>
-      </Card>
+        </Box>
+      </Box>
 
-      <Card sx={{ height: 700 }}>
+      <Box sx={{ height: 700, width: "100%", overflow: "hidden" }}>
         <DataGrid
           rows={transactionsWithBalance}
           columns={columns}
@@ -363,7 +359,7 @@ export default function TransactionsPage() {
           pageSizeOptions={[10, 25, 50]}
           getRowId={(row) => row.id}
         />
-      </Card>
+      </Box>
 
       {/* New / Edit Transaction Dialog */}
       <Dialog open={txDialogOpen} onClose={() => setTxDialogOpen(false)} fullWidth maxWidth="sm">
