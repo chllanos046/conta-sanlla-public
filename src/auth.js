@@ -12,6 +12,11 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     Google({
       clientId: process.env.GOOGLE_CLIENT_ID,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+      authorization: {
+        params: {
+          redirect_uri: `${(process.env.AUTH_URL ?? "").replace(/\/$/, "")}/api/auth/callback/google`,
+        },
+      },
     }),
     Credentials({
       credentials: { email: {}, password: {} },
