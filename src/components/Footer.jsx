@@ -11,7 +11,7 @@ export default function Footer({ drawerWidth }) {
         bottom: 0,
         left: drawerWidth,
         right: 0,
-        height: 48,
+        height: 67,
         bgcolor: "background.paper",
         borderTop: 1,
         borderColor: "divider",

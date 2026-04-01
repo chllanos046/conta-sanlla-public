@@ -47,16 +47,17 @@ export default function AppShell({ children }) {
           component="main"
           sx={{
             flex: 1,
+            minWidth: 0,
             p: 3,
             mt: "64px",
-            mb: "48px",
+            mb: "67px",
             // ml: isMobile ? 0 : `${sidebarWidth}px`,
             ml: 0,
             transition: theme.transitions.create("margin-left", {
               easing: theme.transitions.easing.sharp,
               duration: theme.transitions.duration.enteringScreen,
             }),
-            minHeight: "calc(100vh - 64px - 48px)",
+            minHeight: "calc(100vh - 64px - 67px)",
           }}
         >
           {children}
