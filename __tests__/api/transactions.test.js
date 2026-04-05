@@ -6,12 +6,10 @@ import { NextRequest } from 'next/server'
 
 jest.mock('@/lib/db', () => ({
   query: jest.fn(),
-  queryConn: jest.fn(),
-  withTransaction: jest.fn(),
 }))
 jest.mock('@/auth', () => ({ auth: jest.fn() }))
 
-import { query, queryConn, withTransaction } from '@/lib/db'
+import { query } from '@/lib/db'
 import { auth } from '@/auth'
 
 const makeRequest = (method = 'GET', body = null, search = '') =>
@@ -26,10 +24,10 @@ beforeEach(() => {
 })
 
 describe('GET /api/transactions', () => {
-  it('returns 200 with transactions, accounts, and categories', async () => {
+  it('returns 200 with transactions, accounts, categories, and opening_balance', async () => {
     query
-      .mockResolvedValueOnce([{ id: 1, type: 'expense', amount: 50 }]) // transactions
-      .mockResolvedValueOnce([{ id: 1, name: 'Bank' }])                // accounts
+      .mockResolvedValueOnce([{ id: 1, type: 'expense', amount: -50 }]) // transactions
+      .mockResolvedValueOnce([{ id: 1, name: 'Bank', initial_balance: 1000 }]) // accounts
       .mockResolvedValueOnce([{ id: 1, name: 'Food', type: 'expense' }]) // categories
 
     const res = await GET(makeRequest())
@@ -39,6 +37,7 @@ describe('GET /api/transactions', () => {
     expect(body).toHaveProperty('transactions')
     expect(body).toHaveProperty('accounts')
     expect(body).toHaveProperty('categories')
+    expect(body).toHaveProperty('opening_balance')
     expect(Array.isArray(body.transactions)).toBe(true)
   })
 
@@ -63,16 +62,13 @@ describe('GET /api/transactions', () => {
 })
 
 describe('POST /api/transactions', () => {
-  it('returns 201 when transaction is created', async () => {
-    withTransaction.mockImplementation(async (cb) => {
-      queryConn.mockResolvedValue({ affectedRows: 1 })
-      return cb({})
-    })
+  it('returns 201 when expense transaction is created with negative amount', async () => {
+    query.mockResolvedValue({ insertId: 1 })
 
     const res = await POST(
       makeRequest('POST', {
         type: 'expense',
-        amount: 50,
+        amount: -50,
         source_account_id: 1,
         date: '2024-01-15',
         description: 'Lunch',
@@ -82,10 +78,64 @@ describe('POST /api/transactions', () => {
     expect(res.status).toBe(201)
     const body = await res.json()
     expect(body.message).toBe('Transaction created')
+    // Just one INSERT — no balance UPDATE
+    expect(query).toHaveBeenCalledTimes(1)
+  })
+
+  it('returns 201 when income transaction is created with positive amount', async () => {
+    query.mockResolvedValue({ insertId: 2 })
+
+    const res = await POST(
+      makeRequest('POST', {
+        type: 'income',
+        amount: 500,
+        target_account_id: 1,
+        date: '2024-01-15',
+      }),
+    )
+
+    expect(res.status).toBe(201)
+  })
+
+  it('returns 201 when transfer is created with positive amount', async () => {
+    query.mockResolvedValue({ insertId: 3 })
+
+    const res = await POST(
+      makeRequest('POST', {
+        type: 'transfer',
+        amount: 200,
+        source_account_id: 1,
+        target_account_id: 2,
+        date: '2024-01-15',
+      }),
+    )
+
+    expect(res.status).toBe(201)
+  })
+
+  it('returns 400 when expense amount is positive (sign violation)', async () => {
+    const res = await POST(
+      makeRequest('POST', { type: 'expense', amount: 50, source_account_id: 1, date: '2024-01-15' }),
+    )
+    expect(res.status).toBe(400)
+  })
+
+  it('returns 400 when income amount is negative (sign violation)', async () => {
+    const res = await POST(
+      makeRequest('POST', { type: 'income', amount: -50, target_account_id: 1, date: '2024-01-15' }),
+    )
+    expect(res.status).toBe(400)
+  })
+
+  it('returns 400 when transfer amount is negative (sign violation)', async () => {
+    const res = await POST(
+      makeRequest('POST', { type: 'transfer', amount: -200, source_account_id: 1, target_account_id: 2, date: '2024-01-15' }),
+    )
+    expect(res.status).toBe(400)
   })
 
   it('returns 400 when required fields are missing', async () => {
-    const res = await POST(makeRequest('POST', { amount: 50 }))
+    const res = await POST(makeRequest('POST', { amount: -50 }))
     expect(res.status).toBe(400)
   })
 
@@ -93,7 +143,7 @@ describe('POST /api/transactions', () => {
     auth.mockResolvedValue(null)
 
     const res = await POST(
-      makeRequest('POST', { type: 'expense', amount: 50, date: '2024-01-15' }),
+      makeRequest('POST', { type: 'expense', amount: -50, date: '2024-01-15' }),
     )
     expect(res.status).toBe(401)
   })

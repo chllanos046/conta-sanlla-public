@@ -6,12 +6,10 @@ import { NextRequest } from 'next/server'
 
 jest.mock('@/lib/db', () => ({
   query: jest.fn(),
-  queryConn: jest.fn(),
-  withTransaction: jest.fn(),
 }))
 jest.mock('@/auth', () => ({ auth: jest.fn() }))
 
-import { query, queryConn, withTransaction } from '@/lib/db'
+import { query } from '@/lib/db'
 import { auth } from '@/auth'
 
 const makeRequest = (method = 'GET', body = null) =>
@@ -26,9 +24,9 @@ beforeEach(() => {
 })
 
 describe('GET /api/accounts', () => {
-  it('returns 200 with accounts array', async () => {
+  it('returns 200 with accounts including initial_balance and current_balance', async () => {
     const mockAccounts = [
-      { id: 1, name: 'Savings', currency: 'USD', type: 'bank', balance: 1000 },
+      { id: 1, name: 'Savings', currency: 'USD', type: 'bank', initial_balance: 1000, current_balance: 1500 },
     ]
     query.mockResolvedValue(mockAccounts)
 
@@ -37,7 +35,7 @@ describe('GET /api/accounts', () => {
     expect(res.status).toBe(200)
     const body = await res.json()
     expect(Array.isArray(body)).toBe(true)
-    expect(body[0]).toMatchObject({ id: 1, name: 'Savings' })
+    expect(body[0]).toMatchObject({ id: 1, name: 'Savings', initial_balance: 1000, current_balance: 1500 })
   })
 
   it('returns 401 when not authenticated', async () => {
@@ -49,8 +47,8 @@ describe('GET /api/accounts', () => {
 })
 
 describe('POST /api/accounts', () => {
-  it('returns 201 when account is created without balance', async () => {
-    query.mockResolvedValue({ affectedRows: 1 })
+  it('returns 201 when account is created without initial_balance', async () => {
+    query.mockResolvedValue({ insertId: 1 })
 
     const res = await POST(
       makeRequest('POST', { name: 'Savings', currency: 'USD', type: 'bank' }),
@@ -59,32 +57,21 @@ describe('POST /api/accounts', () => {
     expect(res.status).toBe(201)
     const body = await res.json()
     expect(body.message).toBe('Account created')
+    expect(query).toHaveBeenCalledTimes(1)
   })
 
-  it('returns 201 and uses query directly when createTransaction is false', async () => {
-    query.mockResolvedValue({ affectedRows: 1 })
+  it('returns 201 when account is created with initial_balance', async () => {
+    query.mockResolvedValue({ insertId: 2 })
 
     const res = await POST(
-      makeRequest('POST', { name: 'Savings', currency: 'USD', type: 'bank', balance: 50, createTransaction: false }),
+      makeRequest('POST', { name: 'Savings', currency: 'USD', type: 'bank', initial_balance: 500 }),
     )
 
     expect(res.status).toBe(201)
-    expect(query).toHaveBeenCalled()
-    expect(withTransaction).not.toHaveBeenCalled()
-  })
-
-  it('returns 201 and uses withTransaction when createTransaction is true', async () => {
-    withTransaction.mockImplementation(async (cb) => {
-      queryConn.mockResolvedValue({ insertId: 99, affectedRows: 1 })
-      return cb({})
-    })
-
-    const res = await POST(
-      makeRequest('POST', { name: 'Savings', currency: 'USD', type: 'bank', balance: 100, createTransaction: true }),
-    )
-
-    expect(res.status).toBe(201)
-    expect(withTransaction).toHaveBeenCalled()
+    const body = await res.json()
+    expect(body.message).toBe('Account created')
+    // No withTransaction — just a single INSERT
+    expect(query).toHaveBeenCalledTimes(1)
   })
 
   it('returns 400 when required fields are missing', async () => {

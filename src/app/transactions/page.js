@@ -27,11 +27,12 @@ import EditIcon from "@mui/icons-material/Edit";
 import { useSearchParams } from "next/navigation";
 import { format, parseISO } from "date-fns";
 import axios from "axios";
+import { addRunningBalance } from "@/lib/balanceUtils";
 
 const schema = z
   .object({
     type: z.enum(["expense", "income", "transfer"]),
-    amount: z.coerce.number().positive("Amount must be positive"),
+    amount: z.coerce.number().refine((v) => v !== 0, "Amount cannot be zero"),
     date: z.string().min(1, "Date is required"),
     source_account_id: z.string().optional(),
     target_account_id: z.string().optional(),
@@ -83,6 +84,7 @@ export default function TransactionsPage() {
   const [rows, setRows] = useState([]);
   const [accounts, setAccounts] = useState([]);
   const [categories, setCategories] = useState([]);
+  const [openingBalance, setOpeningBalance] = useState(null);
   const [filters, setFilters] = useState(() => ({
     type: "",
     account: searchParams.get("account") || "",
@@ -126,6 +128,7 @@ export default function TransactionsPage() {
     setRows(data.transactions || []);
     setAccounts(data.accounts || []);
     setCategories(data.categories || []);
+    setOpeningBalance(data.opening_balance ?? null);
   };
 
   useEffect(() => {
@@ -159,7 +162,7 @@ export default function TransactionsPage() {
     setSubmitError(null);
     reset({
       type: row.type,
-      amount: String(row.amount),
+      amount: String(Math.abs(parseFloat(row.amount))),
       date: row.date ? formatDateParam(new Date(row.date)) : today(),
       source_account_id: row.source_account_id ? String(row.source_account_id) : "",
       target_account_id: row.target_account_id ? String(row.target_account_id) : "",
@@ -171,9 +174,14 @@ export default function TransactionsPage() {
 
   const onSubmit = async (data) => {
     try {
+      // User always enters a positive number; negate for expenses
+      const signedAmount = data.type === "expense"
+        ? -Math.abs(parseFloat(data.amount))
+        : Math.abs(parseFloat(data.amount));
+
       const payload = {
         ...data,
-        amount: data.amount,
+        amount: signedAmount,
         source_account_id: data.source_account_id || null,
         target_account_id: data.target_account_id || null,
         category_id: data.category_id || null,
@@ -256,14 +264,13 @@ export default function TransactionsPage() {
   ];
 
   const transactionsWithBalance = useMemo(() => {
-    const sorted = [...rows].sort((a, b) => new Date(a.date) - new Date(b.date));
-    let runningBalance = 0;
-    return sorted.map((tx) => {
-      if (tx.type === "income") runningBalance += parseFloat(tx.amount);
-      if (tx.type === "expense") runningBalance -= parseFloat(tx.amount);
-      return { ...tx, balance: runningBalance };
-    });
-  }, [rows]);
+    const accountId = filters.account || null;
+    // Sort ascending to compute running balance correctly, then reverse for DESC display
+    const ascending = [...rows].sort((a, b) => new Date(a.date) - new Date(b.date));
+    const withBalance = addRunningBalance(ascending, openingBalance ?? 0, accountId);
+    // Return in descending order (most recent first)
+    return withBalance.reverse();
+  }, [rows, openingBalance, filters.account]);
 
   return (
     <LocalizationProvider dateAdapter={AdapterDateFns}>
@@ -358,6 +365,34 @@ export default function TransactionsPage() {
           }}
           pageSizeOptions={[10, 25, 50]}
           getRowId={(row) => row.id}
+          slots={{
+            footer: () => (
+              <Box
+                sx={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "flex-end",
+                  gap: 2,
+                  px: 2,
+                  py: 1,
+                  borderTop: 1,
+                  borderColor: "divider",
+                  bgcolor: "background.paper",
+                }}
+              >
+                <Typography variant="caption" color="text.secondary">
+                  Opening balance (before first shown transaction):
+                </Typography>
+                <Typography
+                  variant="body2"
+                  fontWeight={600}
+                  sx={{ color: (openingBalance ?? 0) >= 0 ? "income.main" : "expense.main" }}
+                >
+                  ${(openingBalance ?? 0).toFixed(2)}
+                </Typography>
+              </Box>
+            ),
+          }}
         />
       </Box>
 

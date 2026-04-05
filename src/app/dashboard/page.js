@@ -289,7 +289,7 @@ export default function Dashboard() {
           </Typography>
           <Grid container spacing={2} sx={{ mb: 3 }}>
             {data.accounts.map((acc) => {
-              const bal = parseFloat(acc.balance);
+              const bal = parseFloat(acc.current_balance);
               return (
                 <Grid key={acc.id} size={{ xs: 12, sm: 6, md: 4 }}>
                   <StatCard

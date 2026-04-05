@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
-import { query, withTransaction, queryConn } from "@/lib/db";
+import { query } from "@/lib/db";
 
 export async function PUT(request, { params }) {
   try {
@@ -12,13 +12,26 @@ export async function PUT(request, { params }) {
     const { id } = await params;
     const data = await request.json();
 
+    const numericAmount = parseFloat(data.amount);
+
+    // Enforce sign convention
+    if (data.type === "income" && numericAmount <= 0) {
+      return NextResponse.json({ error: "Income amount must be positive" }, { status: 400 });
+    }
+    if (data.type === "expense" && numericAmount >= 0) {
+      return NextResponse.json({ error: "Expense amount must be negative" }, { status: 400 });
+    }
+    if (data.type === "transfer" && numericAmount <= 0) {
+      return NextResponse.json({ error: "Transfer amount must be positive" }, { status: 400 });
+    }
+
     const result = await query(
       `UPDATE transactions
        SET type = ?, amount = ?, source_account_id = ?, target_account_id = ?, category_id = ?, date = ?, description = ?
        WHERE id = ? AND user_id = ?`,
       [
         data.type,
-        data.amount,
+        numericAmount,
         data.source_account_id || null,
         data.target_account_id || null,
         data.category_id || null,
@@ -53,41 +66,16 @@ export async function DELETE(_request, { params }) {
 
     const { id } = await params;
 
-    // Reverse transaction effect on balances
-    const tx = await query(
-      "SELECT * FROM transactions WHERE id = ? AND user_id = ?",
+    const result = await query(
+      "DELETE FROM transactions WHERE id = ? AND user_id = ?",
       [id, userId],
     );
-    if (tx.length === 0)
+
+    if (result.affectedRows === 0)
       return NextResponse.json(
         { error: "Transaction not found" },
         { status: 404 },
       );
-
-    const transaction = tx[0];
-
-    await withTransaction(async (conn) => {
-      if (transaction.source_account_id) {
-        await queryConn(
-          conn,
-          "UPDATE accounts SET balance = balance + ? WHERE id = ? AND user_id = ?",
-          [transaction.amount, transaction.source_account_id, userId],
-        );
-      }
-      if (transaction.target_account_id) {
-        await queryConn(
-          conn,
-          "UPDATE accounts SET balance = balance - ? WHERE id = ? AND user_id = ?",
-          [transaction.amount, transaction.target_account_id, userId],
-        );
-      }
-
-      await queryConn(
-        conn,
-        "DELETE FROM transactions WHERE id = ? AND user_id = ?",
-        [id, userId],
-      );
-    });
 
     return NextResponse.json({ message: "Transaction deleted" });
   } catch (error) {

@@ -119,7 +119,7 @@ export default function Sidebar({
 
         {/* Accounts grouped by type */}
         {Object.entries(groupedAccounts).map(([type, items]) => {
-          const groupBalance = items.reduce((sum, a) => sum + convertToUSD(parseFloat(a.balance || 0), a.currency, rates), 0);
+          const groupBalance = items.reduce((sum, a) => sum + convertToUSD(parseFloat(a.current_balance || 0), a.currency, rates), 0);
           const isOpen = openGroups[type];
 
           return (
@@ -162,7 +162,7 @@ export default function Sidebar({
 
                   <Collapse in={isOpen} timeout="auto" unmountOnExit>
                     {items.map((acc) => {
-                      const bal = parseFloat(acc.balance || 0);
+                      const bal = parseFloat(acc.current_balance || 0);
                       return (
                         <ListItem key={acc.id} disablePadding>
                           <ListItemButton
@@ -209,7 +209,7 @@ export default function Sidebar({
                 items.map((acc) => (
                   <Tooltip
                     key={acc.id}
-                    title={`${acc.name} · ${getCurrencySymbol(acc.currency)}${parseFloat(acc.balance || 0).toFixed(2)}`}
+                    title={`${acc.name} · ${getCurrencySymbol(acc.currency)}${parseFloat(acc.current_balance || 0).toFixed(2)}`}
                     placement="right"
                   >
                     <ListItem disablePadding>
