@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
-import { query, withTransaction, queryConn } from "@/lib/db";
+import { query } from "@/lib/db";
 
 export async function GET(request) {
   try {
@@ -65,9 +65,9 @@ export async function GET(request) {
       params,
     );
 
-    // Get accounts and categories for frontend
+    // Get accounts (with initial_balance for opening balance computation)
     const accounts = await query(
-      "SELECT id, name FROM accounts WHERE user_id = ?",
+      "SELECT id, name, initial_balance FROM accounts WHERE user_id = ?",
       [userId],
     );
     const categories = await query(
@@ -75,7 +75,40 @@ export async function GET(request) {
       [userId],
     );
 
-    return NextResponse.json({ transactions, accounts, categories });
+    // Compute opening_balance: balance of the filtered account as of the day before
+    // the earliest transaction in the current result set.
+    // When a single account filter is active, computes the true opening balance.
+    // Otherwise defaults to 0.
+    let opening_balance = 0;
+    if (account && transactions.length > 0) {
+      const acc = accounts.find((a) => String(a.id) === String(account));
+      if (acc) {
+        // Find the earliest date in the filtered set
+        const earliest = transactions.reduce(
+          (min, tx) => (new Date(tx.date) < new Date(min) ? tx.date : min),
+          transactions[0].date,
+        );
+        // Sum all transactions for this account strictly before the earliest date
+        const priorRows = await query(
+          `SELECT type, amount, source_account_id, target_account_id
+           FROM transactions
+           WHERE user_id = ? AND (source_account_id = ? OR target_account_id = ?) AND date < ?`,
+          [userId, account, account, earliest],
+        );
+        const prior = priorRows.reduce((bal, tx) => {
+          const id = String(account);
+          if (String(tx.target_account_id) === id) return bal + parseFloat(tx.amount);
+          if (String(tx.source_account_id) === id) {
+            if (tx.type === "expense") return bal + parseFloat(tx.amount);
+            if (tx.type === "transfer") return bal - parseFloat(tx.amount);
+          }
+          return bal;
+        }, parseFloat(acc.initial_balance) || 0);
+        opening_balance = prior;
+      }
+    }
+
+    return NextResponse.json({ transactions, accounts, categories, opening_balance });
   } catch (error) {
     return NextResponse.json(
       { error: "Failed to fetch transactions" },
@@ -101,69 +134,39 @@ export async function POST(request) {
       description,
     } = await request.json();
 
-    if (!type || !amount || !date) {
+    if (!type || amount == null || !date) {
       return NextResponse.json(
         { error: "Missing required fields: type, amount, date" },
         { status: 400 },
       );
     }
 
-    await withTransaction(async (conn) => {
-      // Update source account balance
-      if (source_account_id) {
-        await queryConn(
-          conn,
-          "UPDATE accounts SET balance = balance - ? WHERE id = ? AND user_id = ?",
-          [amount, source_account_id, userId],
-        );
-      }
+    const numericAmount = parseFloat(amount);
 
-      // Update target account balance (income or transfer)
-      if (target_account_id) {
-        let targetAmount = amount;
+    // Enforce sign convention
+    if (type === "income" && numericAmount <= 0) {
+      return NextResponse.json({ error: "Income amount must be positive" }, { status: 400 });
+    }
+    if (type === "expense" && numericAmount >= 0) {
+      return NextResponse.json({ error: "Expense amount must be negative" }, { status: 400 });
+    }
+    if (type === "transfer" && numericAmount <= 0) {
+      return NextResponse.json({ error: "Transfer amount must be positive" }, { status: 400 });
+    }
 
-        // Currency conversion for transfers
-        if (source_account_id && type === "transfer") {
-          const sourceAcc = await queryConn(
-            conn,
-            "SELECT currency FROM accounts WHERE id = ?",
-            [source_account_id],
-          );
-          const targetAcc = await queryConn(
-            conn,
-            "SELECT currency FROM accounts WHERE id = ?",
-            [target_account_id],
-          );
-
-          if (sourceAcc[0]?.currency !== targetAcc[0]?.currency) {
-            // Simple 1:1 fallback (add exchangerate-api in production)
-            targetAmount = amount * 1.05; // Demo conversion
-          }
-        }
-
-        await queryConn(
-          conn,
-          "UPDATE accounts SET balance = balance + ? WHERE id = ? AND user_id = ?",
-          [targetAmount, target_account_id, userId],
-        );
-      }
-
-      // Create transaction
-      await queryConn(
-        conn,
-        "INSERT INTO transactions (user_id, type, amount, source_account_id, target_account_id, category_id, date, description) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-        [
-          userId,
-          type,
-          amount,
-          source_account_id || null,
-          target_account_id || null,
-          category_id || null,
-          date,
-          description,
-        ],
-      );
-    });
+    await query(
+      "INSERT INTO transactions (user_id, type, amount, source_account_id, target_account_id, category_id, date, description) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+      [
+        userId,
+        type,
+        numericAmount,
+        source_account_id || null,
+        target_account_id || null,
+        category_id || null,
+        date,
+        description,
+      ],
+    );
 
     return NextResponse.json(
       { message: "Transaction created" },

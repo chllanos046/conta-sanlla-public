@@ -14,8 +14,6 @@ import TextField from "@mui/material/TextField";
 import MenuItem from "@mui/material/MenuItem";
 import Chip from "@mui/material/Chip";
 import Box from "@mui/material/Box";
-import FormControlLabel from "@mui/material/FormControlLabel";
-import Checkbox from "@mui/material/Checkbox";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
 import AddIcon from "@mui/icons-material/Add";
@@ -30,12 +28,11 @@ const schema = z.object({
   name: z.string().min(1, "Name is required"),
   currency: z.string().min(1, "Currency is required"),
   type: z.enum(["bank", "cash", "investment", "credit"], { message: "Select a valid type" }),
-  balance: z.coerce.number({ invalid_type_error: "Balance must be a number" }),
-  createTransaction: z.boolean().optional(),
+  initial_balance: z.coerce.number({ invalid_type_error: "Initial balance must be a number" }),
   image_path: z.string().nullable().optional(),
 });
 
-const EMPTY_FORM = { name: "", currency: "USD", type: "bank", balance: 0, createTransaction: false, image_path: null };
+const EMPTY_FORM = { name: "", currency: "USD", type: "bank", initial_balance: 0, image_path: null };
 
 export default function AccountsList() {
   const theme = useTheme();
@@ -57,7 +54,6 @@ export default function AccountsList() {
     defaultValues: EMPTY_FORM,
   });
 
-  const balance = watch("balance");
   const selectedImage = watch("image_path");
 
   const loadAccounts = async () => {
@@ -98,10 +94,16 @@ export default function AccountsList() {
     },
     { field: "name", headerName: "Name", width: 180 },
     {
-      field: "balance",
-      headerName: "Balance",
+      field: "initial_balance",
+      headerName: "Initial Balance",
       width: 140,
-      valueFormatter: (value) => `$${parseFloat(value).toFixed(2)}`,
+      valueFormatter: (value) => `$${parseFloat(value || 0).toFixed(2)}`,
+    },
+    {
+      field: "current_balance",
+      headerName: "Current Balance",
+      width: 150,
+      valueFormatter: (value) => `$${parseFloat(value || 0).toFixed(2)}`,
     },
     {
       field: "currency",
@@ -137,8 +139,7 @@ export default function AccountsList() {
       name: account.name,
       currency: account.currency,
       type: account.type,
-      balance: parseFloat(account.balance) || 0,
-      createTransaction: false,
+      initial_balance: parseFloat(account.initial_balance) || 0,
       image_path: account.image_path || null,
     });
     setDialogOpen(true);
@@ -261,42 +262,19 @@ export default function AccountsList() {
               )}
             />
             <Controller
-              name="balance"
+              name="initial_balance"
               control={control}
               render={({ field }) => (
                 <TextField
                   {...field}
                   fullWidth
-                  label="Balance"
+                  label="Initial Balance"
                   type="number"
-                  error={!!errors.balance}
-                  helperText={errors.balance?.message}
-                  onChange={(e) => {
-                    field.onChange(e);
-                    if (parseFloat(e.target.value) === 0) {
-                      setValue("createTransaction", false);
-                    }
-                  }}
+                  error={!!errors.initial_balance}
+                  helperText={errors.initial_balance?.message}
                 />
               )}
             />
-            {Number(balance) !== 0 && (
-              <Controller
-                name="createTransaction"
-                control={control}
-                render={({ field }) => (
-                  <FormControlLabel
-                    control={
-                      <Checkbox
-                        checked={!!field.value}
-                        onChange={(e) => field.onChange(e.target.checked)}
-                      />
-                    }
-                    label="Record as transaction"
-                  />
-                )}
-              />
-            )}
 
             {/* Image picker */}
             {availableImages.length > 0 && (

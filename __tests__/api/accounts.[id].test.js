@@ -6,12 +6,10 @@ import { NextRequest } from 'next/server'
 
 jest.mock('@/lib/db', () => ({
   query: jest.fn(),
-  queryConn: jest.fn(),
-  withTransaction: jest.fn(),
 }))
 jest.mock('@/auth', () => ({ auth: jest.fn() }))
 
-import { query, queryConn, withTransaction } from '@/lib/db'
+import { query } from '@/lib/db'
 import { auth } from '@/auth'
 
 const makeRequest = (method, body = null) =>
@@ -28,53 +26,37 @@ beforeEach(() => {
 })
 
 describe('PUT /api/accounts/[id]', () => {
-  it('returns 200 when account is updated without balance', async () => {
+  it('returns 200 when account is updated with initial_balance', async () => {
     query.mockResolvedValue({ affectedRows: 1 })
 
     const res = await PUT(
-      makeRequest('PUT', { name: 'Updated', currency: 'USD', type: 'bank' }),
+      makeRequest('PUT', { name: 'Updated', currency: 'USD', type: 'bank', initial_balance: 500 }),
       { params },
     )
 
     expect(res.status).toBe(200)
     const body = await res.json()
     expect(body.message).toBe('Account updated')
+    // Single UPDATE — no transaction needed
+    expect(query).toHaveBeenCalledTimes(1)
   })
 
-  it('returns 200 and uses query directly when balance provided without createTransaction', async () => {
+  it('returns 200 when account is updated without initial_balance (defaults to 0)', async () => {
     query.mockResolvedValue({ affectedRows: 1 })
 
     const res = await PUT(
-      makeRequest('PUT', { name: 'Updated', currency: 'USD', type: 'bank', balance: 200, createTransaction: false }),
+      makeRequest('PUT', { name: 'Updated', currency: 'USD', type: 'bank' }),
       { params },
     )
 
     expect(res.status).toBe(200)
-    expect(query).toHaveBeenCalled()
-    expect(withTransaction).not.toHaveBeenCalled()
-  })
-
-  it('returns 200 and uses withTransaction when balance changes with createTransaction', async () => {
-    query.mockResolvedValueOnce([{ balance: '100.00' }])
-    withTransaction.mockImplementation(async (cb) => {
-      queryConn.mockResolvedValue({ affectedRows: 1 })
-      return cb({})
-    })
-
-    const res = await PUT(
-      makeRequest('PUT', { name: 'Updated', currency: 'USD', type: 'bank', balance: 200, createTransaction: true }),
-      { params },
-    )
-
-    expect(res.status).toBe(200)
-    expect(withTransaction).toHaveBeenCalled()
   })
 
   it('returns 404 when account does not exist', async () => {
     query.mockResolvedValue({ affectedRows: 0 })
 
     const res = await PUT(
-      makeRequest('PUT', { name: 'Updated', currency: 'USD', type: 'bank' }),
+      makeRequest('PUT', { name: 'Updated', currency: 'USD', type: 'bank', initial_balance: 0 }),
       { params },
     )
 

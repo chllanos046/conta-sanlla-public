@@ -15,7 +15,7 @@ CREATE TABLE accounts (
   name VARCHAR(255) NOT NULL,
   currency VARCHAR(3) DEFAULT 'USD',
   type ENUM('bank', 'cash', 'investment', 'credit') NOT NULL,
-  balance DECIMAL(15,2) DEFAULT 0.00,
+  initial_balance DECIMAL(15,2) DEFAULT 0.00,
   image_path VARCHAR(255) NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
-import { query, queryConn, withTransaction } from "@/lib/db";
+import { query } from "@/lib/db";
 
 export async function GET() {
   try {
@@ -10,7 +10,19 @@ export async function GET() {
     const userId = session.user.id;
 
     const accounts = await query(
-      "SELECT * FROM accounts WHERE user_id = ? ORDER BY name",
+      `SELECT a.id, a.name, a.currency, a.type, a.initial_balance, a.image_path, a.created_at,
+        a.initial_balance + COALESCE(SUM(CASE
+          WHEN t.target_account_id = a.id THEN t.amount
+          WHEN t.source_account_id = a.id AND t.type = 'expense' THEN t.amount
+          WHEN t.source_account_id = a.id AND t.type = 'transfer' THEN -t.amount
+          ELSE 0
+        END), 0) AS current_balance
+      FROM accounts a
+      LEFT JOIN transactions t ON (t.target_account_id = a.id OR t.source_account_id = a.id)
+        AND t.user_id = a.user_id
+      WHERE a.user_id = ?
+      GROUP BY a.id
+      ORDER BY a.name`,
       [userId],
     );
     return NextResponse.json(accounts);
@@ -29,7 +41,7 @@ export async function POST(request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     const userId = session.user.id;
 
-    const { name, currency, type, balance = 0, createTransaction = false, image_path = null } = await request.json();
+    const { name, currency, type, initial_balance = 0, image_path = null } = await request.json();
 
     if (!name || !currency || !type) {
       return NextResponse.json(
@@ -38,45 +50,12 @@ export async function POST(request) {
       );
     }
 
-    const numericBalance = parseFloat(balance) || 0;
-    let newId;
+    const result = await query(
+      "INSERT INTO accounts (user_id, name, currency, type, initial_balance, image_path) VALUES (?, ?, ?, ?, ?, ?)",
+      [userId, name, currency, type, parseFloat(initial_balance) || 0, image_path],
+    );
 
-    if (createTransaction && numericBalance !== 0) {
-      await withTransaction(async (conn) => {
-        const insertResult = await queryConn(
-          conn,
-          "INSERT INTO accounts (user_id, name, currency, type, balance, image_path) VALUES (?, ?, ?, ?, 0, ?)",
-          [userId, name, currency, type, image_path],
-        );
-        newId = insertResult.insertId;
-        const amount = Math.abs(numericBalance);
-        const txType = numericBalance > 0 ? "income" : "expense";
-        const targetAccountId = txType === "income" ? newId : null;
-        const sourceAccountId = txType === "expense" ? newId : null;
-
-        await queryConn(
-          conn,
-          txType === "income"
-            ? "UPDATE accounts SET balance = balance + ? WHERE id = ?"
-            : "UPDATE accounts SET balance = balance - ? WHERE id = ?",
-          [amount, newId],
-        );
-
-        await queryConn(
-          conn,
-          "INSERT INTO transactions (user_id, type, amount, source_account_id, target_account_id, date, description) VALUES (?, ?, ?, ?, ?, NOW(), ?)",
-          [userId, txType, amount, sourceAccountId, targetAccountId, "Initial balance"],
-        );
-      });
-    } else {
-      const result = await query(
-        "INSERT INTO accounts (user_id, name, currency, type, balance, image_path) VALUES (?, ?, ?, ?, ?, ?)",
-        [userId, name, currency, type, numericBalance, image_path],
-      );
-      newId = result.insertId;
-    }
-
-    return NextResponse.json({ message: "Account created", id: newId }, { status: 201 });
+    return NextResponse.json({ message: "Account created", id: result.insertId }, { status: 201 });
   } catch (error) {
     return NextResponse.json(
       { error: "Failed to create account" },
