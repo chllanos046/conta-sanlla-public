@@ -15,6 +15,7 @@ import { DatePicker } from "@mui/x-date-pickers/DatePicker";
 import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { LineChart } from "@mui/x-charts/LineChart";
+import { ExpensesByCategoryChart } from "@/components/ExpensesByCategoryChart";
 import { useTheme } from "@mui/material/styles";
 import { format } from "date-fns";
 import axios from "axios";
@@ -311,24 +312,35 @@ export default function Dashboard() {
         </>
       )}
 
-      {/* Income / Expenses / Balance — area line chart */}
-      <Card>
-        <CardContent>
-          <Typography variant="h6" gutterBottom>
-            Income vs Expenses
-          </Typography>
-          <LineChart
-            xAxis={[{ data: chartData.map((d) => d.name), scaleType: "point" }]}
-            series={[
-              { data: chartData.map((d) => d.income),  label: "Income",   color: theme.palette.income.main,  showMark: false, area: true },
-              { data: chartData.map((d) => d.expense), label: "Expenses", color: theme.palette.expense.main, showMark: false, area: true },
-              { data: chartData.map((d) => d.balance), label: "Balance",  color: theme.palette.balance.main, showMark: false, area: true },
-            ]}
-            height={320}
-            sx={{ width: "100%" }}
+      {/* Income / Expenses / Balance — area line chart + expenses pie chart */}
+      <Grid container spacing={3} sx={{ alignItems: "stretch" }}>
+        <Grid size={{ xs: 12, md: 8 }}>
+          <Card sx={{ height: "100%" }}>
+            <CardContent>
+              <Typography variant="h6" gutterBottom>
+                Income vs Expenses
+              </Typography>
+              <LineChart
+                xAxis={[{ data: chartData.map((d) => d.name), scaleType: "point" }]}
+                series={[
+                  { data: chartData.map((d) => d.income),  label: "Income",   color: theme.palette.income.main,  showMark: false, area: true },
+                  { data: chartData.map((d) => d.expense), label: "Expenses", color: theme.palette.expense.main, showMark: false, area: true },
+                  { data: chartData.map((d) => d.balance), label: "Balance",  color: theme.palette.balance.main, showMark: false, area: true },
+                ]}
+                height={320}
+                sx={{ width: "100%" }}
+              />
+            </CardContent>
+          </Card>
+        </Grid>
+        <Grid size={{ xs: 12, md: 4 }}>
+          <ExpensesByCategoryChart
+            transactions={data.transactions}
+            accountCurrencyMap={accountCurrencyMap}
+            rates={rates}
           />
-        </CardContent>
-      </Card>
+        </Grid>
+      </Grid>
 
       <QuickAddFab onClick={() => setFabOpen(true)} />
       <QuickAddTransaction
