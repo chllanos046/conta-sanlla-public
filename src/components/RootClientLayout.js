@@ -5,6 +5,7 @@ import CssBaseline from "@mui/material/CssBaseline";
 import { SessionProvider } from "next-auth/react";
 import AppShell from "@/components/AppShell";
 import theme from "@/styles/theme";
+import { PwaUpdatePrompt } from "@/components/PwaUpdatePrompt";
 
 export default function RootClientLayout({ children }) {
   return (
@@ -12,6 +13,7 @@ export default function RootClientLayout({ children }) {
       <AppRouterCacheProvider>
         <ThemeProvider theme={theme}>
           <CssBaseline />
+          <PwaUpdatePrompt />
           <AppShell>{children}</AppShell>
         </ThemeProvider>
       </AppRouterCacheProvider>
