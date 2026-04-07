@@ -21,6 +21,7 @@ import AccountTypeIcon from "@/components/AccountTypeIcon";
 import ReceiptLongIcon from "@mui/icons-material/ReceiptLong";
 import CategoryIcon from "@mui/icons-material/Category";
 import SettingsIcon from "@mui/icons-material/Settings";
+import InfoIcon from "@mui/icons-material/Info";
 import MoreVertIcon from "@mui/icons-material/MoreVert";
 import ExpandLessIcon from "@mui/icons-material/ExpandLess";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
@@ -285,6 +286,18 @@ export default function Sidebar({
                 >
                   <ListItemIcon sx={iconSx}><CategoryIcon /></ListItemIcon>
                   <ListItemText primary="Categories" />
+                </ListItemButton>
+              </ListItem>
+              <ListItem disablePadding>
+                <ListItemButton
+                  component={Link}
+                  href="/settings/about"
+                  selected={pathname.startsWith("/settings/about")}
+                  onClick={isMobile ? onMobileClose : undefined}
+                  sx={{ ...navItemSx, pl: 4 }}
+                >
+                  <ListItemIcon sx={iconSx}><InfoIcon /></ListItemIcon>
+                  <ListItemText primary="About" />
                 </ListItemButton>
               </ListItem>
             </List>

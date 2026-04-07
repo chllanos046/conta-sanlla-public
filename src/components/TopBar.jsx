@@ -3,18 +3,40 @@ import AppBar from "@mui/material/AppBar";
 import Toolbar from "@mui/material/Toolbar";
 import Typography from "@mui/material/Typography";
 import IconButton from "@mui/material/IconButton";
+import Box from "@mui/material/Box";
 import MenuIcon from "@mui/icons-material/Menu";
+import Image from "next/image";
 
 export default function TopBar({ onMenuClick }) {
   return (
     <AppBar position="fixed" sx={{ zIndex: (theme) => theme.zIndex.drawer + 1 }}>
       <Toolbar>
-        <IconButton color="inherit" edge="start" onClick={onMenuClick} sx={{ mr: 2 }}>
+        <IconButton color="inherit" edge="start" onClick={onMenuClick} sx={{ mr: 1 }}>
           <MenuIcon />
         </IconButton>
-        <Typography variant="h6" noWrap>
-          Conta Sanlla
-        </Typography>
+
+        {/* Logo + Title — centered on mobile, left-aligned on desktop */}
+        <Box
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            gap: 1,
+            flexGrow: { xs: 1, sm: 0 },
+            justifyContent: { xs: "center", sm: "flex-start" },
+            mr: { xs: 5, sm: 0 }, // offset to visually center on mobile (accounts for menu icon width)
+          }}
+        >
+          <Image
+            src="/logo.png"
+            alt="Conta Sanlla"
+            width={32}
+            height={32}
+            style={{ borderRadius: 6 }}
+          />
+          <Typography variant="h6" noWrap>
+            Conta Sanlla
+          </Typography>
+        </Box>
       </Toolbar>
     </AppBar>
   );
