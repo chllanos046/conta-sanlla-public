@@ -1,0 +1,244 @@
+/**
+ * @jest-environment jsdom
+ *
+ * Component tests for TransactionFormDialog.
+ *
+ * These tests verify that the sign conversion in onSubmit fires correctly:
+ * - Expense: user enters a positive amount → form sends negative to the API
+ * - Income: user enters a positive amount → form sends positive to the API
+ * - Transfer: user enters a positive amount → form sends positive to the API
+ * - Edit mode: form pre-fills with absolute value and applies sign on submit
+ *
+ * WHY THESE TESTS EXIST:
+ * The API route handlers enforce sign convention (expense < 0, income > 0, transfer > 0).
+ * The UI input has `min: 0`, so users can only type positive numbers.
+ * The sign conversion happens in onSubmit before calling axios. The existing API tests
+ * bypass the form entirely by sending pre-signed amounts directly to the route handler.
+ * This means a broken sign conversion in the form would pass all API tests but break the UI.
+ */
+import React from "react";
+import { render, screen, fireEvent, waitFor, act, cleanup } from "@testing-library/react";
+import "@testing-library/jest-dom";
+
+// ── Stubs ────────────────────────────────────────────────────────────────────
+
+jest.mock("axios", () => ({
+  post: jest.fn(() => Promise.resolve({ data: {} })),
+  put: jest.fn(() => Promise.resolve({ data: {} })),
+}));
+
+// Stub DatePicker — avoids LocalizationProvider requirement and transition complexity.
+// The date value is irrelevant for sign conversion tests.
+jest.mock("@mui/x-date-pickers/DatePicker", () => ({
+  DatePicker: () => <input aria-label="Date" defaultValue="2024-01-15" readOnly />,
+}));
+
+import axios from "axios";
+import { TransactionFormDialog } from "@/components/TransactionFormDialog";
+
+// ── Fixtures ─────────────────────────────────────────────────────────────────
+
+const ACCOUNTS = [
+  { id: 1, name: "Bank Account", currency: "USD" },
+  { id: 2, name: "Cash Wallet", currency: "USD" },
+];
+
+const CATEGORIES = [
+  { id: 1, name: "Food", type: "expense" },
+  { id: 2, name: "Salary", type: "income" },
+];
+
+const baseProps = {
+  open: true,
+  onClose: jest.fn(),
+  onSaved: jest.fn(),
+  editingTx: null,
+  accounts: ACCOUNTS,
+  categories: CATEGORIES,
+  defaultSourceAccountId: null,
+};
+
+// ── Helpers ──────────────────────────────────────────────────────────────────
+
+/**
+ * Open a MUI Select combobox by index (among all rendered comboboxes) and
+ * pick the option matching optionText.
+ *
+ * MUI Select renders each Select as a div[role="combobox"]. The accessible name
+ * is the currently selected value text (e.g., "Expense" for the Type select).
+ * Combobox order in the DOM mirrors the visual order on screen.
+ */
+async function selectMuiOption(comboboxIndex, optionText) {
+  const comboboxes = screen.getAllByRole("combobox");
+  const select = comboboxes[comboboxIndex];
+  fireEvent.mouseDown(select);
+  const option = await screen.findByRole("option", { name: new RegExp(optionText, "i") });
+  fireEvent.click(option);
+}
+
+afterEach(() => {
+  cleanup();
+  jest.clearAllMocks();
+});
+
+// ── Tests ─────────────────────────────────────────────────────────────────────
+
+describe("TransactionFormDialog — sign conversion", () => {
+  /**
+   * Combobox layout for expense (default):
+   *   [0] Type            → "Expense"
+   *   [1] Source Account  → "" (none selected)
+   *   [2] Category        → "" (none selected)
+   */
+  it("sends negative amount to API when creating an expense", async () => {
+    render(<TransactionFormDialog {...baseProps} />);
+
+    await waitFor(() => expect(screen.getByRole("dialog")).toBeInTheDocument());
+
+    // Amount field is a number spinbutton; fill with a positive value
+    const amountInput = screen.getByRole("spinbutton", { name: /amount/i });
+    fireEvent.change(amountInput, { target: { value: "50" } });
+
+    // Source Account is required for expense — combobox[1]
+    await selectMuiOption(1, "Bank Account");
+
+    fireEvent.click(screen.getByRole("button", { name: /save/i }));
+
+    await waitFor(() => expect(axios.post).toHaveBeenCalledTimes(1));
+
+    const payload = axios.post.mock.calls[0][1];
+    expect(payload.type).toBe("expense");
+    expect(payload.amount).toBe(-50); // sign conversion: positive → negative
+  });
+
+  /**
+   * Combobox layout after switching to income:
+   *   [0] Type            → "Income"
+   *   [1] Target Account  → "" (none selected)
+   *   [2] Category        → "" (none selected)
+   */
+  it("sends positive amount to API when creating an income", async () => {
+    render(<TransactionFormDialog {...baseProps} />);
+
+    await waitFor(() => expect(screen.getByRole("dialog")).toBeInTheDocument());
+
+    // Switch type to Income — Type is combobox[0], currently shows "Expense"
+    await selectMuiOption(0, "Income");
+
+    const amountInput = screen.getByRole("spinbutton", { name: /amount/i });
+    fireEvent.change(amountInput, { target: { value: "500" } });
+
+    // Target Account is required for income — combobox[1] after type change
+    await selectMuiOption(1, "Cash Wallet");
+
+    fireEvent.click(screen.getByRole("button", { name: /save/i }));
+
+    await waitFor(() => expect(axios.post).toHaveBeenCalledTimes(1));
+
+    const payload = axios.post.mock.calls[0][1];
+    expect(payload.type).toBe("income");
+    expect(payload.amount).toBe(500); // stays positive — no sign flip for income
+  });
+
+  /**
+   * Combobox layout after switching to transfer:
+   *   [0] Type            → "Transfer"
+   *   [1] Source Account  → "" (none selected)
+   *   [2] Target Account  → "" (none selected)
+   */
+  it("sends positive amount to API when creating a transfer", async () => {
+    render(<TransactionFormDialog {...baseProps} />);
+
+    await waitFor(() => expect(screen.getByRole("dialog")).toBeInTheDocument());
+
+    await selectMuiOption(0, "Transfer");
+
+    const amountInput = screen.getByRole("spinbutton", { name: /amount/i });
+    fireEvent.change(amountInput, { target: { value: "200" } });
+
+    // Source Account — combobox[1]
+    await selectMuiOption(1, "Bank Account");
+
+    // Target Account — combobox[2] (Bank Account is now selected as source, so Cash Wallet for target)
+    await selectMuiOption(2, "Cash Wallet");
+
+    fireEvent.click(screen.getByRole("button", { name: /save/i }));
+
+    await waitFor(() => expect(axios.post).toHaveBeenCalledTimes(1));
+
+    const payload = axios.post.mock.calls[0][1];
+    expect(payload.type).toBe("transfer");
+    expect(payload.amount).toBe(200); // stays positive
+    expect(payload.source_account_id).toBe("1");
+    expect(payload.target_account_id).toBe("2");
+  });
+
+  it("calls PUT (not POST) and sends negative amount when editing an expense", async () => {
+    const editingTx = {
+      id: 5,
+      type: "expense",
+      amount: -100,
+      date: "2024-01-15",
+      source_account_id: 1,
+      target_account_id: null,
+      category_id: 1,
+      description: "Groceries",
+    };
+
+    // Toggle open false→true to trigger the enter transition (fires handleOpen/reset)
+    const { rerender } = render(
+      <TransactionFormDialog {...baseProps} open={false} editingTx={editingTx} />,
+    );
+    act(() => {
+      rerender(<TransactionFormDialog {...baseProps} open={true} editingTx={editingTx} />);
+    });
+
+    await waitFor(() => expect(screen.getByRole("dialog")).toBeInTheDocument());
+
+    // Amount must show absolute value: 100 not -100
+    const amountInput = screen.getByRole("spinbutton", { name: /amount/i });
+    expect(amountInput.value).toBe("100");
+
+    fireEvent.click(screen.getByRole("button", { name: /save/i }));
+
+    await waitFor(() => expect(axios.put).toHaveBeenCalledTimes(1));
+
+    expect(axios.post).not.toHaveBeenCalled();
+    const payload = axios.put.mock.calls[0][1];
+    expect(payload.type).toBe("expense");
+    expect(payload.amount).toBe(-100); // sign conversion re-applied on save
+  });
+
+  it("calls PUT and sends positive amount when editing an income transaction", async () => {
+    const editingTx = {
+      id: 6,
+      type: "income",
+      amount: 300,
+      date: "2024-01-20",
+      source_account_id: null,
+      target_account_id: 2,
+      category_id: null,
+      description: "Paycheck",
+    };
+
+    const { rerender } = render(
+      <TransactionFormDialog {...baseProps} open={false} editingTx={editingTx} />,
+    );
+    act(() => {
+      rerender(<TransactionFormDialog {...baseProps} open={true} editingTx={editingTx} />);
+    });
+
+    await waitFor(() => expect(screen.getByRole("dialog")).toBeInTheDocument());
+
+    const amountInput = screen.getByRole("spinbutton", { name: /amount/i });
+    expect(amountInput.value).toBe("300");
+
+    fireEvent.click(screen.getByRole("button", { name: /save/i }));
+
+    await waitFor(() => expect(axios.put).toHaveBeenCalledTimes(1));
+
+    const payload = axios.put.mock.calls[0][1];
+    expect(payload.type).toBe("income");
+    expect(payload.amount).toBe(300); // positive stays positive
+  });
+});
