@@ -29,3 +29,4 @@ most relevant to the feature described in `$ARGUMENTS`. Look at:
 4. **Report back** — summarize what you found: which files are relevant,
 what patterns are already in use, and any potential concerns to keep
 in mind when planning. Do not suggest implementation steps yet.
+Ask me what I want to implement as part of this feature, and wait for my response before proceeding to the next step.
