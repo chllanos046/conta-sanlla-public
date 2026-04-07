@@ -14,12 +14,19 @@ export async function POST(request) {
   }
 
   try {
-    const { email, password, name } = await request.json();
+    const { email, password, name, invite_code } = await request.json();
 
     if (!email || !password || !name) {
       return NextResponse.json(
         { error: "Missing required fields: email, password, name" },
         { status: 400 },
+      );
+    }
+
+    if (invite_code !== "CONTASANLLA") {
+      return NextResponse.json(
+        { error: "Invalid invite code" },
+        { status: 403 },
       );
     }
 
