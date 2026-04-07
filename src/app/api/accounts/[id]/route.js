@@ -7,14 +7,13 @@ export async function PUT(request, { params }) {
     const session = await auth();
     if (!session?.user?.id)
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    const userId = session.user.id;
 
     const { id } = await params;
     const { name, currency, type, initial_balance, image_path = null } = await request.json();
 
     const result = await query(
-      "UPDATE accounts SET name = ?, currency = ?, type = ?, initial_balance = ?, image_path = ? WHERE id = ? AND user_id = ?",
-      [name, currency, type, parseFloat(initial_balance) || 0, image_path, id, userId],
+      "UPDATE accounts SET name = ?, currency = ?, type = ?, initial_balance = ?, image_path = ? WHERE id = ?",
+      [name, currency, type, parseFloat(initial_balance) || 0, image_path, id],
     );
 
     if (result.affectedRows === 0)
@@ -34,13 +33,12 @@ export async function DELETE(_request, { params }) {
     const session = await auth();
     if (!session?.user?.id)
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    const userId = session.user.id;
 
     const { id } = await params;
 
     const result = await query(
-      "DELETE FROM accounts WHERE id = ? AND user_id = ?",
-      [id, userId],
+      "DELETE FROM accounts WHERE id = ?",
+      [id],
     );
 
     if (result.affectedRows === 0)

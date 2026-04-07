@@ -7,11 +7,10 @@ export async function GET(request) {
     const session = await auth();
     if (!session?.user?.id)
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    const userId = session.user.id;
 
     const categories = await query(
-      "SELECT * FROM categories WHERE user_id = ? ORDER BY type, name",
-      [userId],
+      "SELECT * FROM categories ORDER BY type, name",
+      [],
     );
     return NextResponse.json(categories);
   } catch (error) {
@@ -27,7 +26,6 @@ export async function POST(request) {
     const session = await auth();
     if (!session?.user?.id)
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    const userId = session.user.id;
 
     const { name, type } = await request.json();
 
@@ -39,8 +37,8 @@ export async function POST(request) {
     }
 
     await query(
-      "INSERT INTO categories (user_id, name, type) VALUES (?, ?, ?)",
-      [userId, name, type],
+      "INSERT INTO categories (name, type) VALUES (?, ?)",
+      [name, type],
     );
 
     return NextResponse.json({ message: "Category created" }, { status: 201 });

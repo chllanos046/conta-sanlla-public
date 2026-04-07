@@ -36,18 +36,25 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   ],
   callbacks: {
     ...authConfig.callbacks,
+    async signIn({ account, profile }) {
+      if (account?.provider === "google" && profile?.email) {
+        const rows = await query("SELECT id FROM users WHERE email = ?", [profile.email]);
+        if (rows.length === 0) {
+          const params = new URLSearchParams({
+            email: profile.email,
+            name: profile.name ?? profile.email,
+          });
+          return `/verify-code?${params}`;
+        }
+      }
+      return true;
+    },
     async jwt({ token, user, account, profile }) {
       if (user?.id) token.id = user.id;
       if (account?.provider === "google" && profile?.email) {
         const rows = await query("SELECT id FROM users WHERE email = ?", [profile.email]);
         if (rows.length > 0) {
           token.id = String(rows[0].id);
-        } else {
-          const result = await query(
-            "INSERT INTO users (email, password, name) VALUES (?, NULL, ?)",
-            [profile.email, profile.name ?? profile.email]
-          );
-          token.id = String(result.insertId);
         }
       }
       return token;

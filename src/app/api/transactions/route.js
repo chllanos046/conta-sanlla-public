@@ -7,7 +7,6 @@ export async function GET(request) {
     const session = await auth();
     if (!session?.user?.id)
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    const userId = session.user.id;
 
     const { searchParams } = new URL(request.url);
     const type = searchParams.get("type");
@@ -27,9 +26,9 @@ export async function GET(request) {
       LEFT JOIN accounts a1 ON t.source_account_id = a1.id
       LEFT JOIN accounts a2 ON t.target_account_id = a2.id
       LEFT JOIN categories c ON t.category_id = c.id
-      WHERE t.user_id = ?
+      WHERE 1=1
     `;
-    const params = [userId];
+    const params = [];
 
     if (type) {
       sql += " AND t.type = ?";
@@ -67,12 +66,12 @@ export async function GET(request) {
 
     // Get accounts (with initial_balance for opening balance computation)
     const accounts = await query(
-      "SELECT id, name, initial_balance FROM accounts WHERE user_id = ?",
-      [userId],
+      "SELECT id, name, initial_balance FROM accounts",
+      [],
     );
     const categories = await query(
-      "SELECT id, name, type FROM categories WHERE user_id = ?",
-      [userId],
+      "SELECT id, name, type FROM categories",
+      [],
     );
 
     // Compute opening_balance: balance of the filtered account as of the day before
@@ -92,8 +91,8 @@ export async function GET(request) {
         const priorRows = await query(
           `SELECT type, amount, source_account_id, target_account_id
            FROM transactions
-           WHERE user_id = ? AND (source_account_id = ? OR target_account_id = ?) AND date < ?`,
-          [userId, account, account, earliest],
+           WHERE (source_account_id = ? OR target_account_id = ?) AND date < ?`,
+          [account, account, earliest],
         );
         const prior = priorRows.reduce((bal, tx) => {
           const id = String(account);
@@ -122,7 +121,6 @@ export async function POST(request) {
     const session = await auth();
     if (!session?.user?.id)
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    const userId = session.user.id;
 
     const {
       type,
@@ -155,9 +153,8 @@ export async function POST(request) {
     }
 
     await query(
-      "INSERT INTO transactions (user_id, type, amount, source_account_id, target_account_id, category_id, date, description) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+      "INSERT INTO transactions (type, amount, source_account_id, target_account_id, category_id, date, description) VALUES (?, ?, ?, ?, ?, ?, ?)",
       [
-        userId,
         type,
         numericAmount,
         source_account_id || null,

@@ -7,7 +7,6 @@ export async function GET(request) {
     const session = await auth();
     if (!session?.user?.id)
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    const userId = session.user.id;
 
     const { searchParams } = new URL(request.url);
     const period     = searchParams.get("period") || "month";
@@ -28,17 +27,15 @@ export async function GET(request) {
         END), 0) AS current_balance
       FROM accounts a
       LEFT JOIN transactions t ON (t.target_account_id = a.id OR t.source_account_id = a.id)
-        AND t.user_id = a.user_id
-      WHERE a.user_id = ?
       GROUP BY a.id
       ORDER BY a.name`,
-      [userId],
+      [],
     );
 
     // Build date filter for period transactions
     const now = new Date();
     let dateFilter = "";
-    const txParams = [userId];
+    const txParams = [];
 
     if (period === "day") {
       const d = dateParam || now.toISOString().split("T")[0];
@@ -67,15 +64,15 @@ export async function GET(request) {
       LEFT JOIN accounts a1 ON t.source_account_id = a1.id
       LEFT JOIN accounts a2 ON t.target_account_id = a2.id
       LEFT JOIN categories c ON t.category_id = c.id
-      WHERE t.user_id = ? ${dateFilter}
+      WHERE 1=1 ${dateFilter}
       ORDER BY t.date DESC
       LIMIT 1000`,
       txParams,
     );
 
     const categories = await query(
-      "SELECT * FROM categories WHERE user_id = ? ORDER BY type, name",
-      [userId],
+      "SELECT * FROM categories ORDER BY type, name",
+      [],
     );
 
     // For custom range, compute per-account balance as of dateFrom (opening balance of the range)
@@ -86,8 +83,8 @@ export async function GET(request) {
           const priorRows = await query(
             `SELECT type, amount, source_account_id, target_account_id
              FROM transactions
-             WHERE user_id = ? AND (source_account_id = ? OR target_account_id = ?) AND date < ?`,
-            [userId, acc.id, acc.id, dateFrom],
+             WHERE (source_account_id = ? OR target_account_id = ?) AND date < ?`,
+            [acc.id, acc.id, dateFrom],
           );
           const openingBalance = priorRows.reduce((bal, tx) => {
             if (String(tx.target_account_id) === String(acc.id)) return bal + parseFloat(tx.amount);

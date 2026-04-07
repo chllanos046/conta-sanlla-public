@@ -22,6 +22,7 @@ const schema = z
     email: z.string().email("Enter a valid email address"),
     password: z.string().min(6, "Password must be at least 6 characters"),
     confirmPassword: z.string(),
+    invite_code: z.string().min(1, "Invite code is required"),
   })
   .refine((data) => data.password === data.confirmPassword, {
     message: "Passwords do not match",
@@ -37,7 +38,7 @@ export default function RegisterPage() {
     formState: { errors, isSubmitting },
   } = useForm({
     resolver: zodResolver(schema),
-    defaultValues: { name: "", email: "", password: "", confirmPassword: "" },
+    defaultValues: { name: "", email: "", password: "", confirmPassword: "", invite_code: "" },
   });
 
   const onSubmit = async (data) => {
@@ -46,6 +47,7 @@ export default function RegisterPage() {
         name: data.name,
         email: data.email,
         password: data.password,
+        invite_code: data.invite_code,
       });
       const result = await signIn("credentials", {
         email: data.email,
@@ -58,9 +60,12 @@ export default function RegisterPage() {
         router.push("/dashboard");
       }
     } catch (err) {
+      const status = err.response?.status;
       const msg = err.response?.data?.error || "Registration failed";
       if (msg.includes("already exists")) {
         setError("email", { message: "This email is already registered" });
+      } else if (status === 403) {
+        setError("invite_code", { message: "Invalid invite code" });
       } else {
         setError("root", { message: msg });
       }
@@ -149,6 +154,20 @@ export default function RegisterPage() {
                   type="password"
                   error={!!errors.confirmPassword}
                   helperText={errors.confirmPassword?.message}
+                  sx={{ mb: 2 }}
+                />
+              )}
+            />
+            <Controller
+              name="invite_code"
+              control={control}
+              render={({ field }) => (
+                <TextField
+                  {...field}
+                  fullWidth
+                  label="Invite Code"
+                  error={!!errors.invite_code}
+                  helperText={errors.invite_code?.message}
                   sx={{ mb: 2 }}
                 />
               )}

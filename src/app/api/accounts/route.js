@@ -7,7 +7,6 @@ export async function GET() {
     const session = await auth();
     if (!session?.user?.id)
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    const userId = session.user.id;
 
     const accounts = await query(
       `SELECT a.id, a.name, a.currency, a.type, a.initial_balance, a.image_path, a.created_at,
@@ -19,11 +18,9 @@ export async function GET() {
         END), 0) AS current_balance
       FROM accounts a
       LEFT JOIN transactions t ON (t.target_account_id = a.id OR t.source_account_id = a.id)
-        AND t.user_id = a.user_id
-      WHERE a.user_id = ?
       GROUP BY a.id
       ORDER BY a.name`,
-      [userId],
+      [],
     );
     return NextResponse.json(accounts);
   } catch (error) {
@@ -39,7 +36,6 @@ export async function POST(request) {
     const session = await auth();
     if (!session?.user?.id)
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    const userId = session.user.id;
 
     const { name, currency, type, initial_balance = 0, image_path = null } = await request.json();
 
@@ -51,8 +47,8 @@ export async function POST(request) {
     }
 
     const result = await query(
-      "INSERT INTO accounts (user_id, name, currency, type, initial_balance, image_path) VALUES (?, ?, ?, ?, ?, ?)",
-      [userId, name, currency, type, parseFloat(initial_balance) || 0, image_path],
+      "INSERT INTO accounts (name, currency, type, initial_balance, image_path) VALUES (?, ?, ?, ?, ?)",
+      [name, currency, type, parseFloat(initial_balance) || 0, image_path],
     );
 
     return NextResponse.json({ message: "Account created", id: result.insertId }, { status: 201 });
