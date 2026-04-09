@@ -11,11 +11,16 @@ import LinearProgress, { linearProgressClasses } from "@mui/material/LinearProgr
 import { convertToUSD } from "@/lib/currency";
 
 const COLORS = [
-  "hsl(0, 65%, 50%)",
-  "hsl(0, 55%, 40%)",
-  "hsl(0, 45%, 32%)",
-  "hsl(0, 35%, 24%)",
-  "hsl(0, 25%, 18%)",
+  "#0ea5e9", // sky blue
+  "#f97316", // orange
+  "#8b5cf6", // violet
+  "#22c55e", // green
+  "#eab308", // yellow
+  "#ec4899", // pink
+  "#14b8a6", // teal
+  "#f43f5e", // rose
+  "#a78bfa", // purple light
+  "#84cc16", // lime
 ];
 
 const StyledText = styled("text", {

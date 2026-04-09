@@ -2,8 +2,8 @@ import { createTheme } from "@mui/material/styles";
 
 const theme = createTheme({
   palette: {
-    primary: { main: "#1976d2" },
-    secondary: { main: "#dc004e" },
+    primary: { main: "#0f766e", light: "#14b8a6", dark: "#0d5c56", contrastText: "#fff" },
+    secondary: { main: "#6366f1", light: "#818cf8", dark: "#4f46e5", contrastText: "#fff" },
     income:  { main: "#2e7d32", light: "#4caf50", dark: "#1b5e20", contrastText: "#fff" },
     expense: { main: "#d32f2f", light: "#ef5350", dark: "#b71c1c", contrastText: "#fff" },
     balance: { main: "#757575", light: "#9e9e9e", dark: "#424242", contrastText: "#fff" },

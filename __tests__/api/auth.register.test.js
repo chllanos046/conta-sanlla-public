@@ -30,7 +30,7 @@ describe('POST /api/auth/register', () => {
     query.mockResolvedValue({ affectedRows: 1 })
 
     const res = await POST(
-      makeRequest({ email: 'a@b.com', password: 'pass', name: 'Alice' }),
+      makeRequest({ email: 'a@b.com', password: 'pass', name: 'Alice', invite_code: 'CONTASANLLA' }),
     )
 
     expect(res.status).toBe(201)
@@ -43,6 +43,15 @@ describe('POST /api/auth/register', () => {
     expect(res.status).toBe(400)
   })
 
+  it('returns 403 when invite code is missing or wrong', async () => {
+    const res = await POST(
+      makeRequest({ email: 'a@b.com', password: 'pass', name: 'Alice', invite_code: 'WRONG' }),
+    )
+    expect(res.status).toBe(403)
+    const body = await res.json()
+    expect(body.error).toMatch(/invite code/i)
+  })
+
   it('returns 409 when email already exists', async () => {
     bcrypt.hash.mockResolvedValue('hashed-password')
     const dupError = new Error('Duplicate')
@@ -50,7 +59,7 @@ describe('POST /api/auth/register', () => {
     query.mockRejectedValue(dupError)
 
     const res = await POST(
-      makeRequest({ email: 'existing@b.com', password: 'pass', name: 'Bob' }),
+      makeRequest({ email: 'existing@b.com', password: 'pass', name: 'Bob', invite_code: 'CONTASANLLA' }),
     )
 
     expect(res.status).toBe(409)
