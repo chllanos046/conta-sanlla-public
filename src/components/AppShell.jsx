@@ -6,7 +6,6 @@ import { useTheme } from "@mui/material/styles";
 import { usePathname } from "next/navigation";
 import TopBar from "@/components/TopBar";
 import Sidebar from "@/components/Sidebar";
-import Footer from "@/components/Footer";
 
 const DRAWER_WIDTH = 240;
 const MINI_DRAWER_WIDTH = 64;
@@ -50,19 +49,16 @@ export default function AppShell({ children }) {
             minWidth: 0,
             p: 3,
             mt: "64px",
-            mb: "67px",
-            // ml: isMobile ? 0 : `${sidebarWidth}px`,
             ml: 0,
             transition: theme.transitions.create("margin-left", {
               easing: theme.transitions.easing.sharp,
               duration: theme.transitions.duration.enteringScreen,
             }),
-            minHeight: "calc(100vh - 64px - 67px)",
+            minHeight: "calc(100vh - 64px)",
           }}
         >
           {children}
         </Box>
-        <Footer drawerWidth={isMobile ? 0 : sidebarWidth} />
       </Box>
     </Suspense>
   );

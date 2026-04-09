@@ -20,13 +20,15 @@ Confirm the branch was created successfully before proceeding.
 
 2. **Enter Plan Mode** — switch to Plan Mode now. Do not write or modify any files.
 
-3. **Explore the codebase** — read and understand the areas of the project
-most relevant to the feature described in `$ARGUMENTS`. Look at:
+3. **Ask for feature details** — ask the developer to describe the feature they want to implement.
+
+4. **Explore the codebase** — read and understand the areas of the project
+most relevant to the feature described in previous step. Look at:
 - Related existing components or pages
 - API routes or data fetching patterns that may be involved
 - Any relevant entries in `CLAUDE.md` that apply to this feature
 
-4. **Report back** — summarize what you found: which files are relevant,
+5. **Report back** — summarize what you found: which files are relevant,
 what patterns are already in use, and any potential concerns to keep
 in mind when planning. Do not suggest implementation steps yet.
-Ask me what I want to implement as part of this feature, and wait for my response before proceeding to the next step.
+Ask me if you have any questions about what you have found out and needs to implement as part of this feature, and wait for my response before proceeding to the next step.

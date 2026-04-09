@@ -22,19 +22,34 @@ import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import axios from "axios";
 
-const schema = z.object({
-  type: z.enum(["income", "expense"]),
-  amount: z.coerce.number().positive("Amount must be positive"),
-  account_id: z.string().min(1, "Account is required"),
-  category_id: z.string().min(1, "Category is required"),
-  date: z.string().min(1, "Date is required"),
-  description: z.string().optional(),
-});
+const schema = z
+  .object({
+    type: z.enum(["income", "expense", "transfer"]),
+    amount: z.coerce.number().positive("Amount must be positive"),
+    source_account_id: z.string().optional(),
+    target_account_id: z.string().optional(),
+    category_id: z.string().optional(),
+    date: z.string().min(1, "Date is required"),
+    description: z.string().optional(),
+  })
+  .superRefine((data, ctx) => {
+    if (data.type === "expense" || data.type === "transfer") {
+      if (!data.source_account_id) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Source account is required", path: ["source_account_id"] });
+      }
+    }
+    if (data.type === "income" || data.type === "transfer") {
+      if (!data.target_account_id) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Target account is required", path: ["target_account_id"] });
+      }
+    }
+  });
 
 const EMPTY_FORM = {
   type: "expense",
   amount: "",
-  account_id: "",
+  source_account_id: "",
+  target_account_id: "",
   category_id: "",
   date: format(new Date(), "yyyy-MM-dd"),
   description: "",
@@ -54,6 +69,8 @@ export default function QuickAddTransaction({ accounts = [], categories = [], op
   });
 
   const type = watch("type");
+  const showSource = type === "expense" || type === "transfer";
+  const showTarget = type === "income" || type === "transfer";
   const filteredCategories = categories.filter((c) => c.type === type);
 
   useEffect(() => {
@@ -62,16 +79,18 @@ export default function QuickAddTransaction({ accounts = [], categories = [], op
 
   const onSubmit = async (data) => {
     try {
+      const signedAmount = data.type === "expense" ? -Math.abs(data.amount) : Math.abs(data.amount);
+
       const payload = {
         type: data.type,
-        amount: data.amount,
+        amount: signedAmount,
         date: data.date,
         description: data.description || "",
-        category_id: data.category_id,
-        ...(data.type === "income"
-          ? { target_account_id: data.account_id }
-          : { source_account_id: data.account_id }),
+        category_id: data.category_id || null,
+        source_account_id: data.source_account_id || null,
+        target_account_id: data.target_account_id || null,
       };
+
       await axios.post("/api/transactions", payload);
       onSuccess();
       onClose();
@@ -103,6 +122,7 @@ export default function QuickAddTransaction({ accounts = [], categories = [], op
                 >
                   <ToggleButton value="expense">Expense</ToggleButton>
                   <ToggleButton value="income">Income</ToggleButton>
+                  <ToggleButton value="transfer">Transfer</ToggleButton>
                 </ToggleButtonGroup>
               )}
             />
@@ -124,49 +144,76 @@ export default function QuickAddTransaction({ accounts = [], categories = [], op
               )}
             />
 
-            <Controller
-              name="account_id"
-              control={control}
-              render={({ field }) => (
-                <TextField
-                  {...field}
-                  select
-                  label="Account"
-                  error={!!errors.account_id}
-                  helperText={errors.account_id?.message}
-                  size="small"
-                  fullWidth
-                >
-                  {accounts.map((a) => (
-                    <MenuItem key={a.id} value={String(a.id)}>
-                      {a.name}
-                    </MenuItem>
-                  ))}
-                </TextField>
-              )}
-            />
+            {showSource && (
+              <Controller
+                name="source_account_id"
+                control={control}
+                render={({ field }) => (
+                  <TextField
+                    {...field}
+                    select
+                    label="From Account"
+                    error={!!errors.source_account_id}
+                    helperText={errors.source_account_id?.message}
+                    size="small"
+                    fullWidth
+                  >
+                    {accounts.map((a) => (
+                      <MenuItem key={a.id} value={String(a.id)}>
+                        {a.name}
+                      </MenuItem>
+                    ))}
+                  </TextField>
+                )}
+              />
+            )}
 
-            <Controller
-              name="category_id"
-              control={control}
-              render={({ field }) => (
-                <TextField
-                  {...field}
-                  select
-                  label="Category"
-                  error={!!errors.category_id}
-                  helperText={errors.category_id?.message}
-                  size="small"
-                  fullWidth
-                >
-                  {filteredCategories.map((c) => (
-                    <MenuItem key={c.id} value={String(c.id)}>
-                      {c.name}
-                    </MenuItem>
-                  ))}
-                </TextField>
-              )}
-            />
+            {showTarget && (
+              <Controller
+                name="target_account_id"
+                control={control}
+                render={({ field }) => (
+                  <TextField
+                    {...field}
+                    select
+                    label="To Account"
+                    error={!!errors.target_account_id}
+                    helperText={errors.target_account_id?.message}
+                    size="small"
+                    fullWidth
+                  >
+                    {accounts.map((a) => (
+                      <MenuItem key={a.id} value={String(a.id)}>
+                        {a.name}
+                      </MenuItem>
+                    ))}
+                  </TextField>
+                )}
+              />
+            )}
+
+            {type !== "transfer" && (
+              <Controller
+                name="category_id"
+                control={control}
+                render={({ field }) => (
+                  <TextField
+                    {...field}
+                    select
+                    label="Category"
+                    size="small"
+                    fullWidth
+                  >
+                    <MenuItem value="">None</MenuItem>
+                    {filteredCategories.map((c) => (
+                      <MenuItem key={c.id} value={String(c.id)}>
+                        {c.name}
+                      </MenuItem>
+                    ))}
+                  </TextField>
+                )}
+              />
+            )}
 
             <Controller
               name="date"

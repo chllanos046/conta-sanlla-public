@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Grid from "@mui/material/Grid";
 import Card from "@mui/material/Card";
 import CardContent from "@mui/material/CardContent";
@@ -7,20 +7,31 @@ import Typography from "@mui/material/Typography";
 import ToggleButtonGroup from "@mui/material/ToggleButtonGroup";
 import ToggleButton from "@mui/material/ToggleButton";
 import Box from "@mui/material/Box";
+import IconButton from "@mui/material/IconButton";
+import Table from "@mui/material/Table";
+import TableBody from "@mui/material/TableBody";
+import TableCell from "@mui/material/TableCell";
+import TableHead from "@mui/material/TableHead";
+import TableRow from "@mui/material/TableRow";
+import CircularProgress from "@mui/material/CircularProgress";
+import Chip from "@mui/material/Chip";
 import TrendingUpIcon from "@mui/icons-material/TrendingUp";
 import TrendingDownIcon from "@mui/icons-material/TrendingDown";
 import BalanceIcon from "@mui/icons-material/Balance";
-import AccountTypeIcon from "@/components/AccountTypeIcon";
+import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
+import ChevronRightIcon from "@mui/icons-material/ChevronRight";
+import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 import { DatePicker } from "@mui/x-date-pickers/DatePicker";
 import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { LineChart } from "@mui/x-charts/LineChart";
 import { ExpensesByCategoryChart } from "@/components/ExpensesByCategoryChart";
 import { useTheme } from "@mui/material/styles";
-import { format } from "date-fns";
+import { format, subMonths, addMonths, isSameMonth } from "date-fns";
 import axios from "axios";
 import StatCard from "@/components/StatCard";
-import { convertToUSD, getCurrencySymbol } from "@/lib/currency";
+import AccountCarousel from "@/components/AccountCarousel";
+import { convertToUSD } from "@/lib/currency";
 import QuickAddTransaction, { QuickAddFab } from "@/components/QuickAddTransaction";
 
 const PERIODS = [
@@ -30,14 +41,12 @@ const PERIODS = [
   { value: "custom", label: "Custom" },
 ];
 
+const PULL_THRESHOLD = 80;
+
 export default function Dashboard() {
   const theme = useTheme();
 
-  const [data, setData] = useState({
-    accounts: [],
-    transactions: [],
-    categories: [],
-  });
+  const [data, setData] = useState({ accounts: [], transactions: [], categories: [] });
   const [period, setPeriod]         = useState("month");
   const [periodDate, setPeriodDate] = useState(new Date());
   const [customFrom, setCustomFrom] = useState(null);
@@ -45,6 +54,8 @@ export default function Dashboard() {
   const [rates, setRates] = useState({});
   const prevArsRef = useRef(null);
   const [fabOpen, setFabOpen] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const [pullY, setPullY] = useState(0);
 
   useEffect(() => {
     axios.get("/api/exchange-rates").then((res) => {
@@ -56,7 +67,7 @@ export default function Dashboard() {
     }).catch(() => {});
   }, []);
 
-  const buildApiUrl = () => {
+  const buildApiUrl = useCallback(() => {
     const p = new URLSearchParams({ period });
     if (period === "day") {
       p.set("date", format(periodDate, "yyyy-MM-dd"));
@@ -70,15 +81,56 @@ export default function Dashboard() {
       if (customTo)   p.set("dateTo",   format(customTo,   "yyyy-MM-dd"));
     }
     return `/api/dashboard?${p}`;
-  };
+  }, [period, periodDate, customFrom, customTo]);
 
-  const loadData = () => {
-    axios.get(buildApiUrl()).then((res) => setData(res.data));
-  };
+  const loadData = useCallback(() => {
+    setRefreshing(true);
+    axios.get(buildApiUrl())
+      .then((res) => setData(res.data))
+      .finally(() => setRefreshing(false));
+  }, [buildApiUrl]);
 
   useEffect(() => {
     loadData();
-  }, [period, periodDate, customFrom, customTo]);
+  }, [loadData]);
+
+  // Pull-to-refresh
+  useEffect(() => {
+    let startY = 0;
+    let pulling = false;
+
+    const onTouchStart = (e) => {
+      if (window.scrollY === 0) {
+        startY = e.touches[0].clientY;
+        pulling = true;
+      }
+    };
+
+    const onTouchMove = (e) => {
+      if (!pulling) return;
+      const dy = Math.max(0, e.touches[0].clientY - startY);
+      setPullY(Math.min(dy, PULL_THRESHOLD + 20));
+    };
+
+    const onTouchEnd = (e) => {
+      if (!pulling) return;
+      pulling = false;
+      const dy = e.changedTouches[0].clientY - startY;
+      setPullY(0);
+      if (dy >= PULL_THRESHOLD) {
+        loadData();
+      }
+    };
+
+    document.addEventListener("touchstart", onTouchStart, { passive: true });
+    document.addEventListener("touchmove", onTouchMove, { passive: true });
+    document.addEventListener("touchend", onTouchEnd);
+    return () => {
+      document.removeEventListener("touchstart", onTouchStart);
+      document.removeEventListener("touchmove", onTouchMove);
+      document.removeEventListener("touchend", onTouchEnd);
+    };
+  }, [loadData]);
 
   const handlePeriodChange = (_, val) => {
     if (!val) return;
@@ -103,9 +155,10 @@ export default function Dashboard() {
     .filter((t) => t.type === "income")
     .reduce((sum, t) => sum + convertToUSD(parseFloat(t.amount || 0), txCurrency(t), rates), 0);
 
+  // Expenses stored as negative — use Math.abs for correct sum
   const expenses = data.transactions
     .filter((t) => t.type === "expense")
-    .reduce((sum, t) => sum + convertToUSD(parseFloat(t.amount || 0), txCurrency(t), rates), 0);
+    .reduce((sum, t) => sum + convertToUSD(Math.abs(parseFloat(t.amount || 0)), txCurrency(t), rates), 0);
 
   const balance = income - expenses;
 
@@ -132,7 +185,9 @@ export default function Dashboard() {
       if (t.type !== "income" && t.type !== "expense") continue;
       const key = getKey(t.date);
       if (!buckets[key]) buckets[key] = { key, income: 0, expense: 0 };
-      buckets[key][t.type] += convertToUSD(parseFloat(t.amount || 0), txCurrency(t), rates);
+      // Use Math.abs for expenses so both values are positive
+      const amt = convertToUSD(Math.abs(parseFloat(t.amount || 0)), txCurrency(t), rates);
+      buckets[key][t.type] += amt;
     }
 
     let runningBalance = 0;
@@ -151,25 +206,31 @@ export default function Dashboard() {
 
   const summaryCards = [
     {
-      label:   "Income",
-      value:   `$${income.toFixed(2)}`,
-      color:   "income.main",
-      iconBg:  "income.main",
-      icon:    <TrendingUpIcon sx={{ fontSize: 28, color: "#fff" }} />,
+      label:     "Income",
+      value:     `$${income.toFixed(2)}`,
+      color:     "income.main",
+      iconBg:    "income.main",
+      icon:      <TrendingUpIcon sx={{ fontSize: 28, color: "#fff" }} />,
+      sparkData: chartData.map((d) => d.income),
+      sparkColor: theme.palette.income.main,
     },
     {
-      label:   "Expenses",
-      value:   `$${expenses.toFixed(2)}`,
-      color:   "expense.main",
-      iconBg:  "expense.main",
-      icon:    <TrendingDownIcon sx={{ fontSize: 28, color: "#fff" }} />,
+      label:     "Expenses",
+      value:     `$${expenses.toFixed(2)}`,
+      color:     "expense.main",
+      iconBg:    "expense.main",
+      icon:      <TrendingDownIcon sx={{ fontSize: 28, color: "#fff" }} />,
+      sparkData: chartData.map((d) => d.expense),
+      sparkColor: theme.palette.expense.main,
     },
     {
-      label:   "Balance",
-      value:   `$${balance.toFixed(2)}`,
-      color:   "balance.main",
-      iconBg:  "balance.light",
-      icon:    <BalanceIcon sx={{ fontSize: 28, color: "#fff" }} />,
+      label:     "Balance",
+      value:     `$${balance.toFixed(2)}`,
+      color:     balance >= 0 ? "income.main" : "expense.main",
+      iconBg:    "balance.light",
+      icon:      <BalanceIcon sx={{ fontSize: 28, color: "#fff" }} />,
+      sparkData: chartData.map((d) => d.balance),
+      sparkColor: theme.palette.balance.main,
     },
   ];
 
@@ -179,8 +240,44 @@ export default function Dashboard() {
     return "balance.main";
   };
 
+  const today = new Date();
+  const isCurrentMonth = isSameMonth(periodDate, today);
+
   return (
     <LocalizationProvider dateAdapter={AdapterDateFns}>
+      {/* Pull-to-refresh indicator */}
+      {pullY > 0 && (
+        <Box sx={{
+          position: "fixed",
+          top: 64 + pullY / 2,
+          left: "50%",
+          transform: "translateX(-50%)",
+          zIndex: 1300,
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          gap: 0.5,
+          transition: "top 0.05s",
+          pointerEvents: "none",
+        }}>
+          <KeyboardArrowDownIcon
+            sx={{
+              color: "primary.main",
+              fontSize: 32,
+              opacity: Math.min(pullY / PULL_THRESHOLD, 1),
+              transform: pullY >= PULL_THRESHOLD ? "rotate(180deg)" : "none",
+              transition: "transform 0.2s",
+            }}
+          />
+        </Box>
+      )}
+
+      {refreshing && (
+        <Box sx={{ display: "flex", justifyContent: "center", mb: 1 }}>
+          <CircularProgress size={20} />
+        </Box>
+      )}
+
       <Typography variant="h4" gutterBottom>
         Dashboard
       </Typography>
@@ -211,15 +308,27 @@ export default function Dashboard() {
             />
           )}
           {period === "month" && (
-            <DatePicker
-              label="Month"
-              views={["year", "month"]}
-              openTo="month"
-              format="yyyy-MM"
-              value={periodDate}
-              onChange={(v) => v && setPeriodDate(v)}
-              slotProps={{ textField: { size: "small" } }}
-            />
+            <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+              <IconButton
+                size="small"
+                onClick={() => setPeriodDate((d) => subMonths(d, 1))}
+              >
+                <ChevronLeftIcon />
+              </IconButton>
+              <Chip
+                label={format(periodDate, "MMMM yyyy")}
+                variant="outlined"
+                size="small"
+                sx={{ minWidth: 130, justifyContent: "center", fontWeight: 500 }}
+              />
+              <IconButton
+                size="small"
+                onClick={() => setPeriodDate((d) => addMonths(d, 1))}
+                disabled={isCurrentMonth}
+              >
+                <ChevronRightIcon />
+              </IconButton>
+            </Box>
           )}
           {period === "year" && (
             <DatePicker
@@ -273,48 +382,33 @@ export default function Dashboard() {
         )}
       </Box>
 
-      {/* Summary stat cards */}
+      {/* Summary stat cards with sparklines */}
       <Grid container spacing={3} sx={{ mb: 3 }}>
-        {summaryCards.map(({ label, value, color, iconBg, icon }) => (
+        {summaryCards.map(({ label, value, color, iconBg, icon, sparkData, sparkColor }) => (
           <Grid key={label} size={{ xs: 12, sm: 4 }}>
-            <StatCard label={label} value={value} valueColor={color} icon={icon} iconBg={iconBg} />
+            <StatCard
+              label={label}
+              value={value}
+              valueColor={color}
+              icon={icon}
+              iconBg={iconBg}
+              sparkData={sparkData}
+              sparkColor={sparkColor}
+            />
           </Grid>
         ))}
       </Grid>
 
-      {/* Account balance cards — original currency */}
-      {data.accounts.length > 0 && (
-        <>
-          <Typography variant="h6" gutterBottom>
-            Account Balances
-          </Typography>
-          <Grid container spacing={2} sx={{ mb: 3 }}>
-            {data.accounts.map((acc) => {
-              const bal = parseFloat(acc.current_balance);
-              return (
-                <Grid key={acc.id} size={{ xs: 12, sm: 6, md: 4 }}>
-                  <StatCard
-                    label={acc.name}
-                    value={`${getCurrencySymbol(acc.currency)}${bal.toFixed(2)}`}
-                    valueColor={balanceColor(bal)}
-                    icon={
-                      acc.image_path
-                        ? <Box component="img" src={acc.image_path} alt={acc.name} sx={{ width: 48, height: 48, objectFit: "cover" }} />
-                        : <AccountTypeIcon type={acc.type} sx={{ fontSize: 22, color: "grey.600" }} />
-                    }
-                    iconBg="grey.200"
-                    href={`/transactions?account=${acc.id}`}
-                  />
-                </Grid>
-              );
-            })}
-          </Grid>
-        </>
-      )}
-
-      {/* Income / Expenses / Balance — area line chart + expenses pie chart */}
-      <Grid container spacing={3} sx={{ alignItems: "stretch" }}>
-        <Grid size={{ xs: 12, md: 8 }}>
+      {/* Charts: Expenses by category (left) + Income vs Expenses (right) */}
+      <Grid container spacing={3} sx={{ mb: 3, alignItems: "stretch" }}>
+        <Grid size={{ xs: 12, md: 5 }}>
+          <ExpensesByCategoryChart
+            transactions={data.transactions}
+            accountCurrencyMap={accountCurrencyMap}
+            rates={rates}
+          />
+        </Grid>
+        <Grid size={{ xs: 12, md: 7 }}>
           <Card sx={{ height: "100%" }}>
             <CardContent>
               <Typography variant="h6" gutterBottom>
@@ -333,14 +427,70 @@ export default function Dashboard() {
             </CardContent>
           </Card>
         </Grid>
-        <Grid size={{ xs: 12, md: 4 }}>
-          <ExpensesByCategoryChart
-            transactions={data.transactions}
-            accountCurrencyMap={accountCurrencyMap}
-            rates={rates}
-          />
-        </Grid>
       </Grid>
+
+      {/* Recent Transactions */}
+      {data.transactions.length > 0 && (
+        <Card sx={{ mb: 3 }}>
+          <CardContent>
+            <Typography variant="h6" gutterBottom>
+              Recent Transactions
+            </Typography>
+            <Table size="small">
+              <TableHead>
+                <TableRow>
+                  <TableCell>Date</TableCell>
+                  <TableCell>Description</TableCell>
+                  <TableCell>Category</TableCell>
+                  <TableCell>Account</TableCell>
+                  <TableCell align="right">Amount</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {data.transactions.slice(0, 10).map((tx) => {
+                  const amt = Math.abs(parseFloat(tx.amount || 0));
+                  const isIncome = tx.type === "income";
+                  const isExpense = tx.type === "expense";
+                  return (
+                    <TableRow key={tx.id} hover>
+                      <TableCell sx={{ whiteSpace: "nowrap" }}>
+                        {format(new Date(tx.date), "MMM d")}
+                      </TableCell>
+                      <TableCell>{tx.description || "—"}</TableCell>
+                      <TableCell>{tx.category_name || "—"}</TableCell>
+                      <TableCell>
+                        {tx.source_name || tx.target_name || "—"}
+                      </TableCell>
+                      <TableCell
+                        align="right"
+                        sx={{
+                          color: isIncome ? "income.main" : isExpense ? "expense.main" : "text.secondary",
+                          fontWeight: 600,
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        {isIncome ? "+" : isExpense ? "-" : ""}${amt.toFixed(2)}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Account Balances Carousel */}
+      {data.accounts.length > 0 && (
+        <>
+          <Typography variant="h6" gutterBottom>
+            Account Balances
+          </Typography>
+          <Box sx={{ mb: 3 }}>
+            <AccountCarousel accounts={data.accounts} balanceColor={balanceColor} />
+          </Box>
+        </>
+      )}
 
       <QuickAddFab onClick={() => setFabOpen(true)} />
       <QuickAddTransaction

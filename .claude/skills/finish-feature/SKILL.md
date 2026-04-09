@@ -59,3 +59,9 @@ The PR body must include:
   - [ ] Error handling on all async functions
 
 7. **Confirm** — report the PR URL so the developer can open it for review.
+
+8. **Move back to main** — run:
+```bash
+git checkout main
+git branch -D <feature-branch-name>
+``` 
