@@ -182,6 +182,7 @@ export default function Dashboard() {
 
     for (const t of data.transactions) {
       if (t.type !== "income" && t.type !== "expense") continue;
+      if (!t.date) continue;
       const key = getKey(t.date);
       if (!buckets[key]) buckets[key] = { key, income: 0, expense: 0 };
       const amt = convertToUSD(Math.abs(parseFloat(t.amount || 0)), txCurrency(t), rates);
@@ -432,7 +433,11 @@ export default function Dashboard() {
                       return (
                         <TableRow key={tx.id} hover>
                           <TableCell sx={{ whiteSpace: "nowrap" }}>
-                            {format(tx.date instanceof Date ? tx.date : new Date(tx.date + "T12:00:00"), "MMM d")}
+                            {(() => {
+                              if (!tx.date) return "—";
+                              const d = tx.date instanceof Date ? tx.date : new Date(tx.date + "T12:00:00");
+                              return isNaN(d.getTime()) ? "—" : format(d, "MMM d");
+                            })()}
                           </TableCell>
                           <TableCell>{tx.description || "—"}</TableCell>
                           <TableCell>{tx.category_name || "—"}</TableCell>
