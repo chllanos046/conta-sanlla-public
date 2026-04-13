@@ -17,7 +17,6 @@ import CircularProgress from "@mui/material/CircularProgress";
 import Chip from "@mui/material/Chip";
 import TrendingUpIcon from "@mui/icons-material/TrendingUp";
 import TrendingDownIcon from "@mui/icons-material/TrendingDown";
-import BalanceIcon from "@mui/icons-material/Balance";
 import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
 import ChevronRightIcon from "@mui/icons-material/ChevronRight";
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
@@ -25,10 +24,9 @@ import { DatePicker } from "@mui/x-date-pickers/DatePicker";
 import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { ExpensesByCategoryChart } from "@/components/ExpensesByCategoryChart";
-import { useTheme } from "@mui/material/styles";
 import { format, subMonths, addMonths, isSameMonth } from "date-fns";
 import axios from "axios";
-import StatCard from "@/components/StatCard";
+import { SummaryStatCard } from "@/components/SummaryStatCard";
 import AccountCarousel from "@/components/AccountCarousel";
 import { convertToUSD } from "@/lib/currency";
 import QuickAddTransaction, { QuickAddFab } from "@/components/QuickAddTransaction";
@@ -43,8 +41,6 @@ const PERIODS = [
 const PULL_THRESHOLD = 80;
 
 export default function Dashboard() {
-  const theme = useTheme();
-
   const [data, setData] = useState({ accounts: [], transactions: [], categories: [] });
   const [period, setPeriod]         = useState("month");
   const [periodDate, setPeriodDate] = useState(new Date());
@@ -162,23 +158,35 @@ export default function Dashboard() {
   const balance = income - expenses;
 
   const chartData = (() => {
-    const buckets = {};
+    const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 
     const getKey = (dateStr) => {
       const d = new Date(dateStr);
-      if (period === "day") return `${String(d.getHours()).padStart(2, "0")}:00`;
+      if (period === "day")  return `${String(d.getHours()).padStart(2, "0")}:00`;
       if (period === "year") return String(d.getMonth() + 1).padStart(2, "0");
       return String(d.getDate()).padStart(2, "0");
     };
 
     const getLabel = (key) => {
-      if (period === "day") return `${key}h`;
-      if (period === "year") {
-        const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
-        return months[parseInt(key, 10) - 1];
-      }
-      return `Day ${key}`;
+      if (period === "day")  return `${key}h`;
+      if (period === "year") return MONTHS[parseInt(key, 10) - 1];
+      return `Day ${parseInt(key, 10)}`;
     };
+
+    // Pre-fill all buckets for month/year so every slot appears even with 0 values
+    const buckets = {};
+    if (period === "month") {
+      const daysInMonth = new Date(periodDate.getFullYear(), periodDate.getMonth() + 1, 0).getDate();
+      for (let d = 1; d <= daysInMonth; d++) {
+        const key = String(d).padStart(2, "0");
+        buckets[key] = { key, income: 0, expense: 0 };
+      }
+    } else if (period === "year") {
+      for (let m = 1; m <= 12; m++) {
+        const key = String(m).padStart(2, "0");
+        buckets[key] = { key, income: 0, expense: 0 };
+      }
+    }
 
     for (const t of data.transactions) {
       if (t.type !== "income" && t.type !== "expense") continue;
@@ -207,33 +215,51 @@ export default function Dashboard() {
     .sort((a, b) => new Date(b.date) - new Date(a.date))
     .slice(0, 10);
 
+  const pctChange = (current, previous) => {
+    if (!previous) return null;
+    return ((current - previous) / Math.abs(previous)) * 100;
+  };
+
+  const periodLabel = (() => {
+    if (period === "year") return "From previous year";
+    return "From previous month";
+  })();
+
+  const prevIncome  = data.prevMonthSummary?.income  ?? 0;
+  const prevExpense = data.prevMonthSummary?.expense ?? 0;
+  const prevBalance = prevIncome - prevExpense;
+
+  const xAxisData = (period === "month" || period === "year")
+    ? chartData.map((d) => d.name)
+    : undefined;
+
   const summaryCards = [
     {
-      label:      "Income",
-      value:      `$${income.toFixed(2)}`,
-      color:      "income.main",
-      iconBg:     "income.main",
-      icon:       <TrendingUpIcon sx={{ fontSize: 28, color: "#fff" }} />,
-      sparkData:  chartData.map((d) => d.income),
-      sparkColor: theme.palette.income.main,
+      title:         "Income",
+      value:         `$${income.toFixed(2)}`,
+      trend:         "up",
+      data:          chartData.map((d) => d.income),
+      xAxisData,
+      percentChange: pctChange(income, prevIncome),
+      interval:      periodLabel,
     },
     {
-      label:      "Expenses",
-      value:      `$${expenses.toFixed(2)}`,
-      color:      "expense.main",
-      iconBg:     "expense.main",
-      icon:       <TrendingDownIcon sx={{ fontSize: 28, color: "#fff" }} />,
-      sparkData:  chartData.map((d) => d.expense),
-      sparkColor: theme.palette.expense.main,
+      title:         "Expenses",
+      value:         `$${expenses.toFixed(2)}`,
+      trend:         "down",
+      data:          chartData.map((d) => d.expense),
+      xAxisData,
+      percentChange: pctChange(expenses, prevExpense),
+      interval:      periodLabel,
     },
     {
-      label:      "Balance",
-      value:      `$${balance.toFixed(2)}`,
-      color:      balance >= 0 ? "income.main" : "expense.main",
-      iconBg:     "balance.light",
-      icon:       <BalanceIcon sx={{ fontSize: 28, color: "#fff" }} />,
-      sparkData:  chartData.map((d) => d.balance),
-      sparkColor: theme.palette.balance.main,
+      title:         "Balance",
+      value:         `$${balance.toFixed(2)}`,
+      trend:         "neutral",
+      data:          chartData.map((d) => d.balance),
+      xAxisData,
+      percentChange: pctChange(balance, prevBalance),
+      interval:      periodLabel,
     },
   ];
 
@@ -387,16 +413,16 @@ export default function Dashboard() {
 
       {/* Summary stat cards with sparklines */}
       <Grid container spacing={3} sx={{ mb: 3 }}>
-        {summaryCards.map(({ label, value, color, iconBg, icon, sparkData, sparkColor }) => (
-          <Grid key={label} size={{ xs: 12, sm: 4 }}>
-            <StatCard
-              label={label}
+        {summaryCards.map(({ title, value, trend, data, xAxisData, percentChange, interval }) => (
+          <Grid key={title} size={{ xs: 12, sm: 4 }}>
+            <SummaryStatCard
+              title={title}
               value={value}
-              valueColor={color}
-              icon={icon}
-              iconBg={iconBg}
-              sparkData={sparkData}
-              sparkColor={sparkColor}
+              trend={trend}
+              data={data}
+              xAxisData={xAxisData}
+              percentChange={percentChange}
+              interval={interval}
             />
           </Grid>
         ))}
