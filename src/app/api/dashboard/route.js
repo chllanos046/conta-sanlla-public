@@ -104,6 +104,21 @@ export async function GET(request) {
       0,
     );
 
+    // Previous calendar month totals for % change badges
+    const prevMonthEnd = new Date(now.getFullYear(), now.getMonth(), 1); // first of current month = exclusive end
+    const prevMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const prevMonthStartStr = prevMonthStart.toISOString().split("T")[0];
+    const prevMonthEndStr   = prevMonthEnd.toISOString().split("T")[0];
+
+    const [prevMonthRow] = await query(
+      `SELECT
+        COALESCE(SUM(CASE WHEN type = 'income'  THEN amount       ELSE 0 END), 0) AS income,
+        COALESCE(SUM(CASE WHEN type = 'expense' THEN ABS(amount)  ELSE 0 END), 0) AS expense
+       FROM transactions
+       WHERE date >= ? AND date < ?`,
+      [prevMonthStartStr, prevMonthEndStr],
+    );
+
     return NextResponse.json({
       accounts: accountsWithPeriodBalance,
       transactions,
@@ -111,6 +126,10 @@ export async function GET(request) {
       summary: {
         totalBalance,
         transactionCount: transactions.length,
+      },
+      prevMonthSummary: {
+        income:  parseFloat(prevMonthRow.income),
+        expense: parseFloat(prevMonthRow.expense),
       },
     });
   } catch (error) {
