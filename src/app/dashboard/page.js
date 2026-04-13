@@ -24,7 +24,6 @@ import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 import { DatePicker } from "@mui/x-date-pickers/DatePicker";
 import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
-import { LineChart } from "@mui/x-charts/LineChart";
 import { ExpensesByCategoryChart } from "@/components/ExpensesByCategoryChart";
 import { useTheme } from "@mui/material/styles";
 import { format, subMonths, addMonths, isSameMonth } from "date-fns";
@@ -185,7 +184,6 @@ export default function Dashboard() {
       if (t.type !== "income" && t.type !== "expense") continue;
       const key = getKey(t.date);
       if (!buckets[key]) buckets[key] = { key, income: 0, expense: 0 };
-      // Use Math.abs for expenses so both values are positive
       const amt = convertToUSD(Math.abs(parseFloat(t.amount || 0)), txCurrency(t), rates);
       buckets[key][t.type] += amt;
     }
@@ -204,32 +202,36 @@ export default function Dashboard() {
       });
   })();
 
+  const recentTransactions = [...data.transactions]
+    .sort((a, b) => new Date(b.date) - new Date(a.date))
+    .slice(0, 10);
+
   const summaryCards = [
     {
-      label:     "Income",
-      value:     `$${income.toFixed(2)}`,
-      color:     "income.main",
-      iconBg:    "income.main",
-      icon:      <TrendingUpIcon sx={{ fontSize: 28, color: "#fff" }} />,
-      sparkData: chartData.map((d) => d.income),
+      label:      "Income",
+      value:      `$${income.toFixed(2)}`,
+      color:      "income.main",
+      iconBg:     "income.main",
+      icon:       <TrendingUpIcon sx={{ fontSize: 28, color: "#fff" }} />,
+      sparkData:  chartData.map((d) => d.income),
       sparkColor: theme.palette.income.main,
     },
     {
-      label:     "Expenses",
-      value:     `$${expenses.toFixed(2)}`,
-      color:     "expense.main",
-      iconBg:    "expense.main",
-      icon:      <TrendingDownIcon sx={{ fontSize: 28, color: "#fff" }} />,
-      sparkData: chartData.map((d) => d.expense),
+      label:      "Expenses",
+      value:      `$${expenses.toFixed(2)}`,
+      color:      "expense.main",
+      iconBg:     "expense.main",
+      icon:       <TrendingDownIcon sx={{ fontSize: 28, color: "#fff" }} />,
+      sparkData:  chartData.map((d) => d.expense),
       sparkColor: theme.palette.expense.main,
     },
     {
-      label:     "Balance",
-      value:     `$${balance.toFixed(2)}`,
-      color:     balance >= 0 ? "income.main" : "expense.main",
-      iconBg:    "balance.light",
-      icon:      <BalanceIcon sx={{ fontSize: 28, color: "#fff" }} />,
-      sparkData: chartData.map((d) => d.balance),
+      label:      "Balance",
+      value:      `$${balance.toFixed(2)}`,
+      color:      balance >= 0 ? "income.main" : "expense.main",
+      iconBg:     "balance.light",
+      icon:       <BalanceIcon sx={{ fontSize: 28, color: "#fff" }} />,
+      sparkData:  chartData.map((d) => d.balance),
       sparkColor: theme.palette.balance.main,
     },
   ];
@@ -399,86 +401,69 @@ export default function Dashboard() {
         ))}
       </Grid>
 
-      {/* Charts: Expenses by category (left) + Income vs Expenses (right) */}
+      {/* Recent Transactions + Expenses by Category */}
       <Grid container spacing={3} sx={{ mb: 3, alignItems: "stretch" }}>
-        <Grid size={{ xs: 12, md: 5 }}>
+        <Grid size={{ xs: 12, md: 8 }}>
+          <Card sx={{ height: "100%" }}>
+            <CardContent>
+              <Typography variant="h6" gutterBottom>
+                Recent Transactions
+              </Typography>
+              {recentTransactions.length === 0 ? (
+                <Typography variant="body2" color="text.secondary" sx={{ py: 2 }}>
+                  No transactions for this period
+                </Typography>
+              ) : (
+                <Table size="small">
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>Date</TableCell>
+                      <TableCell>Description</TableCell>
+                      <TableCell>Category</TableCell>
+                      <TableCell>Account</TableCell>
+                      <TableCell align="right">Amount</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {recentTransactions.map((tx) => {
+                      const amt = Math.abs(parseFloat(tx.amount || 0));
+                      const isIncome = tx.type === "income";
+                      const isExpense = tx.type === "expense";
+                      return (
+                        <TableRow key={tx.id} hover>
+                          <TableCell sx={{ whiteSpace: "nowrap" }}>
+                            {format(tx.date instanceof Date ? tx.date : new Date(tx.date + "T12:00:00"), "MMM d")}
+                          </TableCell>
+                          <TableCell>{tx.description || "—"}</TableCell>
+                          <TableCell>{tx.category_name || "—"}</TableCell>
+                          <TableCell>{tx.source_name || tx.target_name || "—"}</TableCell>
+                          <TableCell
+                            align="right"
+                            sx={{
+                              color: isIncome ? "income.main" : isExpense ? "expense.main" : "text.secondary",
+                              fontWeight: 600,
+                              whiteSpace: "nowrap",
+                            }}
+                          >
+                            {isIncome ? "+" : isExpense ? "-" : ""}${amt.toFixed(2)}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              )}
+            </CardContent>
+          </Card>
+        </Grid>
+        <Grid size={{ xs: 12, md: 4 }}>
           <ExpensesByCategoryChart
             transactions={data.transactions}
             accountCurrencyMap={accountCurrencyMap}
             rates={rates}
           />
         </Grid>
-        <Grid size={{ xs: 12, md: 7 }}>
-          <Card sx={{ height: "100%" }}>
-            <CardContent>
-              <Typography variant="h6" gutterBottom>
-                Income vs Expenses
-              </Typography>
-              <LineChart
-                xAxis={[{ data: chartData.map((d) => d.name), scaleType: "point" }]}
-                series={[
-                  { data: chartData.map((d) => d.income),  label: "Income",   color: theme.palette.income.main,  showMark: false, area: true },
-                  { data: chartData.map((d) => d.expense), label: "Expenses", color: theme.palette.expense.main, showMark: false, area: true },
-                  { data: chartData.map((d) => d.balance), label: "Balance",  color: theme.palette.balance.main, showMark: false, area: true },
-                ]}
-                height={320}
-                sx={{ width: "100%" }}
-              />
-            </CardContent>
-          </Card>
-        </Grid>
       </Grid>
-
-      {/* Recent Transactions */}
-      {data.transactions.length > 0 && (
-        <Card sx={{ mb: 3 }}>
-          <CardContent>
-            <Typography variant="h6" gutterBottom>
-              Recent Transactions
-            </Typography>
-            <Table size="small">
-              <TableHead>
-                <TableRow>
-                  <TableCell>Date</TableCell>
-                  <TableCell>Description</TableCell>
-                  <TableCell>Category</TableCell>
-                  <TableCell>Account</TableCell>
-                  <TableCell align="right">Amount</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {data.transactions.slice(0, 10).map((tx) => {
-                  const amt = Math.abs(parseFloat(tx.amount || 0));
-                  const isIncome = tx.type === "income";
-                  const isExpense = tx.type === "expense";
-                  return (
-                    <TableRow key={tx.id} hover>
-                      <TableCell sx={{ whiteSpace: "nowrap" }}>
-                        {format(new Date(tx.date), "MMM d")}
-                      </TableCell>
-                      <TableCell>{tx.description || "—"}</TableCell>
-                      <TableCell>{tx.category_name || "—"}</TableCell>
-                      <TableCell>
-                        {tx.source_name || tx.target_name || "—"}
-                      </TableCell>
-                      <TableCell
-                        align="right"
-                        sx={{
-                          color: isIncome ? "income.main" : isExpense ? "expense.main" : "text.secondary",
-                          fontWeight: 600,
-                          whiteSpace: "nowrap",
-                        }}
-                      >
-                        {isIncome ? "+" : isExpense ? "-" : ""}${amt.toFixed(2)}
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
-      )}
 
       {/* Account Balances Carousel */}
       {data.accounts.length > 0 && (
