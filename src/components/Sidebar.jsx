@@ -116,8 +116,6 @@ export default function Sidebar({
           </ListItem>
         </Tooltip>
 
-        <Divider sx={{ my: 1 }} />
-
         {/* Accounts grouped by type */}
         {Object.entries(groupedAccounts).map(([type, items]) => {
           const groupBalance = items.reduce((sum, a) => sum + convertToUSD(parseFloat(a.current_balance || 0), a.currency, rates), 0);
@@ -240,8 +238,6 @@ export default function Sidebar({
             </Box>
           );
         })}
-
-        {Object.keys(groupedAccounts).length > 0 && <Divider sx={{ my: 1 }} />}
 
         {/* Settings collapsible */}
         <Tooltip title={!expanded ? "Settings" : ""} placement="right">

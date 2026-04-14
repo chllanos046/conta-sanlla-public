@@ -32,10 +32,8 @@ import { convertToUSD } from "@/lib/currency";
 import QuickAddTransaction, { QuickAddFab } from "@/components/QuickAddTransaction";
 
 const PERIODS = [
-  { value: "day",    label: "Day"    },
-  { value: "month",  label: "Month"  },
-  { value: "year",   label: "Year"   },
-  { value: "custom", label: "Custom" },
+  { value: "month", label: "Month" },
+  { value: "year",  label: "Year"  },
 ];
 
 const PULL_THRESHOLD = 80;
@@ -44,9 +42,7 @@ export default function Dashboard() {
   const [data, setData] = useState({ accounts: [], transactions: [], categories: [] });
   const [period, setPeriod]         = useState("month");
   const [periodDate, setPeriodDate] = useState(new Date());
-  const [customFrom, setCustomFrom] = useState(null);
-  const [customTo, setCustomTo]     = useState(null);
-  const [rates, setRates] = useState({});
+const [rates, setRates] = useState({});
   const prevArsRef = useRef(null);
   const [fabOpen, setFabOpen] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -64,19 +60,14 @@ export default function Dashboard() {
 
   const buildApiUrl = useCallback(() => {
     const p = new URLSearchParams({ period });
-    if (period === "day") {
-      p.set("date", format(periodDate, "yyyy-MM-dd"));
-    } else if (period === "month") {
+    if (period === "month") {
       p.set("year",  periodDate.getFullYear());
       p.set("month", periodDate.getMonth() + 1);
     } else if (period === "year") {
       p.set("year", periodDate.getFullYear());
-    } else if (period === "custom") {
-      if (customFrom) p.set("dateFrom", format(customFrom, "yyyy-MM-dd"));
-      if (customTo)   p.set("dateTo",   format(customTo,   "yyyy-MM-dd"));
     }
     return `/api/dashboard?${p}`;
-  }, [period, periodDate, customFrom, customTo]);
+  }, [period, periodDate]);
 
   const loadData = useCallback(() => {
     setRefreshing(true);
@@ -162,13 +153,11 @@ export default function Dashboard() {
 
     const getKey = (dateStr) => {
       const d = new Date(dateStr);
-      if (period === "day")  return `${String(d.getHours()).padStart(2, "0")}:00`;
       if (period === "year") return String(d.getMonth() + 1).padStart(2, "0");
       return String(d.getDate()).padStart(2, "0");
     };
 
     const getLabel = (key) => {
-      if (period === "day")  return `${key}h`;
       if (period === "year") return MONTHS[parseInt(key, 10) - 1];
       return `Day ${parseInt(key, 10)}`;
     };
@@ -216,7 +205,7 @@ export default function Dashboard() {
     .slice(0, 10);
 
   const pctChange = (current, previous) => {
-    if (!previous) return null;
+    if (previous === 0) return current > 0 ? 100 : 0;
     return ((current - previous) / Math.abs(previous)) * 100;
   };
 
@@ -327,15 +316,6 @@ export default function Dashboard() {
             ))}
           </ToggleButtonGroup>
 
-          {period === "day" && (
-            <DatePicker
-              label="Day"
-              format="yyyy-MM-dd"
-              value={periodDate}
-              onChange={(v) => v && setPeriodDate(v)}
-              slotProps={{ textField: { size: "small" } }}
-            />
-          )}
           {period === "month" && (
             <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
               <IconButton
@@ -368,24 +348,6 @@ export default function Dashboard() {
               onChange={(v) => v && setPeriodDate(v)}
               slotProps={{ textField: { size: "small" } }}
             />
-          )}
-          {period === "custom" && (
-            <Box sx={{ display: "flex", gap: 2 }}>
-              <DatePicker
-                label="From"
-                format="yyyy-MM-dd"
-                value={customFrom}
-                onChange={(v) => setCustomFrom(v)}
-                slotProps={{ textField: { size: "small" } }}
-              />
-              <DatePicker
-                label="To"
-                format="yyyy-MM-dd"
-                value={customTo}
-                onChange={(v) => setCustomTo(v)}
-                slotProps={{ textField: { size: "small" } }}
-              />
-            </Box>
           )}
         </Box>
 
@@ -461,8 +423,8 @@ export default function Dashboard() {
                           <TableCell sx={{ whiteSpace: "nowrap" }}>
                             {(() => {
                               if (!tx.date) return "—";
-                              const d = tx.date instanceof Date ? tx.date : new Date(tx.date + "T12:00:00");
-                              return isNaN(d.getTime()) ? "—" : format(d, "MMM d");
+                              const d = new Date(tx.date);
+                              return isNaN(d.getTime()) ? "—" : format(d, "yyyy-MM-dd");
                             })()}
                           </TableCell>
                           <TableCell>{tx.description || "—"}</TableCell>
