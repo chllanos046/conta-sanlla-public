@@ -1,8 +1,9 @@
 "use client";
 import { useState, useEffect, useMemo } from "react";
 import Typography from "@mui/material/Typography";
-import Button from "@mui/material/Button";
 import Box from "@mui/material/Box";
+import IconButton from "@mui/material/IconButton";
+import Tooltip from "@mui/material/Tooltip";
 import AddIcon from "@mui/icons-material/Add";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
@@ -12,12 +13,6 @@ import { addRunningBalance } from "@/lib/balanceUtils";
 import { TransactionFilters } from "@/components/TransactionFilters";
 import { TransactionsTable } from "@/components/TransactionsTable";
 import { TransactionFormDialog } from "@/components/TransactionFormDialog";
-
-const formatDateParam = (date) => {
-  if (!date) return null;
-  const d = new Date(date);
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-};
 
 export default function TransactionsPage() {
   const searchParams = useSearchParams();
@@ -31,8 +26,6 @@ export default function TransactionsPage() {
     account: searchParams.get("account") || "",
     sourceAccount: "",
     targetAccount: "",
-    dateFrom: null,
-    dateTo: null,
   }));
 
   const [txDialogOpen, setTxDialogOpen] = useState(false);
@@ -44,8 +37,6 @@ export default function TransactionsPage() {
     if (currentFilters.account) params.account = currentFilters.account;
     if (currentFilters.sourceAccount) params.sourceAccount = currentFilters.sourceAccount;
     if (currentFilters.targetAccount) params.targetAccount = currentFilters.targetAccount;
-    if (currentFilters.dateFrom) params.dateFrom = formatDateParam(currentFilters.dateFrom);
-    if (currentFilters.dateTo) params.dateTo = formatDateParam(currentFilters.dateTo);
 
     const { data } = await axios.get("/api/transactions", { params });
     setRows(data.transactions || []);
@@ -92,9 +83,11 @@ export default function TransactionsPage() {
         <Typography variant="h4">
           Transactions{accountName ? ` — ${accountName}` : ""}
         </Typography>
-        <Button variant="contained" startIcon={<AddIcon />} onClick={openNewTx}>
-          New Transaction
-        </Button>
+        <Tooltip title="New Transaction">
+          <IconButton color="primary" onClick={openNewTx} sx={{ bgcolor: "primary.main", color: "primary.contrastText", "&:hover": { bgcolor: "primary.dark" } }}>
+            <AddIcon />
+          </IconButton>
+        </Tooltip>
       </Box>
 
       <TransactionFilters
@@ -108,8 +101,6 @@ export default function TransactionsPage() {
             account: "",
             sourceAccount: "",
             targetAccount: "",
-            dateFrom: null,
-            dateTo: null,
           };
           setFilters(cleared);
           loadData(cleared);

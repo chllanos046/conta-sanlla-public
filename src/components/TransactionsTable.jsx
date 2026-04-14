@@ -94,34 +94,50 @@ export function TransactionsTable({ rows, accounts, openingBalance, onEditRow })
         pageSizeOptions={[10, 25, 50]}
         getRowId={(row) => row.id}
         slots={{
-          footer: () => (
-            <Box
-              sx={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "flex-end",
-                gap: 2,
-                px: 2,
-                py: 1,
-                borderTop: 1,
-                borderColor: "divider",
-                bgcolor: "background.paper",
-              }}
-            >
-              <Typography variant="caption" color="text.secondary">
-                Opening balance (before first shown transaction):
-              </Typography>
-              <Typography
-                variant="body2"
-                fontWeight={600}
+          footer: () => {
+            if (openingBalance === null) return null;
+            const closingBalance = rows[0]?.balance ?? openingBalance;
+            return (
+              <Box
                 sx={{
-                  color: (openingBalance ?? 0) >= 0 ? "income.main" : "expense.main",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "flex-end",
+                  gap: 3,
+                  px: 2,
+                  py: 1,
+                  borderTop: 1,
+                  borderColor: "divider",
+                  bgcolor: "background.paper",
                 }}
               >
-                ${(openingBalance ?? 0).toFixed(2)}
-              </Typography>
-            </Box>
-          ),
+                <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                  <Typography variant="caption" color="text.secondary">
+                    Opening balance:
+                  </Typography>
+                  <Typography
+                    variant="body2"
+                    fontWeight={600}
+                    sx={{ color: openingBalance >= 0 ? "income.main" : "expense.main" }}
+                  >
+                    ${openingBalance.toFixed(2)}
+                  </Typography>
+                </Box>
+                <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                  <Typography variant="caption" color="text.secondary">
+                    Closing balance:
+                  </Typography>
+                  <Typography
+                    variant="body2"
+                    fontWeight={600}
+                    sx={{ color: closingBalance >= 0 ? "income.main" : "expense.main" }}
+                  >
+                    ${closingBalance.toFixed(2)}
+                  </Typography>
+                </Box>
+              </Box>
+            );
+          },
         }}
       />
     </Box>
