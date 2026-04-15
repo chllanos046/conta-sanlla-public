@@ -28,7 +28,6 @@ import { format, subMonths, addMonths, isSameMonth } from "date-fns";
 import axios from "axios";
 import { SummaryStatCard } from "@/components/SummaryStatCard";
 import AccountCarousel from "@/components/AccountCarousel";
-import { convertToUSD } from "@/lib/currency";
 import QuickAddTransaction, { QuickAddFab } from "@/components/QuickAddTransaction";
 
 const PERIODS = [
@@ -128,23 +127,15 @@ const [rates, setRates] = useState({});
     ? rates.ARS > prevArsRef.current
     : null;
 
-  const accountCurrencyMap = Object.fromEntries(
-    data.accounts.map((a) => [String(a.id), a.currency])
-  );
-
-  const txCurrency = (t) => {
-    if (t.type === "income") return accountCurrencyMap[String(t.target_account_id)] || "USD";
-    return accountCurrencyMap[String(t.source_account_id)] || "USD";
-  };
-
+  // Amounts are stored in USD — sum directly
   const income = data.transactions
     .filter((t) => t.type === "income")
-    .reduce((sum, t) => sum + convertToUSD(parseFloat(t.amount || 0), txCurrency(t), rates), 0);
+    .reduce((sum, t) => sum + parseFloat(t.amount || 0), 0);
 
   // Expenses stored as negative — use Math.abs for correct sum
   const expenses = data.transactions
     .filter((t) => t.type === "expense")
-    .reduce((sum, t) => sum + convertToUSD(Math.abs(parseFloat(t.amount || 0)), txCurrency(t), rates), 0);
+    .reduce((sum, t) => sum + Math.abs(parseFloat(t.amount || 0)), 0);
 
   const balance = income - expenses;
 
@@ -182,7 +173,7 @@ const [rates, setRates] = useState({});
       if (!t.date) continue;
       const key = getKey(t.date);
       if (!buckets[key]) buckets[key] = { key, income: 0, expense: 0 };
-      const amt = convertToUSD(Math.abs(parseFloat(t.amount || 0)), txCurrency(t), rates);
+      const amt = Math.abs(parseFloat(t.amount || 0));
       buckets[key][t.type] += amt;
     }
 
@@ -452,8 +443,6 @@ const [rates, setRates] = useState({});
         <Grid size={{ xs: 12, md: 4 }}>
           <ExpensesByCategoryChart
             transactions={data.transactions}
-            accountCurrencyMap={accountCurrencyMap}
-            rates={rates}
           />
         </Grid>
       </Grid>

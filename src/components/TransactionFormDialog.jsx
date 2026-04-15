@@ -17,39 +17,59 @@ import Select from "@mui/material/Select";
 import MenuItem from "@mui/material/MenuItem";
 import { DatePicker } from "@mui/x-date-pickers/DatePicker";
 import { format, parseISO } from "date-fns";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import axios from "axios";
 
-const schema = z
-  .object({
-    type: z.enum(["expense", "income", "transfer"]),
-    amount: z.coerce.number().refine((v) => v !== 0, "Amount cannot be zero"),
-    date: z.string().min(1, "Date is required"),
-    source_account_id: z.string().optional(),
-    target_account_id: z.string().optional(),
-    category_id: z.string().optional(),
-    description: z.string().optional(),
-  })
-  .superRefine((data, ctx) => {
-    if (data.type === "expense" || data.type === "transfer") {
-      if (!data.source_account_id) {
+const makeSchema = (accounts) =>
+  z
+    .object({
+      type: z.enum(["expense", "income", "transfer"]),
+      amount: z.coerce.number().refine((v) => v !== 0, "Amount cannot be zero"),
+      date: z.string().min(1, "Date is required"),
+      source_account_id: z.string().optional(),
+      target_account_id: z.string().optional(),
+      category_id: z.string().optional(),
+      description: z.string().optional(),
+      exchange_rate: z.preprocess(
+        (v) => (v === "" || v == null ? null : Number(v)),
+        z.number().positive().nullable()
+      ),
+    })
+    .superRefine((data, ctx) => {
+      if (data.type === "expense" || data.type === "transfer") {
+        if (!data.source_account_id) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: "Source account is required",
+            path: ["source_account_id"],
+          });
+        }
+      }
+      if (data.type === "income" || data.type === "transfer") {
+        if (!data.target_account_id) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: "Target account is required",
+            path: ["target_account_id"],
+          });
+        }
+      }
+      const srcAcc = accounts.find((a) => String(a.id) === data.source_account_id);
+      const tgtAcc = accounts.find((a) => String(a.id) === data.target_account_id);
+      const needsRate =
+        (data.type === "expense" && srcAcc?.currency && srcAcc.currency !== "USD") ||
+        (data.type === "income" && tgtAcc?.currency && tgtAcc.currency !== "USD") ||
+        (data.type === "transfer" &&
+          ((srcAcc?.currency && srcAcc.currency !== "USD") ||
+            (tgtAcc?.currency && tgtAcc.currency !== "USD")));
+      if (needsRate && !data.exchange_rate) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
-          message: "Source account is required",
-          path: ["source_account_id"],
+          message: "Exchange rate is required",
+          path: ["exchange_rate"],
         });
       }
-    }
-    if (data.type === "income" || data.type === "transfer") {
-      if (!data.target_account_id) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: "Target account is required",
-          path: ["target_account_id"],
-        });
-      }
-    }
-  });
+    });
 
 const today = () => new Date().toISOString().split("T")[0];
 
@@ -61,10 +81,13 @@ const EMPTY_TX = {
   target_account_id: "",
   category_id: "",
   description: "",
+  exchange_rate: "",
 };
 
 export function TransactionFormDialog({ open, onClose, editingTx, accounts, categories, defaultSourceAccountId, onSaved }) {
   const [submitError, setSubmitError] = useState(null);
+
+  const resolvedSchema = useMemo(() => makeSchema(accounts), [accounts]);
 
   const {
     control,
@@ -74,14 +97,33 @@ export function TransactionFormDialog({ open, onClose, editingTx, accounts, cate
     setValue,
     formState: { errors, isSubmitting },
   } = useForm({
-    resolver: zodResolver(schema),
+    resolver: zodResolver(resolvedSchema),
     defaultValues: EMPTY_TX,
   });
 
   const txType = watch("type");
+  const sourceAccountId = watch("source_account_id");
+  const targetAccountId = watch("target_account_id");
   const showSource = txType === "expense" || txType === "transfer";
   const showTarget = txType === "income" || txType === "transfer";
   const filteredCategories = categories.filter((cat) => cat.type === txType);
+
+  const srcAcc = accounts.find((a) => String(a.id) === sourceAccountId);
+  const tgtAcc = accounts.find((a) => String(a.id) === targetAccountId);
+
+  const showExchangeRate =
+    (txType === "expense" && srcAcc?.currency && srcAcc.currency !== "USD") ||
+    (txType === "income" && tgtAcc?.currency && tgtAcc.currency !== "USD") ||
+    (txType === "transfer" &&
+      ((srcAcc?.currency && srcAcc.currency !== "USD") ||
+        (tgtAcc?.currency && tgtAcc.currency !== "USD")));
+
+  const foreignCurrency =
+    txType === "income"
+      ? tgtAcc?.currency
+      : txType === "expense"
+        ? srcAcc?.currency
+        : srcAcc?.currency ?? tgtAcc?.currency;
 
   const handleOpen = () => {
     setSubmitError(null);
@@ -94,6 +136,7 @@ export function TransactionFormDialog({ open, onClose, editingTx, accounts, cate
         target_account_id: editingTx.target_account_id ? String(editingTx.target_account_id) : "",
         category_id: editingTx.category_id ? String(editingTx.category_id) : "",
         description: editingTx.description ?? "",
+        exchange_rate: editingTx.exchange_rate ? String(editingTx.exchange_rate) : "",
       });
     } else {
       reset({
@@ -106,14 +149,15 @@ export function TransactionFormDialog({ open, onClose, editingTx, accounts, cate
 
   const onSubmit = async (data) => {
     try {
-      const signedAmount =
-        data.type === "expense"
-          ? -Math.abs(parseFloat(data.amount))
-          : Math.abs(parseFloat(data.amount));
+      const rawAmount = Math.abs(parseFloat(data.amount));
+      const exchangeRate = data.exchange_rate ? parseFloat(data.exchange_rate) : null;
+      const usdAmount = exchangeRate ? rawAmount / exchangeRate : rawAmount;
+      const signedAmount = data.type === "expense" ? -usdAmount : usdAmount;
 
       const payload = {
         ...data,
         amount: signedAmount,
+        exchange_rate: exchangeRate,
         source_account_id: data.source_account_id || null,
         target_account_id: data.target_account_id || null,
         category_id: data.category_id || null,
@@ -153,6 +197,7 @@ export function TransactionFormDialog({ open, onClose, editingTx, accounts, cate
                     field.onChange(newType);
                     setValue("target_account_id", "");
                     setValue("category_id", "");
+                    setValue("exchange_rate", "");
                     if (newType === "transfer") {
                       setValue("description", "Transfer between accounts");
                     }
@@ -183,6 +228,27 @@ export function TransactionFormDialog({ open, onClose, editingTx, accounts, cate
             )}
           />
 
+          {showExchangeRate && (
+            <Controller
+              name="exchange_rate"
+              control={control}
+              render={({ field }) => (
+                <TextField
+                  {...field}
+                  fullWidth
+                  label={`How many ${foreignCurrency} = 1 USD?`}
+                  type="number"
+                  slotProps={{ htmlInput: { min: 0, step: "0.01" } }}
+                  error={!!errors.exchange_rate}
+                  helperText={
+                    errors.exchange_rate?.message ??
+                    `e.g. 1450 means 1 USD = 1450 ${foreignCurrency}`
+                  }
+                />
+              )}
+            />
+          )}
+
           <Controller
             name="date"
             control={control}
@@ -210,7 +276,14 @@ export function TransactionFormDialog({ open, onClose, editingTx, accounts, cate
               render={({ field }) => (
                 <FormControl fullWidth error={!!errors.source_account_id}>
                   <InputLabel>Source Account</InputLabel>
-                  <Select {...field} label="Source Account">
+                  <Select
+                    {...field}
+                    label="Source Account"
+                    onChange={(e) => {
+                      field.onChange(e);
+                      setValue("exchange_rate", "");
+                    }}
+                  >
                     <MenuItem value="">None</MenuItem>
                     {accounts.map((acc) => (
                       <MenuItem key={acc.id} value={String(acc.id)}>
@@ -233,7 +306,14 @@ export function TransactionFormDialog({ open, onClose, editingTx, accounts, cate
               render={({ field }) => (
                 <FormControl fullWidth error={!!errors.target_account_id}>
                   <InputLabel>Target Account</InputLabel>
-                  <Select {...field} label="Target Account">
+                  <Select
+                    {...field}
+                    label="Target Account"
+                    onChange={(e) => {
+                      field.onChange(e);
+                      setValue("exchange_rate", "");
+                    }}
+                  >
                     <MenuItem value="">None</MenuItem>
                     {accounts.map((acc) => (
                       <MenuItem key={acc.id} value={String(acc.id)}>

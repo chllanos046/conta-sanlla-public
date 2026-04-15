@@ -1,5 +1,5 @@
 "use client";
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -22,28 +22,44 @@ import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import axios from "axios";
 
-const schema = z
-  .object({
-    type: z.enum(["income", "expense", "transfer"]),
-    amount: z.coerce.number().positive("Amount must be positive"),
-    source_account_id: z.string().optional(),
-    target_account_id: z.string().optional(),
-    category_id: z.string().optional(),
-    date: z.string().min(1, "Date is required"),
-    description: z.string().optional(),
-  })
-  .superRefine((data, ctx) => {
-    if (data.type === "expense" || data.type === "transfer") {
-      if (!data.source_account_id) {
-        ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Source account is required", path: ["source_account_id"] });
+const makeSchema = (accounts) =>
+  z
+    .object({
+      type: z.enum(["income", "expense", "transfer"]),
+      amount: z.coerce.number().positive("Amount must be positive"),
+      source_account_id: z.string().optional(),
+      target_account_id: z.string().optional(),
+      category_id: z.string().optional(),
+      date: z.string().min(1, "Date is required"),
+      description: z.string().optional(),
+      exchange_rate: z.preprocess(
+        (v) => (v === "" || v == null ? null : Number(v)),
+        z.number().positive().nullable()
+      ),
+    })
+    .superRefine((data, ctx) => {
+      if (data.type === "expense" || data.type === "transfer") {
+        if (!data.source_account_id) {
+          ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Source account is required", path: ["source_account_id"] });
+        }
       }
-    }
-    if (data.type === "income" || data.type === "transfer") {
-      if (!data.target_account_id) {
-        ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Target account is required", path: ["target_account_id"] });
+      if (data.type === "income" || data.type === "transfer") {
+        if (!data.target_account_id) {
+          ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Target account is required", path: ["target_account_id"] });
+        }
       }
-    }
-  });
+      const srcAcc = accounts.find((a) => String(a.id) === data.source_account_id);
+      const tgtAcc = accounts.find((a) => String(a.id) === data.target_account_id);
+      const needsRate =
+        (data.type === "expense" && srcAcc?.currency && srcAcc.currency !== "USD") ||
+        (data.type === "income" && tgtAcc?.currency && tgtAcc.currency !== "USD") ||
+        (data.type === "transfer" &&
+          ((srcAcc?.currency && srcAcc.currency !== "USD") ||
+            (tgtAcc?.currency && tgtAcc.currency !== "USD")));
+      if (needsRate && !data.exchange_rate) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Exchange rate is required", path: ["exchange_rate"] });
+      }
+    });
 
 const EMPTY_FORM = {
   type: "expense",
@@ -53,25 +69,48 @@ const EMPTY_FORM = {
   category_id: "",
   date: format(new Date(), "yyyy-MM-dd"),
   description: "",
+  exchange_rate: "",
 };
 
 export default function QuickAddTransaction({ accounts = [], categories = [], open, onClose, onSuccess }) {
+  const resolvedSchema = useMemo(() => makeSchema(accounts), [accounts]);
+
   const {
     control,
     handleSubmit,
     watch,
     reset,
+    setValue,
     setError,
     formState: { errors, isSubmitting },
   } = useForm({
-    resolver: zodResolver(schema),
+    resolver: zodResolver(resolvedSchema),
     defaultValues: EMPTY_FORM,
   });
 
   const type = watch("type");
+  const sourceAccountId = watch("source_account_id");
+  const targetAccountId = watch("target_account_id");
   const showSource = type === "expense" || type === "transfer";
   const showTarget = type === "income" || type === "transfer";
   const filteredCategories = categories.filter((c) => c.type === type);
+
+  const srcAcc = accounts.find((a) => String(a.id) === sourceAccountId);
+  const tgtAcc = accounts.find((a) => String(a.id) === targetAccountId);
+
+  const showExchangeRate =
+    (type === "expense" && srcAcc?.currency && srcAcc.currency !== "USD") ||
+    (type === "income" && tgtAcc?.currency && tgtAcc.currency !== "USD") ||
+    (type === "transfer" &&
+      ((srcAcc?.currency && srcAcc.currency !== "USD") ||
+        (tgtAcc?.currency && tgtAcc.currency !== "USD")));
+
+  const foreignCurrency =
+    type === "income"
+      ? tgtAcc?.currency
+      : type === "expense"
+        ? srcAcc?.currency
+        : srcAcc?.currency ?? tgtAcc?.currency;
 
   useEffect(() => {
     if (open) reset(EMPTY_FORM);
@@ -79,11 +118,15 @@ export default function QuickAddTransaction({ accounts = [], categories = [], op
 
   const onSubmit = async (data) => {
     try {
-      const signedAmount = data.type === "expense" ? -Math.abs(data.amount) : Math.abs(data.amount);
+      const rawAmount = Math.abs(data.amount);
+      const exchangeRate = data.exchange_rate ? parseFloat(data.exchange_rate) : null;
+      const usdAmount = exchangeRate ? rawAmount / exchangeRate : rawAmount;
+      const signedAmount = data.type === "expense" ? -usdAmount : usdAmount;
 
       const payload = {
         type: data.type,
         amount: signedAmount,
+        exchange_rate: exchangeRate,
         date: data.date,
         description: data.description || "",
         category_id: data.category_id || null,
@@ -116,7 +159,12 @@ export default function QuickAddTransaction({ accounts = [], categories = [], op
                 <ToggleButtonGroup
                   value={field.value}
                   exclusive
-                  onChange={(_, val) => { if (val) field.onChange(val); }}
+                  onChange={(_, val) => {
+                    if (val) {
+                      field.onChange(val);
+                      setValue("exchange_rate", "");
+                    }
+                  }}
                   fullWidth
                   size="small"
                 >
@@ -144,6 +192,28 @@ export default function QuickAddTransaction({ accounts = [], categories = [], op
               )}
             />
 
+            {showExchangeRate && (
+              <Controller
+                name="exchange_rate"
+                control={control}
+                render={({ field }) => (
+                  <TextField
+                    {...field}
+                    label={`How many ${foreignCurrency} = 1 USD?`}
+                    type="number"
+                    inputProps={{ min: 0, step: 0.01 }}
+                    error={!!errors.exchange_rate}
+                    helperText={
+                      errors.exchange_rate?.message ??
+                      `e.g. 1450 means 1 USD = 1450 ${foreignCurrency}`
+                    }
+                    size="small"
+                    fullWidth
+                  />
+                )}
+              />
+            )}
+
             {showSource && (
               <Controller
                 name="source_account_id"
@@ -157,6 +227,10 @@ export default function QuickAddTransaction({ accounts = [], categories = [], op
                     helperText={errors.source_account_id?.message}
                     size="small"
                     fullWidth
+                    onChange={(e) => {
+                      field.onChange(e);
+                      setValue("exchange_rate", "");
+                    }}
                   >
                     {accounts.map((a) => (
                       <MenuItem key={a.id} value={String(a.id)}>
@@ -181,6 +255,10 @@ export default function QuickAddTransaction({ accounts = [], categories = [], op
                     helperText={errors.target_account_id?.message}
                     size="small"
                     fullWidth
+                    onChange={(e) => {
+                      field.onChange(e);
+                      setValue("exchange_rate", "");
+                    }}
                   >
                     {accounts.map((a) => (
                       <MenuItem key={a.id} value={String(a.id)}>

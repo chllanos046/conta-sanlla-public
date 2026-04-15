@@ -4,9 +4,10 @@ import Box from "@mui/material/Box";
 import Chip from "@mui/material/Chip";
 import Typography from "@mui/material/Typography";
 import EditIcon from "@mui/icons-material/Edit";
+import DeleteIcon from "@mui/icons-material/Delete";
 import { format } from "date-fns";
 
-export function TransactionsTable({ rows, accounts, openingBalance, onEditRow }) {
+export function TransactionsTable({ rows, accounts, openingBalance, onEditRow, onDeleteRow }) {
   const columns = [
     {
       field: "date",
@@ -70,13 +71,19 @@ export function TransactionsTable({ rows, accounts, openingBalance, onEditRow })
     {
       field: "actions",
       type: "actions",
-      width: 60,
+      width: 90,
       getActions: (params) => [
         <GridActionsCellItem
           key="edit"
           icon={<EditIcon />}
           label="Edit"
           onClick={() => onEditRow(params.row)}
+        />,
+        <GridActionsCellItem
+          key="delete"
+          icon={<DeleteIcon />}
+          label="Delete"
+          onClick={() => onDeleteRow(params.row.id)}
         />,
       ],
     },

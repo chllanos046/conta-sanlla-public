@@ -64,9 +64,9 @@ export async function GET(request) {
       params,
     );
 
-    // Get accounts (with initial_balance for opening balance computation)
+    // Get accounts (with currency for exchange rate field visibility in form)
     const accounts = await query(
-      "SELECT id, name, initial_balance FROM accounts",
+      "SELECT id, name, currency, initial_balance FROM accounts ORDER BY name",
       [],
     );
     const categories = await query(
@@ -130,6 +130,7 @@ export async function POST(request) {
       category_id,
       date,
       description,
+      exchange_rate,
     } = await request.json();
 
     if (!type || amount == null || !date) {
@@ -153,7 +154,7 @@ export async function POST(request) {
     }
 
     await query(
-      "INSERT INTO transactions (type, amount, source_account_id, target_account_id, category_id, date, description) VALUES (?, ?, ?, ?, ?, ?, ?)",
+      "INSERT INTO transactions (type, amount, source_account_id, target_account_id, category_id, date, description, exchange_rate) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
       [
         type,
         numericAmount,
@@ -162,6 +163,7 @@ export async function POST(request) {
         category_id || null,
         date,
         description,
+        exchange_rate ? parseFloat(exchange_rate) : null,
       ],
     );
 

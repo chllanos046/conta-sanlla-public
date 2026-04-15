@@ -35,6 +35,7 @@ CREATE TABLE transactions (
   category_id INT NULL,
   date DATETIME NOT NULL,
   description TEXT,
+  exchange_rate DECIMAL(15,6) NULL DEFAULT NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (source_account_id) REFERENCES accounts(id),
   FOREIGN KEY (target_account_id) REFERENCES accounts(id),

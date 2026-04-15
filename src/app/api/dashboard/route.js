@@ -20,9 +20,12 @@ export async function GET(request) {
     const accounts = await query(
       `SELECT a.id, a.name, a.currency, a.type, a.initial_balance, a.image_path, a.created_at,
         a.initial_balance + COALESCE(SUM(CASE
-          WHEN t.target_account_id = a.id THEN t.amount
-          WHEN t.source_account_id = a.id AND t.type = 'expense' THEN t.amount
-          WHEN t.source_account_id = a.id AND t.type = 'transfer' THEN -t.amount
+          WHEN t.target_account_id = a.id
+            THEN t.amount * CASE WHEN a.currency = 'USD' THEN 1 ELSE COALESCE(t.exchange_rate, 1) END
+          WHEN t.source_account_id = a.id AND t.type = 'expense'
+            THEN t.amount * CASE WHEN a.currency = 'USD' THEN 1 ELSE COALESCE(t.exchange_rate, 1) END
+          WHEN t.source_account_id = a.id AND t.type = 'transfer'
+            THEN -t.amount * CASE WHEN a.currency = 'USD' THEN 1 ELSE COALESCE(t.exchange_rate, 1) END
           ELSE 0
         END), 0) AS current_balance
       FROM accounts a

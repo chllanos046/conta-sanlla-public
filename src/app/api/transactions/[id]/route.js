@@ -26,7 +26,7 @@ export async function PUT(request, { params }) {
 
     const result = await query(
       `UPDATE transactions
-       SET type = ?, amount = ?, source_account_id = ?, target_account_id = ?, category_id = ?, date = ?, description = ?
+       SET type = ?, amount = ?, source_account_id = ?, target_account_id = ?, category_id = ?, date = ?, description = ?, exchange_rate = ?
        WHERE id = ?`,
       [
         data.type,
@@ -36,6 +36,7 @@ export async function PUT(request, { params }) {
         data.category_id || null,
         data.date,
         data.description,
+        data.exchange_rate ? parseFloat(data.exchange_rate) : null,
         id,
       ],
     );
