@@ -70,6 +70,14 @@ export default function TransactionsPage() {
     setTxDialogOpen(true);
   };
 
+  const handleDelete = async (id) => {
+    if (!confirm("Delete this transaction?")) return;
+    await axios.delete(`/api/transactions/${id}`, {
+      headers: { Cookie: document.cookie },
+    });
+    loadData(filters);
+  };
+
   const transactionsWithBalance = useMemo(() => {
     const accountId = filters.account || null;
     const ascending = [...rows].sort((a, b) => new Date(a.date) - new Date(b.date));
@@ -112,6 +120,7 @@ export default function TransactionsPage() {
         accounts={accounts}
         openingBalance={openingBalance}
         onEditRow={openEditTx}
+        onDeleteRow={handleDelete}
       />
 
       <TransactionFormDialog

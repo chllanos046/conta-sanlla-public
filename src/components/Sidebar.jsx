@@ -118,7 +118,10 @@ export default function Sidebar({
 
         {/* Accounts grouped by type */}
         {Object.entries(groupedAccounts).map(([type, items]) => {
-          const groupBalance = items.reduce((sum, a) => sum + convertToUSD(parseFloat(a.current_balance || 0), a.currency, rates), 0);
+          const groupBalance = items.reduce(
+            (sum, a) => sum + convertToUSD(parseFloat(a.current_balance || 0), a.currency, rates),
+            0
+          );
           const isOpen = openGroups[type];
 
           return (
@@ -195,7 +198,7 @@ export default function Sidebar({
                                   color: bal > 0 ? "income.main" : bal < 0 ? "expense.main" : "text.disabled",
                                 }}
                               >
-                                {getCurrencySymbol(acc.currency)}{bal.toFixed(2)}
+                                ${convertToUSD(bal, acc.currency, rates).toFixed(2)}
                               </Typography>
                             </Box>
                           </ListItemButton>

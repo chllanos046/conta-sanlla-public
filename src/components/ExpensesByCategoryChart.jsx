@@ -8,7 +8,6 @@ import Typography from "@mui/material/Typography";
 import Box from "@mui/material/Box";
 import Stack from "@mui/material/Stack";
 import LinearProgress, { linearProgressClasses } from "@mui/material/LinearProgress";
-import { convertToUSD } from "@/lib/currency";
 
 const COLORS = [
   "#0ea5e9", // sky blue
@@ -53,16 +52,13 @@ function PieCenterLabel({ primaryText, secondaryText }) {
   );
 }
 
-export function ExpensesByCategoryChart({ transactions, accountCurrencyMap, rates }) {
-  const txCurrency = (t) => accountCurrencyMap[String(t.source_account_id)] || "USD";
-
+export function ExpensesByCategoryChart({ transactions }) {
   const expensesByCategory = {};
   for (const t of transactions) {
     if (t.type !== "expense") continue;
     const cat = t.category_name || "Uncategorized";
     expensesByCategory[cat] =
-      (expensesByCategory[cat] || 0) +
-      convertToUSD(Math.abs(parseFloat(t.amount || 0)), txCurrency(t), rates);
+      (expensesByCategory[cat] || 0) + Math.abs(parseFloat(t.amount || 0));
   }
 
   const entries = Object.entries(expensesByCategory)
