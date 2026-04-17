@@ -4,7 +4,7 @@ import Google from "next-auth/providers/google";
 import bcrypt from "bcryptjs";
 import { query } from "@/lib/db";
 import { checkRateLimit } from "@/lib/rateLimit";
-import { authConfig } from "@/../auth.config";
+import { authConfig } from "@/auth.config";
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   ...authConfig,
@@ -24,12 +24,17 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         const ip = request?.headers?.get("x-forwarded-for") ?? "unknown";
         const { allowed, retryAfter } = checkRateLimit(ip);
         if (!allowed) {
-          throw new Error(`Too many login attempts. Try again in ${retryAfter} seconds.`);
+          throw new Error(
+            `Too many login attempts. Try again in ${retryAfter} seconds.`,
+          );
         }
-        const users = await query("SELECT * FROM users WHERE email = ?", [credentials.email]);
+        const users = await query("SELECT * FROM users WHERE email = ?", [
+          credentials.email,
+        ]);
         const user = users[0];
         if (!user || !user.password) return null;
-        if (!(await bcrypt.compare(credentials.password, user.password))) return null;
+        if (!(await bcrypt.compare(credentials.password, user.password)))
+          return null;
         return { id: String(user.id), email: user.email, name: user.name };
       },
     }),
@@ -38,7 +43,9 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     ...authConfig.callbacks,
     async signIn({ account, profile }) {
       if (account?.provider === "google" && profile?.email) {
-        const rows = await query("SELECT id FROM users WHERE email = ?", [profile.email]);
+        const rows = await query("SELECT id FROM users WHERE email = ?", [
+          profile.email,
+        ]);
         if (rows.length === 0) {
           const params = new URLSearchParams({
             email: profile.email,
@@ -52,7 +59,9 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     async jwt({ token, user, account, profile }) {
       if (user?.id) token.id = user.id;
       if (account?.provider === "google" && profile?.email) {
-        const rows = await query("SELECT id FROM users WHERE email = ?", [profile.email]);
+        const rows = await query("SELECT id FROM users WHERE email = ?", [
+          profile.email,
+        ]);
         if (rows.length > 0) {
           token.id = String(rows[0].id);
         }

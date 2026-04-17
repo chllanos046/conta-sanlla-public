@@ -28,39 +28,48 @@ import { format, subMonths, addMonths, isSameMonth } from "date-fns";
 import axios from "axios";
 import { SummaryStatCard } from "@/components/SummaryStatCard";
 import AccountCarousel from "@/components/AccountCarousel";
-import QuickAddTransaction, { QuickAddFab } from "@/components/QuickAddTransaction";
+import QuickAddTransaction, {
+  QuickAddFab,
+} from "@/components/QuickAddTransaction";
 
 const PERIODS = [
   { value: "month", label: "Month" },
-  { value: "year",  label: "Year"  },
+  { value: "year", label: "Year" },
 ];
 
 const PULL_THRESHOLD = 80;
 
 export default function Dashboard() {
-  const [data, setData] = useState({ accounts: [], transactions: [], categories: [] });
-  const [period, setPeriod]         = useState("month");
+  const [data, setData] = useState({
+    accounts: [],
+    transactions: [],
+    categories: [],
+  });
+  const [period, setPeriod] = useState("month");
   const [periodDate, setPeriodDate] = useState(new Date());
-const [rates, setRates] = useState({});
+  const [rates, setRates] = useState({});
   const prevArsRef = useRef(null);
   const [fabOpen, setFabOpen] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [pullY, setPullY] = useState(0);
 
   useEffect(() => {
-    axios.get("/api/exchange-rates").then((res) => {
-      const newRates = res.data;
-      setRates((prev) => {
-        prevArsRef.current = prev.ARS ?? newRates.ARS;
-        return newRates;
-      });
-    }).catch(() => {});
+    axios
+      .get("/api/exchange-rates")
+      .then((res) => {
+        const newRates = res.data;
+        setRates((prev) => {
+          prevArsRef.current = prev.ARS ?? newRates.ARS;
+          return newRates;
+        });
+      })
+      .catch(() => {});
   }, []);
 
   const buildApiUrl = useCallback(() => {
     const p = new URLSearchParams({ period });
     if (period === "month") {
-      p.set("year",  periodDate.getFullYear());
+      p.set("year", periodDate.getFullYear());
       p.set("month", periodDate.getMonth() + 1);
     } else if (period === "year") {
       p.set("year", periodDate.getFullYear());
@@ -70,7 +79,8 @@ const [rates, setRates] = useState({});
 
   const loadData = useCallback(() => {
     setRefreshing(true);
-    axios.get(buildApiUrl())
+    axios
+      .get(buildApiUrl())
       .then((res) => setData(res.data))
       .finally(() => setRefreshing(false));
   }, [buildApiUrl]);
@@ -123,9 +133,12 @@ const [rates, setRates] = useState({});
     setPeriodDate(new Date());
   };
 
-  const arsUp = rates.ARS != null && prevArsRef.current != null && rates.ARS !== prevArsRef.current
-    ? rates.ARS > prevArsRef.current
-    : null;
+  const arsUp =
+    rates.ARS != null &&
+    prevArsRef.current != null &&
+    rates.ARS !== prevArsRef.current
+      ? rates.ARS > prevArsRef.current
+      : null;
 
   // Amounts are stored in USD — sum directly
   const income = data.transactions
@@ -140,7 +153,20 @@ const [rates, setRates] = useState({});
   const balance = income - expenses;
 
   const chartData = (() => {
-    const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+    const MONTHS = [
+      "Jan",
+      "Feb",
+      "Mar",
+      "Apr",
+      "May",
+      "Jun",
+      "Jul",
+      "Aug",
+      "Sep",
+      "Oct",
+      "Nov",
+      "Dec",
+    ];
 
     const getKey = (dateStr) => {
       const d = new Date(dateStr);
@@ -156,7 +182,11 @@ const [rates, setRates] = useState({});
     // Pre-fill all buckets for month/year so every slot appears even with 0 values
     const buckets = {};
     if (period === "month") {
-      const daysInMonth = new Date(periodDate.getFullYear(), periodDate.getMonth() + 1, 0).getDate();
+      const daysInMonth = new Date(
+        periodDate.getFullYear(),
+        periodDate.getMonth() + 1,
+        0,
+      ).getDate();
       for (let d = 1; d <= daysInMonth; d++) {
         const key = String(d).padStart(2, "0");
         buckets[key] = { key, income: 0, expense: 0 };
@@ -183,8 +213,8 @@ const [rates, setRates] = useState({});
       .map(({ key, income, expense }) => {
         runningBalance += income - expense;
         return {
-          name:    getLabel(key),
-          income:  parseFloat(income.toFixed(2)),
+          name: getLabel(key),
+          income: parseFloat(income.toFixed(2)),
           expense: parseFloat(expense.toFixed(2)),
           balance: parseFloat(runningBalance.toFixed(2)),
         };
@@ -205,41 +235,42 @@ const [rates, setRates] = useState({});
     return "From previous month";
   })();
 
-  const prevIncome  = data.prevMonthSummary?.income  ?? 0;
+  const prevIncome = data.prevMonthSummary?.income ?? 0;
   const prevExpense = data.prevMonthSummary?.expense ?? 0;
   const prevBalance = prevIncome - prevExpense;
 
-  const xAxisData = (period === "month" || period === "year")
-    ? chartData.map((d) => d.name)
-    : undefined;
+  const xAxisData =
+    period === "month" || period === "year"
+      ? chartData.map((d) => d.name)
+      : undefined;
 
   const summaryCards = [
     {
-      title:         "Income",
-      value:         `$${income.toFixed(2)}`,
-      trend:         "up",
-      data:          chartData.map((d) => d.income),
+      title: "Income",
+      value: `$${income.toFixed(2)}`,
+      trend: "up",
+      data: chartData.map((d) => d.income),
       xAxisData,
       percentChange: pctChange(income, prevIncome),
-      interval:      periodLabel,
+      interval: periodLabel,
     },
     {
-      title:         "Expenses",
-      value:         `$${expenses.toFixed(2)}`,
-      trend:         "down",
-      data:          chartData.map((d) => d.expense),
+      title: "Expenses",
+      value: `$${expenses.toFixed(2)}`,
+      trend: "down",
+      data: chartData.map((d) => d.expense),
       xAxisData,
       percentChange: pctChange(expenses, prevExpense),
-      interval:      periodLabel,
+      interval: periodLabel,
     },
     {
-      title:         "Balance",
-      value:         `$${balance.toFixed(2)}`,
-      trend:         "neutral",
-      data:          chartData.map((d) => d.balance),
+      title: "Balance",
+      value: `$${balance.toFixed(2)}`,
+      trend: "neutral",
+      data: chartData.map((d) => d.balance),
       xAxisData,
       percentChange: pctChange(balance, prevBalance),
-      interval:      periodLabel,
+      interval: periodLabel,
     },
   ];
 
@@ -256,19 +287,21 @@ const [rates, setRates] = useState({});
     <LocalizationProvider dateAdapter={AdapterDateFns}>
       {/* Pull-to-refresh indicator */}
       {pullY > 0 && (
-        <Box sx={{
-          position: "fixed",
-          top: 64 + pullY / 2,
-          left: "50%",
-          transform: "translateX(-50%)",
-          zIndex: 1300,
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          gap: 0.5,
-          transition: "top 0.05s",
-          pointerEvents: "none",
-        }}>
+        <Box
+          sx={{
+            position: "fixed",
+            top: 64 + pullY / 2,
+            left: "50%",
+            transform: "translateX(-50%)",
+            zIndex: 1300,
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            gap: 0.5,
+            transition: "top 0.05s",
+            pointerEvents: "none",
+          }}
+        >
           <KeyboardArrowDownIcon
             sx={{
               color: "primary.main",
@@ -283,7 +316,7 @@ const [rates, setRates] = useState({});
 
       {refreshing && (
         <Box sx={{ display: "flex", justifyContent: "center", mb: 1 }}>
-          <CircularProgress size={20} />
+          <CircularProgress size={20} color="primary" />
         </Box>
       )}
 
@@ -292,8 +325,24 @@ const [rates, setRates] = useState({});
       </Typography>
 
       {/* Period controls row */}
-      <Box sx={{ mb: 3, display: "flex", alignItems: "center", gap: 2, flexWrap: "wrap", justifyContent: "space-between" }}>
-        <Box sx={{ display: "flex", alignItems: "center", gap: 2, flexWrap: "wrap" }}>
+      <Box
+        sx={{
+          mb: 3,
+          display: "flex",
+          alignItems: "center",
+          gap: 2,
+          flexWrap: "wrap",
+          justifyContent: "space-between",
+        }}
+      >
+        <Box
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            gap: 2,
+            flexWrap: "wrap",
+          }}
+        >
           <ToggleButtonGroup
             value={period}
             exclusive
@@ -319,7 +368,11 @@ const [rates, setRates] = useState({});
                 label={format(periodDate, "MMMM yyyy")}
                 variant="outlined"
                 size="small"
-                sx={{ minWidth: 130, justifyContent: "center", fontWeight: 500 }}
+                sx={{
+                  minWidth: 130,
+                  justifyContent: "center",
+                  fontWeight: 500,
+                }}
               />
               <IconButton
                 size="small"
@@ -343,42 +396,67 @@ const [rates, setRates] = useState({});
         </Box>
 
         {rates.ARS && (
-          <Box sx={{
-            display: "flex",
-            alignItems: "center",
-            gap: 0.75,
-            border: "1px solid rgba(0,0,0,0.23)",
-            borderRadius: 1,
-            px: 1.5,
-            height: 40,
-          }}>
+          <Box
+            sx={{
+              display: "flex",
+              alignItems: "center",
+              gap: 0.75,
+              border: "1px solid rgba(0,0,0,0.23)",
+              borderRadius: 1,
+              px: 1.5,
+              height: 40,
+            }}
+          >
             <Typography variant="body2" color="text.secondary">
-              1 USD = <strong>{rates.ARS.toLocaleString("en-US", { maximumFractionDigits: 2 })} ARS</strong>
+              1 USD ={" "}
+              <strong>
+                {rates.ARS.toLocaleString("en-US", {
+                  maximumFractionDigits: 2,
+                })}{" "}
+                ARS
+              </strong>
             </Typography>
-            {arsUp !== null && (
-              arsUp
-                ? <TrendingUpIcon fontSize="small" sx={{ color: "income.main" }} />
-                : <TrendingDownIcon fontSize="small" sx={{ color: "expense.main" }} />
-            )}
+            {arsUp !== null &&
+              (arsUp ? (
+                <TrendingUpIcon
+                  fontSize="small"
+                  sx={{ color: "income.main" }}
+                />
+              ) : (
+                <TrendingDownIcon
+                  fontSize="small"
+                  sx={{ color: "expense.main" }}
+                />
+              ))}
           </Box>
         )}
       </Box>
 
       {/* Summary stat cards with sparklines */}
       <Grid container spacing={3} sx={{ mb: 3 }}>
-        {summaryCards.map(({ title, value, trend, data, xAxisData, percentChange, interval }) => (
-          <Grid key={title} size={{ xs: 12, sm: 4 }}>
-            <SummaryStatCard
-              title={title}
-              value={value}
-              trend={trend}
-              data={data}
-              xAxisData={xAxisData}
-              percentChange={percentChange}
-              interval={interval}
-            />
-          </Grid>
-        ))}
+        {summaryCards.map(
+          ({
+            title,
+            value,
+            trend,
+            data,
+            xAxisData,
+            percentChange,
+            interval,
+          }) => (
+            <Grid key={title} size={{ xs: 12, sm: 4 }}>
+              <SummaryStatCard
+                title={title}
+                value={value}
+                trend={trend}
+                data={data}
+                xAxisData={xAxisData}
+                percentChange={percentChange}
+                interval={interval}
+              />
+            </Grid>
+          ),
+        )}
       </Grid>
 
       {/* Recent Transactions + Expenses by Category */}
@@ -390,7 +468,11 @@ const [rates, setRates] = useState({});
                 Recent Transactions
               </Typography>
               {recentTransactions.length === 0 ? (
-                <Typography variant="body2" color="text.secondary" sx={{ py: 2 }}>
+                <Typography
+                  variant="body2"
+                  color="text.secondary"
+                  sx={{ py: 2 }}
+                >
                   No transactions for this period
                 </Typography>
               ) : (
@@ -415,21 +497,30 @@ const [rates, setRates] = useState({});
                             {(() => {
                               if (!tx.date) return "—";
                               const d = new Date(tx.date);
-                              return isNaN(d.getTime()) ? "—" : format(d, "yyyy-MM-dd");
+                              return isNaN(d.getTime())
+                                ? "—"
+                                : format(d, "yyyy-MM-dd");
                             })()}
                           </TableCell>
                           <TableCell>{tx.description || "—"}</TableCell>
                           <TableCell>{tx.category_name || "—"}</TableCell>
-                          <TableCell>{tx.source_name || tx.target_name || "—"}</TableCell>
+                          <TableCell>
+                            {tx.source_name || tx.target_name || "—"}
+                          </TableCell>
                           <TableCell
                             align="right"
                             sx={{
-                              color: isIncome ? "income.main" : isExpense ? "expense.main" : "text.secondary",
+                              color: isIncome
+                                ? "income.main"
+                                : isExpense
+                                  ? "expense.main"
+                                  : "text.secondary",
                               fontWeight: 600,
                               whiteSpace: "nowrap",
                             }}
                           >
-                            {isIncome ? "+" : isExpense ? "-" : ""}${amt.toFixed(2)}
+                            {isIncome ? "+" : isExpense ? "-" : ""}$
+                            {amt.toFixed(2)}
                           </TableCell>
                         </TableRow>
                       );
@@ -441,9 +532,7 @@ const [rates, setRates] = useState({});
           </Card>
         </Grid>
         <Grid size={{ xs: 12, md: 4 }}>
-          <ExpensesByCategoryChart
-            transactions={data.transactions}
-          />
+          <ExpensesByCategoryChart transactions={data.transactions} />
         </Grid>
       </Grid>
 
@@ -454,7 +543,10 @@ const [rates, setRates] = useState({});
             Account Balances
           </Typography>
           <Box sx={{ mb: 3 }}>
-            <AccountCarousel accounts={data.accounts} balanceColor={balanceColor} />
+            <AccountCarousel
+              accounts={data.accounts}
+              balanceColor={balanceColor}
+            />
           </Box>
         </>
       )}

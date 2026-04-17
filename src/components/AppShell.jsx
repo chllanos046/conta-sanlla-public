@@ -6,6 +6,7 @@ import { useTheme } from "@mui/material/styles";
 import { usePathname } from "next/navigation";
 import TopBar from "@/components/TopBar";
 import Sidebar from "@/components/Sidebar";
+import Loading from "@/components/Loading";
 
 const DRAWER_WIDTH = 240;
 const MINI_DRAWER_WIDTH = 64;
@@ -28,10 +29,8 @@ export default function AppShell({ children }) {
   const toggleDesktop = () => setOpen((prev) => !prev);
   const toggleMobile = () => setMobileOpen((prev) => !prev);
 
-  const sidebarWidth = !isMobile && open ? DRAWER_WIDTH : MINI_DRAWER_WIDTH;
-
   return (
-    <Suspense fallback={<p>Loading...</p>}>
+    <Suspense fallback={<Loading />}>
       <Box sx={{ display: "flex", minHeight: "100vh" }}>
         <TopBar onMenuClick={isMobile ? toggleMobile : toggleDesktop} />
         <Sidebar
