@@ -5,6 +5,7 @@ import Box from "@mui/material/Box";
 import IconButton from "@mui/material/IconButton";
 import Tooltip from "@mui/material/Tooltip";
 import AddIcon from "@mui/icons-material/Add";
+import UploadFileIcon from "@mui/icons-material/UploadFile";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 import { useSearchParams } from "next/navigation";
@@ -13,6 +14,7 @@ import { addRunningBalance } from "@/lib/balanceUtils";
 import { TransactionFilters } from "@/components/TransactionFilters";
 import { TransactionsTable } from "@/components/TransactionsTable";
 import { TransactionFormDialog } from "@/components/TransactionFormDialog";
+import { ImportTransactionsDialog } from "@/components/ImportTransactionsDialog";
 
 export default function TransactionsPage() {
   const searchParams = useSearchParams();
@@ -21,44 +23,60 @@ export default function TransactionsPage() {
   const [accounts, setAccounts] = useState([]);
   const [categories, setCategories] = useState([]);
   const [openingBalance, setOpeningBalance] = useState(null);
+
   const [filters, setFilters] = useState(() => ({
     type: "",
     account: searchParams.get("account") || "",
     sourceAccount: "",
     targetAccount: "",
   }));
+  const [appliedFilters, setAppliedFilters] = useState(() => ({
+    type: "",
+    account: searchParams.get("account") || "",
+    sourceAccount: "",
+    targetAccount: "",
+  }));
+  const [refreshKey, setRefreshKey] = useState(0);
 
   const [txDialogOpen, setTxDialogOpen] = useState(false);
   const [editingTx, setEditingTx] = useState(null);
+  const [importOpen, setImportOpen] = useState(false);
 
-  const loadData = async (currentFilters) => {
+  // Sync URL account param during render (React-recommended alternative to an effect).
+  // When searchParams changes Next.js re-renders this component; we detect the drift
+  // here and update both filter states before the render completes.
+  const urlAccount = searchParams.get("account") || "";
+  const [prevUrlAccount, setPrevUrlAccount] = useState(urlAccount);
+  if (urlAccount !== prevUrlAccount) {
+    const updated = { type: "", account: urlAccount, sourceAccount: "", targetAccount: "" };
+    setPrevUrlAccount(urlAccount);
+    setFilters(updated);
+    setAppliedFilters(updated);
+  }
+
+  // Reactive data loading — all setState calls are inside .then(), never synchronous.
+  const { type: af_type, account: af_account, sourceAccount: af_source, targetAccount: af_target } = appliedFilters;
+  useEffect(() => {
     const params = {};
-    if (currentFilters.type) params.type = currentFilters.type;
-    if (currentFilters.account) params.account = currentFilters.account;
-    if (currentFilters.sourceAccount) params.sourceAccount = currentFilters.sourceAccount;
-    if (currentFilters.targetAccount) params.targetAccount = currentFilters.targetAccount;
+    if (af_type) params.type = af_type;
+    if (af_account) params.account = af_account;
+    if (af_source) params.sourceAccount = af_source;
+    if (af_target) params.targetAccount = af_target;
 
-    const { data } = await axios.get("/api/transactions", { params });
-    setRows(data.transactions || []);
-    setAccounts(data.accounts || []);
-    setCategories(data.categories || []);
-    setOpeningBalance(data.opening_balance ?? null);
-  };
+    let cancelled = false;
+    axios.get("/api/transactions", { params }).then(({ data }) => {
+      if (cancelled) return;
+      setRows(data.transactions || []);
+      setAccounts(data.accounts || []);
+      setCategories(data.categories || []);
+      setOpeningBalance(data.opening_balance ?? null);
+    });
+    return () => { cancelled = true; };
+  }, [af_type, af_account, af_source, af_target, refreshKey]);
 
-  useEffect(() => {
-    loadData(filters);
-  }, []);
+  const refresh = () => setRefreshKey((k) => k + 1);
 
-  useEffect(() => {
-    const urlAccount = searchParams.get("account") || "";
-    if (urlAccount !== filters.account) {
-      const updated = { ...filters, account: urlAccount, sourceAccount: "", targetAccount: "" };
-      setFilters(updated);
-      loadData(updated);
-    }
-  }, [searchParams]);
-
-  const accountName = accounts.find((a) => String(a.id) === String(filters.account))?.name;
+  const accountName = accounts.find((a) => String(a.id) === String(appliedFilters.account))?.name;
 
   const openNewTx = () => {
     setEditingTx(null);
@@ -72,37 +90,65 @@ export default function TransactionsPage() {
 
   const handleDelete = async (id) => {
     if (!confirm("Delete this transaction?")) return;
-    await axios.delete(`/api/transactions/${id}`, {
-      headers: { Cookie: document.cookie },
-    });
-    loadData(filters);
+    await axios.delete(`/api/transactions/${id}`);
+    refresh();
   };
 
   const transactionsWithBalance = useMemo(() => {
-    const accountId = filters.account || null;
+    const accountId = appliedFilters.account || null;
     const ascending = [...rows].sort((a, b) => new Date(a.date) - new Date(b.date));
     const withBalance = addRunningBalance(ascending, openingBalance ?? 0, accountId);
     return withBalance.reverse();
-  }, [rows, openingBalance, filters.account]);
+  }, [rows, openingBalance, appliedFilters.account]);
 
   return (
     <LocalizationProvider dateAdapter={AdapterDateFns}>
-      <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 2 }}>
+      <Box
+        sx={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          mb: 2,
+        }}
+      >
         <Typography variant="h4">
           Transactions{accountName ? ` — ${accountName}` : ""}
         </Typography>
-        <Tooltip title="New Transaction">
-          <IconButton color="primary" onClick={openNewTx} sx={{ bgcolor: "primary.main", color: "primary.contrastText", "&:hover": { bgcolor: "primary.dark" } }}>
-            <AddIcon />
-          </IconButton>
-        </Tooltip>
+        <Box sx={{ display: "flex", gap: 1 }}>
+          <Tooltip title="Import CSV">
+            <IconButton
+              color="primary"
+              onClick={() => setImportOpen(true)}
+              sx={{
+                bgcolor: "primary.main",
+                color: "primary.contrastText",
+                "&:hover": { bgcolor: "primary.dark" },
+              }}
+            >
+              <UploadFileIcon />
+            </IconButton>
+          </Tooltip>
+          <Tooltip title="New Transaction">
+            <IconButton
+              color="primary"
+              onClick={openNewTx}
+              sx={{
+                bgcolor: "primary.main",
+                color: "primary.contrastText",
+                "&:hover": { bgcolor: "primary.dark" },
+              }}
+            >
+              <AddIcon />
+            </IconButton>
+          </Tooltip>
+        </Box>
       </Box>
 
       <TransactionFilters
         filters={filters}
         accounts={accounts}
         onChange={setFilters}
-        onApply={() => loadData(filters)}
+        onApply={() => setAppliedFilters({ ...filters })}
         onClear={() => {
           const cleared = {
             type: "",
@@ -111,7 +157,7 @@ export default function TransactionsPage() {
             targetAccount: "",
           };
           setFilters(cleared);
-          loadData(cleared);
+          setAppliedFilters(cleared);
         }}
       />
 
@@ -123,14 +169,24 @@ export default function TransactionsPage() {
         onDeleteRow={handleDelete}
       />
 
+      <ImportTransactionsDialog
+        open={importOpen}
+        onClose={() => setImportOpen(false)}
+        onSuccess={refresh}
+        accounts={accounts}
+        categories={categories}
+      />
+
       <TransactionFormDialog
         open={txDialogOpen}
         onClose={() => setTxDialogOpen(false)}
         editingTx={editingTx}
         accounts={accounts}
         categories={categories}
-        defaultSourceAccountId={filters.account || filters.sourceAccount || ""}
-        onSaved={() => loadData(filters)}
+        defaultSourceAccountId={
+          appliedFilters.account || appliedFilters.sourceAccount || ""
+        }
+        onSaved={refresh}
       />
     </LocalizationProvider>
   );
