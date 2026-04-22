@@ -11,12 +11,12 @@ export async function GET() {
   }
 
   try {
-    // open.er-api.com is free, no API key required, and includes ARS and other emerging market currencies
-    const res = await fetch("https://open.er-api.com/v6/latest/USD");
+    const res = await fetch("https://dolarapi.com/v1/dolares/cripto");
     if (!res.ok) throw new Error("Exchange rate fetch failed");
     const data = await res.json();
-    // Response: { base_code: "USD", rates: { USD: 1, EUR: 0.92, ARS: 1050, ... } }
-    const rates = data.rates;
+    // Response: { compra: 1250.5, venta: 1255.0, ... }
+    // "compra" = ARS needed to buy 1 USD
+    const rates = { USD: 1, ARS: data.compra };
     cache = rates;
     cacheTime = now;
     return NextResponse.json(rates);

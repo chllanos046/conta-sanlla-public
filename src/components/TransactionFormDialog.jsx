@@ -17,7 +17,7 @@ import Select from "@mui/material/Select";
 import MenuItem from "@mui/material/MenuItem";
 import { DatePicker } from "@mui/x-date-pickers/DatePicker";
 import { format, parseISO } from "date-fns";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import axios from "axios";
 
 const makeSchema = (accounts) =>
@@ -86,6 +86,11 @@ const EMPTY_TX = {
 
 export function TransactionFormDialog({ open, onClose, editingTx, accounts, categories, defaultSourceAccountId, onSaved }) {
   const [submitError, setSubmitError] = useState(null);
+  const [arsRate, setArsRate] = useState(null);
+
+  useEffect(() => {
+    axios.get("/api/exchange-rates").then((res) => setArsRate(res.data.ARS ?? null));
+  }, []);
 
   const resolvedSchema = useMemo(() => makeSchema(accounts), [accounts]);
 
@@ -95,6 +100,7 @@ export function TransactionFormDialog({ open, onClose, editingTx, accounts, cate
     watch,
     reset,
     setValue,
+    getValues,
     formState: { errors, isSubmitting },
   } = useForm({
     resolver: zodResolver(resolvedSchema),
@@ -124,6 +130,12 @@ export function TransactionFormDialog({ open, onClose, editingTx, accounts, cate
       : txType === "expense"
         ? srcAcc?.currency
         : srcAcc?.currency ?? tgtAcc?.currency;
+
+  useEffect(() => {
+    if (showExchangeRate && !getValues("exchange_rate") && arsRate) {
+      setValue("exchange_rate", String(arsRate));
+    }
+  }, [showExchangeRate, foreignCurrency, arsRate, getValues, setValue]);
 
   const handleOpen = () => {
     setSubmitError(null);

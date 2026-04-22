@@ -23,6 +23,7 @@ import "@testing-library/jest-dom";
 // ── Stubs ────────────────────────────────────────────────────────────────────
 
 jest.mock("axios", () => ({
+  get: jest.fn(() => Promise.resolve({ data: { USD: 1, ARS: 1200 } })),
   post: jest.fn(() => Promise.resolve({ data: {} })),
   put: jest.fn(() => Promise.resolve({ data: {} })),
 }));
