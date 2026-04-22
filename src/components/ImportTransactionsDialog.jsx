@@ -147,6 +147,13 @@ export function ImportTransactionsDialog({ open, onClose, onSuccess, accounts = 
   const [newCatForm, setNewCatForm] = useState({ name: "", type: "expense" });
   const [importing, setImporting] = useState(false);
   const [error, setError] = useState("");
+  const [arsRate, setArsRate] = useState(null);
+
+  useEffect(() => {
+    if (open) {
+      axios.get("/api/exchange-rates").then((res) => setArsRate(res.data.ARS ?? null));
+    }
+  }, [open]);
   const fileRef = useRef(null);
 
   const handleFileChange = (e) => {
@@ -185,9 +192,20 @@ export function ImportTransactionsDialog({ open, onClose, onSuccess, accounts = 
     (v) => !["income", "expense", "transfer"].includes(v.toLowerCase().trim())
   );
 
+  const accountIdToCurrency = Object.fromEntries(
+    localAccounts.map((a) => [String(a.id), a.currency])
+  );
+
   const validRows = csvRows
     .map((row) => resolveRow(row, columnMap, accountMap, categoryMap, typeMap))
-    .filter(Boolean);
+    .filter(Boolean)
+    .map((row) => {
+      if (row.exchange_rate !== null || !arsRate) return row;
+      const srcCurr = accountIdToCurrency[String(row.source_account_id)];
+      const tgtCurr = accountIdToCurrency[String(row.target_account_id)];
+      const needsRate = (srcCurr && srcCurr !== "USD") || (tgtCurr && tgtCurr !== "USD");
+      return needsRate ? { ...row, exchange_rate: arsRate } : row;
+    });
   const skippedCount = csvRows.length - validRows.length;
 
   const handleImport = async () => {
@@ -456,9 +474,7 @@ export function ImportTransactionsDialog({ open, onClose, onSuccess, accounts = 
                           onChange={(e) => setNewAccForm((p) => ({ ...p, currency: e.target.value }))}
                         >
                           <MenuItem value="USD">USD</MenuItem>
-                          <MenuItem value="EUR">EUR</MenuItem>
                           <MenuItem value="ARS">ARS</MenuItem>
-                          <MenuItem value="BRL">BRL</MenuItem>
                         </Select>
                       </FormControl>
                       <FormControl size="small" sx={{ width: 130 }}>

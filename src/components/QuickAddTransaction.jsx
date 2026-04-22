@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -73,6 +73,12 @@ const EMPTY_FORM = {
 };
 
 export default function QuickAddTransaction({ accounts = [], categories = [], open, onClose, onSuccess }) {
+  const [arsRate, setArsRate] = useState(null);
+
+  useEffect(() => {
+    axios.get("/api/exchange-rates").then((res) => setArsRate(res.data.ARS ?? null));
+  }, []);
+
   const resolvedSchema = useMemo(() => makeSchema(accounts), [accounts]);
 
   const {
@@ -81,6 +87,7 @@ export default function QuickAddTransaction({ accounts = [], categories = [], op
     watch,
     reset,
     setValue,
+    getValues,
     setError,
     formState: { errors, isSubmitting },
   } = useForm({
@@ -115,6 +122,12 @@ export default function QuickAddTransaction({ accounts = [], categories = [], op
   useEffect(() => {
     if (open) reset(EMPTY_FORM);
   }, [open, reset]);
+
+  useEffect(() => {
+    if (showExchangeRate && !getValues("exchange_rate") && arsRate) {
+      setValue("exchange_rate", String(arsRate));
+    }
+  }, [showExchangeRate, foreignCurrency, arsRate, getValues, setValue]);
 
   const onSubmit = async (data) => {
     try {

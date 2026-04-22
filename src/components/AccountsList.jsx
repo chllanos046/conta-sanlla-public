@@ -236,9 +236,7 @@ export default function AccountsList() {
                   helperText={errors.currency?.message}
                 >
                   <MenuItem value="USD">USD</MenuItem>
-                  <MenuItem value="EUR">EUR</MenuItem>
                   <MenuItem value="ARS">ARS</MenuItem>
-                  <MenuItem value="BRL">BRL</MenuItem>
                 </TextField>
               )}
             />
