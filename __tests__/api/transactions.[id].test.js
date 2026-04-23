@@ -27,7 +27,7 @@ beforeEach(() => {
 
 describe('PUT /api/transactions/[id]', () => {
   it('returns 200 when expense transaction is updated with negative amount', async () => {
-    query.mockResolvedValue({ affectedRows: 1 })
+    query.mockResolvedValue(Object.assign([], { count: 1 }))
 
     const res = await PUT(
       makeRequest('PUT', {
@@ -50,7 +50,7 @@ describe('PUT /api/transactions/[id]', () => {
   })
 
   it('returns 200 when income transaction is updated with positive amount', async () => {
-    query.mockResolvedValue({ affectedRows: 1 })
+    query.mockResolvedValue(Object.assign([], { count: 1 }))
 
     const res = await PUT(
       makeRequest('PUT', {
@@ -110,7 +110,7 @@ describe('PUT /api/transactions/[id]', () => {
   })
 
   it('returns 404 when transaction does not exist', async () => {
-    query.mockResolvedValue({ affectedRows: 0 })
+    query.mockResolvedValue(Object.assign([], { count: 0 }))
 
     const res = await PUT(
       makeRequest('PUT', {
@@ -132,7 +132,7 @@ describe('PUT /api/transactions/[id]', () => {
   })
 
   it('returns 200 for transfer update with source and target account IDs', async () => {
-    query.mockResolvedValue({ affectedRows: 1 })
+    query.mockResolvedValue(Object.assign([], { count: 1 }))
 
     const res = await PUT(
       makeRequest('PUT', {
@@ -156,7 +156,7 @@ describe('PUT /api/transactions/[id]', () => {
   })
 
   it('returns 200 for expense update changing source account', async () => {
-    query.mockResolvedValue({ affectedRows: 1 })
+    query.mockResolvedValue(Object.assign([], { count: 1 }))
 
     const res = await PUT(
       makeRequest('PUT', {
@@ -180,7 +180,7 @@ describe('PUT /api/transactions/[id]', () => {
   })
 
   it('stores correct positive amount for income update', async () => {
-    query.mockResolvedValue({ affectedRows: 1 })
+    query.mockResolvedValue(Object.assign([], { count: 1 }))
 
     await PUT(
       makeRequest('PUT', {
@@ -205,7 +205,7 @@ describe('PUT /api/transactions/[id]', () => {
 
 describe('DELETE /api/transactions/[id]', () => {
   it('returns 200 when transaction is deleted without touching account balances', async () => {
-    query.mockResolvedValue({ affectedRows: 1 })
+    query.mockResolvedValue(Object.assign([], { count: 1 }))
 
     const res = await DELETE(makeRequest('DELETE'), { params })
 
@@ -217,7 +217,7 @@ describe('DELETE /api/transactions/[id]', () => {
   })
 
   it('returns 404 when transaction does not exist', async () => {
-    query.mockResolvedValue({ affectedRows: 0 })
+    query.mockResolvedValue(Object.assign([], { count: 0 }))
 
     const res = await DELETE(makeRequest('DELETE'), { params })
     expect(res.status).toBe(404)

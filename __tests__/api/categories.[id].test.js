@@ -25,7 +25,7 @@ beforeEach(() => {
 
 describe('PUT /api/categories/[id]', () => {
   it('returns 200 when category is updated', async () => {
-    query.mockResolvedValue({ affectedRows: 1 })
+    query.mockResolvedValue(Object.assign([], { count: 1 }))
 
     const res = await PUT(
       makeRequest('PUT', { name: 'Updated', type: 'expense' }),
@@ -38,7 +38,7 @@ describe('PUT /api/categories/[id]', () => {
   })
 
   it('returns 404 when category does not exist', async () => {
-    query.mockResolvedValue({ affectedRows: 0 })
+    query.mockResolvedValue(Object.assign([], { count: 0 }))
 
     const res = await PUT(
       makeRequest('PUT', { name: 'Updated', type: 'expense' }),
@@ -61,7 +61,7 @@ describe('PUT /api/categories/[id]', () => {
 
 describe('DELETE /api/categories/[id]', () => {
   it('returns 200 when category is deleted', async () => {
-    query.mockResolvedValue({ affectedRows: 1 })
+    query.mockResolvedValue(Object.assign([], { count: 1 }))
 
     const res = await DELETE(makeRequest('DELETE'), { params })
 
@@ -71,7 +71,7 @@ describe('DELETE /api/categories/[id]', () => {
   })
 
   it('returns 404 when category does not exist', async () => {
-    query.mockResolvedValue({ affectedRows: 0 })
+    query.mockResolvedValue(Object.assign([], { count: 0 }))
 
     const res = await DELETE(makeRequest('DELETE'), { params })
     expect(res.status).toBe(404)

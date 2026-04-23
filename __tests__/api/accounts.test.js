@@ -48,7 +48,7 @@ describe('GET /api/accounts', () => {
 
 describe('POST /api/accounts', () => {
   it('returns 201 when account is created without initial_balance', async () => {
-    query.mockResolvedValue({ insertId: 1 })
+    query.mockResolvedValue([{ id: 1 }])
 
     const res = await POST(
       makeRequest('POST', { name: 'Savings', currency: 'USD', type: 'bank' }),
@@ -61,7 +61,7 @@ describe('POST /api/accounts', () => {
   })
 
   it('returns 201 when account is created with initial_balance', async () => {
-    query.mockResolvedValue({ insertId: 2 })
+    query.mockResolvedValue([{ id: 2 }])
 
     const res = await POST(
       makeRequest('POST', { name: 'Savings', currency: 'USD', type: 'bank', initial_balance: 500 }),

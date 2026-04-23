@@ -41,7 +41,7 @@ export async function PUT(request, { params }) {
       ],
     );
 
-    if (result.affectedRows === 0)
+    if (result.count === 0)
       return NextResponse.json(
         { error: "Transaction not found" },
         { status: 404 },
@@ -69,7 +69,7 @@ export async function DELETE(_request, { params }) {
       [id],
     );
 
-    if (result.affectedRows === 0)
+    if (result.count === 0)
       return NextResponse.json(
         { error: "Transaction not found" },
         { status: 404 },

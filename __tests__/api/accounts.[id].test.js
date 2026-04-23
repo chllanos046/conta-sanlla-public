@@ -27,7 +27,7 @@ beforeEach(() => {
 
 describe('PUT /api/accounts/[id]', () => {
   it('returns 200 when account is updated with initial_balance', async () => {
-    query.mockResolvedValue({ affectedRows: 1 })
+    query.mockResolvedValue(Object.assign([], { count: 1 }))
 
     const res = await PUT(
       makeRequest('PUT', { name: 'Updated', currency: 'USD', type: 'bank', initial_balance: 500 }),
@@ -42,7 +42,7 @@ describe('PUT /api/accounts/[id]', () => {
   })
 
   it('returns 200 when account is updated without initial_balance (defaults to 0)', async () => {
-    query.mockResolvedValue({ affectedRows: 1 })
+    query.mockResolvedValue(Object.assign([], { count: 1 }))
 
     const res = await PUT(
       makeRequest('PUT', { name: 'Updated', currency: 'USD', type: 'bank' }),
@@ -53,7 +53,7 @@ describe('PUT /api/accounts/[id]', () => {
   })
 
   it('returns 404 when account does not exist', async () => {
-    query.mockResolvedValue({ affectedRows: 0 })
+    query.mockResolvedValue(Object.assign([], { count: 0 }))
 
     const res = await PUT(
       makeRequest('PUT', { name: 'Updated', currency: 'USD', type: 'bank', initial_balance: 0 }),
@@ -76,7 +76,7 @@ describe('PUT /api/accounts/[id]', () => {
 
 describe('DELETE /api/accounts/[id]', () => {
   it('returns 200 when account is deleted', async () => {
-    query.mockResolvedValueOnce({ affectedRows: 1 })
+    query.mockResolvedValueOnce(Object.assign([], { count: 1 }))
 
     const res = await DELETE(makeRequest('DELETE'), { params })
 
@@ -86,7 +86,7 @@ describe('DELETE /api/accounts/[id]', () => {
   })
 
   it('returns 404 when account does not exist', async () => {
-    query.mockResolvedValueOnce({ affectedRows: 0 })
+    query.mockResolvedValueOnce(Object.assign([], { count: 0 }))
 
     const res = await DELETE(makeRequest('DELETE'), { params })
     expect(res.status).toBe(404)

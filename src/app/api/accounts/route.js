@@ -50,11 +50,11 @@ export async function POST(request) {
     }
 
     const result = await query(
-      "INSERT INTO accounts (name, currency, type, initial_balance, image_path) VALUES (?, ?, ?, ?, ?)",
+      "INSERT INTO accounts (name, currency, type, initial_balance, image_path) VALUES (?, ?, ?, ?, ?) RETURNING id",
       [name, currency, type, parseFloat(initial_balance) || 0, image_path],
     );
 
-    return NextResponse.json({ message: "Account created", id: result.insertId }, { status: 201 });
+    return NextResponse.json({ message: "Account created", id: result[0].id }, { status: 201 });
   } catch (error) {
     return NextResponse.json(
       { error: "Failed to create account" },
