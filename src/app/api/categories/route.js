@@ -37,11 +37,11 @@ export async function POST(request) {
     }
 
     const result = await query(
-      "INSERT INTO categories (name, type) VALUES (?, ?)",
+      "INSERT INTO categories (name, type) VALUES (?, ?) RETURNING id",
       [name, type],
     );
 
-    return NextResponse.json({ message: "Category created", id: result.insertId }, { status: 201 });
+    return NextResponse.json({ message: "Category created", id: result[0].id }, { status: 201 });
   } catch (error) {
     return NextResponse.json(
       { error: "Failed to create category" },

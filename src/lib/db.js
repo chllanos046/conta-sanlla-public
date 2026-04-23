@@ -1,34 +1,22 @@
-import mysql from "mysql2/promise";
+import postgres from "postgres";
 
-const pool = mysql.createPool({
-  uri: process.env.DB_URL,
-  waitForConnections: true,
-  connectionLimit: 10,
-});
+const sql = postgres(process.env.SUPABASE_DB_URL, { max: 10 });
 
-export async function query(sql, params = []) {
-  const [rows] = await pool.execute(sql, params);
-  return rows;
+function convertPlaceholders(rawSql) {
+  let i = 0;
+  return rawSql.replace(/\?/g, () => `$${++i}`);
 }
 
-export async function queryConn(connection, sql, params = []) {
-  const [rows] = await connection.execute(sql, params);
-  return rows;
+export async function query(rawSql, params = []) {
+  return await sql.unsafe(convertPlaceholders(rawSql), params);
+}
+
+export async function queryConn(txSql, rawSql, params = []) {
+  return await txSql.unsafe(convertPlaceholders(rawSql), params);
 }
 
 export async function withTransaction(callback) {
-  const connection = await pool.getConnection();
-  await connection.beginTransaction();
-  try {
-    const result = await callback(connection);
-    await connection.commit();
-    return result;
-  } catch (error) {
-    await connection.rollback();
-    throw error;
-  } finally {
-    connection.release();
-  }
+  return await sql.begin(async (txSql) => callback(txSql));
 }
 
-export default pool;
+export default sql;

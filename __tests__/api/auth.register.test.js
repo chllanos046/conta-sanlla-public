@@ -55,7 +55,7 @@ describe('POST /api/auth/register', () => {
   it('returns 409 when email already exists', async () => {
     bcrypt.hash.mockResolvedValue('hashed-password')
     const dupError = new Error('Duplicate')
-    dupError.code = 'ER_DUP_ENTRY'
+    dupError.code = '23505'
     query.mockRejectedValue(dupError)
 
     const res = await POST(

@@ -47,7 +47,7 @@ describe('GET /api/categories', () => {
 
 describe('POST /api/categories', () => {
   it('returns 201 when category is created', async () => {
-    query.mockResolvedValue({ affectedRows: 1 })
+    query.mockResolvedValue([{ id: 1 }])
 
     const res = await POST(makeRequest('POST', { name: 'Food', type: 'expense' }))
 

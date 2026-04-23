@@ -43,7 +43,7 @@ export async function POST(request) {
       { status: 201 },
     );
   } catch (error) {
-    if (error.code === "ER_DUP_ENTRY") {
+    if (error.code === "23505") {
       return NextResponse.json(
         { error: "Email already exists" },
         { status: 409 },

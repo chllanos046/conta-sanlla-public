@@ -16,7 +16,7 @@ export async function PUT(request, { params }) {
       [name, currency, type, parseFloat(initial_balance) || 0, image_path, id],
     );
 
-    if (result.affectedRows === 0)
+    if (result.count === 0)
       return NextResponse.json({ error: "Account not found" }, { status: 404 });
 
     return NextResponse.json({ message: "Account updated" });
@@ -41,7 +41,7 @@ export async function DELETE(_request, { params }) {
       [id],
     );
 
-    if (result.affectedRows === 0)
+    if (result.count === 0)
       return NextResponse.json({ error: "Account not found" }, { status: 404 });
 
     return NextResponse.json({ message: "Account deleted" });
