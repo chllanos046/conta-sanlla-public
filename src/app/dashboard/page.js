@@ -329,18 +329,20 @@ export default function Dashboard() {
         sx={{
           mb: 3,
           display: "flex",
-          alignItems: "center",
+          flexDirection: { xs: "column", sm: "row" },
+          alignItems: { xs: "stretch", sm: "center" },
           gap: 2,
-          flexWrap: "wrap",
-          justifyContent: "space-between",
+          flexWrap: { sm: "wrap" },
+          justifyContent: { sm: "space-between" },
         }}
       >
+        {/* Toggle + date picker: same row on all sizes */}
         <Box
           sx={{
             display: "flex",
             alignItems: "center",
+            justifyContent: "space-between",
             gap: 2,
-            flexWrap: "wrap",
           }}
         >
           <ToggleButtonGroup
@@ -405,6 +407,8 @@ export default function Dashboard() {
               borderRadius: 1,
               px: 1.5,
               height: 40,
+              width: { xs: "100%", sm: "auto" },
+              justifyContent: { xs: "center", sm: "flex-start" },
             }}
           >
             <Typography variant="body2" color="text.secondary">

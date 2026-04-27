@@ -54,7 +54,7 @@ export default function AppShell({ children }) {
               p: 3,
               mt: "64px",
               ml: 0,
-              pb: isMobile ? "72px" : 3,
+              pb: isMobile ? "88px" : 3,
               transition: theme.transitions.create("margin-left", {
                 easing: theme.transitions.easing.sharp,
                 duration: theme.transitions.duration.enteringScreen,

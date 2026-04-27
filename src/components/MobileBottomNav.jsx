@@ -52,7 +52,7 @@ export default function MobileBottomNav() {
         value={activeIndex === -1 ? false : activeIndex}
         onChange={handleChange}
         showLabels={false}
-        sx={{ height: 56 }}
+        sx={{ height: 72 }}
       >
         {NAV_ITEMS.map((item) => (
           <BottomNavigationAction
@@ -60,6 +60,7 @@ export default function MobileBottomNav() {
             icon={item.icon}
             sx={{
               minWidth: 0,
+              "& .MuiSvgIcon-root": { fontSize: 30 },
               "& .MuiBottomNavigationAction-label": { display: "none" },
             }}
           />
