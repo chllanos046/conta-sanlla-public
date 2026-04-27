@@ -14,11 +14,43 @@ import { getCurrencySymbol } from "@/lib/currency";
 export default function AccountCarousel({ accounts, balanceColor }) {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
-  const visibleCount = isMobile ? 1 : 3;
   const [startIndex, setStartIndex] = useState(0);
 
   if (!accounts || accounts.length === 0) return null;
 
+  const renderAccountCard = (acc) => {
+    const bal = parseFloat(acc.current_balance);
+    const symbol = getCurrencySymbol(acc.currency);
+    const currencyLabel = acc.currency !== "USD" ? ` ${acc.currency}` : "";
+    return (
+      <StatCard
+        label={acc.name}
+        value={`${symbol}${bal.toFixed(2)}${currencyLabel}`}
+        valueColor={balanceColor(bal)}
+        icon={
+          acc.image_path
+            ? <Box component="img" src={acc.image_path} alt={acc.name} sx={{ width: 48, height: 48, objectFit: "cover" }} />
+            : <AccountTypeIcon type={acc.type} sx={{ fontSize: 22, color: "grey.600" }} />
+        }
+        iconBg="grey.200"
+        href={`/transactions?account=${acc.id}`}
+      />
+    );
+  };
+
+  if (isMobile) {
+    return (
+      <Grid container spacing={2}>
+        {accounts.map((acc) => (
+          <Grid key={acc.id} size={{ xs: 12 }}>
+            {renderAccountCard(acc)}
+          </Grid>
+        ))}
+      </Grid>
+    );
+  }
+
+  const visibleCount = 3;
   const visibleAccounts = accounts.slice(startIndex, startIndex + visibleCount);
   const canGoPrev = startIndex > 0;
   const canGoNext = startIndex + visibleCount < accounts.length;
@@ -35,27 +67,11 @@ export default function AccountCarousel({ accounts, balanceColor }) {
       </IconButton>
 
       <Grid container spacing={2} sx={{ flex: 1 }}>
-        {visibleAccounts.map((acc) => {
-          const bal = parseFloat(acc.current_balance);
-          const symbol = getCurrencySymbol(acc.currency);
-          const currencyLabel = acc.currency !== "USD" ? ` ${acc.currency}` : "";
-          return (
-            <Grid key={acc.id} size={{ xs: 12, sm: 4 }}>
-              <StatCard
-                label={acc.name}
-                value={`${symbol}${bal.toFixed(2)}${currencyLabel}`}
-                valueColor={balanceColor(bal)}
-                icon={
-                  acc.image_path
-                    ? <Box component="img" src={acc.image_path} alt={acc.name} sx={{ width: 48, height: 48, objectFit: "cover" }} />
-                    : <AccountTypeIcon type={acc.type} sx={{ fontSize: 22, color: "grey.600" }} />
-                }
-                iconBg="grey.200"
-                href={`/transactions?account=${acc.id}`}
-              />
-            </Grid>
-          );
-        })}
+        {visibleAccounts.map((acc) => (
+          <Grid key={acc.id} size={{ xs: 12, sm: 4 }}>
+            {renderAccountCard(acc)}
+          </Grid>
+        ))}
       </Grid>
 
       <IconButton

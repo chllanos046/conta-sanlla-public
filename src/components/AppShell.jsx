@@ -7,6 +7,8 @@ import { usePathname } from "next/navigation";
 import TopBar from "@/components/TopBar";
 import Sidebar from "@/components/Sidebar";
 import Loading from "@/components/Loading";
+import MobileBottomNav from "@/components/MobileBottomNav";
+import { TransactionDialogProvider } from "@/contexts/TransactionDialogContext";
 
 const DRAWER_WIDTH = 240;
 const MINI_DRAWER_WIDTH = 64;
@@ -30,35 +32,41 @@ export default function AppShell({ children }) {
   const toggleMobile = () => setMobileOpen((prev) => !prev);
 
   return (
-    <Suspense fallback={<Loading />}>
-      <Box sx={{ display: "flex", minHeight: "100vh" }}>
-        <TopBar onMenuClick={isMobile ? toggleMobile : toggleDesktop} />
-        <Sidebar
-          open={open}
-          mobileOpen={mobileOpen}
-          onMobileClose={() => setMobileOpen(false)}
-          isMobile={isMobile}
-          drawerWidth={DRAWER_WIDTH}
-          miniWidth={MINI_DRAWER_WIDTH}
-        />
-        <Box
-          component="main"
-          sx={{
-            flex: 1,
-            minWidth: 0,
-            p: 3,
-            mt: "64px",
-            ml: 0,
-            transition: theme.transitions.create("margin-left", {
-              easing: theme.transitions.easing.sharp,
-              duration: theme.transitions.duration.enteringScreen,
-            }),
-            minHeight: "calc(100vh - 64px)",
-          }}
-        >
-          {children}
+    <TransactionDialogProvider>
+      <Suspense fallback={<Loading />}>
+        <Box sx={{ display: "flex", minHeight: "100vh" }}>
+          <TopBar onMenuClick={isMobile ? toggleMobile : toggleDesktop} isMobile={isMobile} />
+          {!isMobile && (
+            <Sidebar
+              open={open}
+              mobileOpen={mobileOpen}
+              onMobileClose={() => setMobileOpen(false)}
+              isMobile={isMobile}
+              drawerWidth={DRAWER_WIDTH}
+              miniWidth={MINI_DRAWER_WIDTH}
+            />
+          )}
+          <Box
+            component="main"
+            sx={{
+              flex: 1,
+              minWidth: 0,
+              p: 3,
+              mt: "64px",
+              ml: 0,
+              pb: isMobile ? "72px" : 3,
+              transition: theme.transitions.create("margin-left", {
+                easing: theme.transitions.easing.sharp,
+                duration: theme.transitions.duration.enteringScreen,
+              }),
+              minHeight: "calc(100vh - 64px)",
+            }}
+          >
+            {children}
+          </Box>
+          {isMobile && <MobileBottomNav />}
         </Box>
-      </Box>
-    </Suspense>
+      </Suspense>
+    </TransactionDialogProvider>
   );
 }

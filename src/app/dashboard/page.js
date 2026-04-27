@@ -461,7 +461,7 @@ export default function Dashboard() {
 
       {/* Recent Transactions + Expenses by Category */}
       <Grid container spacing={3} sx={{ mb: 3, alignItems: "stretch" }}>
-        <Grid size={{ xs: 12, md: 8 }}>
+        <Grid size={{ xs: 12, md: 8 }} sx={{ display: { xs: "none", sm: "block" } }}>
           <Card sx={{ height: "100%" }}>
             <CardContent>
               <Typography variant="h6" gutterBottom>
@@ -534,6 +534,7 @@ export default function Dashboard() {
         <Grid size={{ xs: 12, md: 4 }}>
           <ExpensesByCategoryChart transactions={data.transactions} />
         </Grid>
+
       </Grid>
 
       {/* Account Balances Carousel */}

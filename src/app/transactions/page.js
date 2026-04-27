@@ -123,6 +123,7 @@ export default function TransactionsPage() {
                 bgcolor: "primary.main",
                 color: "primary.contrastText",
                 "&:hover": { bgcolor: "primary.dark" },
+                display: { xs: "none", sm: "flex" },
               }}
             >
               <UploadFileIcon />
@@ -136,6 +137,7 @@ export default function TransactionsPage() {
                 bgcolor: "primary.main",
                 color: "primary.contrastText",
                 "&:hover": { bgcolor: "primary.dark" },
+                display: { xs: "none", sm: "flex" },
               }}
             >
               <AddIcon />
