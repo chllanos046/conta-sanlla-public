@@ -4,6 +4,9 @@ import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { format } from "date-fns";
+import { useRouter } from "next/navigation";
+import useMediaQuery from "@mui/material/useMediaQuery";
+import { useTheme } from "@mui/material/styles";
 import Fab from "@mui/material/Fab";
 import Dialog from "@mui/material/Dialog";
 import DialogTitle from "@mui/material/DialogTitle";
@@ -72,7 +75,10 @@ const EMPTY_FORM = {
   exchange_rate: "",
 };
 
-export default function QuickAddTransaction({ accounts = [], categories = [], open, onClose, onSuccess }) {
+export default function QuickAddTransaction({ accounts = [], categories = [], open, onClose, onSuccess, navigateOnSuccess }) {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
+  const router = useRouter();
   const [arsRate, setArsRate] = useState(null);
 
   useEffect(() => {
@@ -150,6 +156,7 @@ export default function QuickAddTransaction({ accounts = [], categories = [], op
       await axios.post("/api/transactions", payload);
       onSuccess();
       onClose();
+      if (navigateOnSuccess) router.push("/transactions");
     } catch (err) {
       setError("root", { message: err.response?.data?.error || "Failed to save transaction" });
     }
@@ -157,7 +164,7 @@ export default function QuickAddTransaction({ accounts = [], categories = [], op
 
   return (
     <LocalizationProvider dateAdapter={AdapterDateFns}>
-      <Dialog open={open} onClose={onClose} maxWidth="xs" fullWidth>
+      <Dialog open={open} onClose={onClose} maxWidth="xs" fullWidth fullScreen={isMobile}>
         <DialogTitle>New Transaction</DialogTitle>
         <DialogContent>
           <Box sx={{ display: "flex", flexDirection: "column", gap: 2, pt: 1 }}>
@@ -364,7 +371,7 @@ export function QuickAddFab({ onClick }) {
       color="primary"
       aria-label="add transaction"
       onClick={onClick}
-      sx={{ position: "fixed", bottom: 24, right: 24, zIndex: 1200 }}
+      sx={{ position: "fixed", bottom: 24, right: 24, zIndex: 1200, display: { xs: "none", sm: "flex" } }}
     >
       <AddIcon />
     </Fab>

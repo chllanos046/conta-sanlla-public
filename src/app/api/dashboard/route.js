@@ -136,6 +136,7 @@ export async function GET(request) {
       },
     });
   } catch (error) {
+    console.error("[dashboard]", error);
     return NextResponse.json(
       { error: "Failed to load dashboard" },
       { status: 500 },
