@@ -285,6 +285,7 @@ export default function Dashboard() {
 
   return (
     <LocalizationProvider dateAdapter={AdapterDateFns}>
+      <Box sx={{ px: { xs: 2, sm: 0 }, pt: { xs: 1, sm: 0 } }}>
       {/* Pull-to-refresh indicator */}
       {pullY > 0 && (
         <Box
@@ -320,10 +321,6 @@ export default function Dashboard() {
         </Box>
       )}
 
-      <Typography variant="h4" gutterBottom>
-        Dashboard
-      </Typography>
-
       {/* Period controls row */}
       <Box
         sx={{
@@ -334,6 +331,11 @@ export default function Dashboard() {
           gap: 2,
           flexWrap: { sm: "wrap" },
           justifyContent: { sm: "space-between" },
+          bgcolor: "background.paper",
+          borderRadius: 1,
+          p: { xs: 1.5, sm: 1.5 },
+          border: "1px solid",
+          borderColor: "divider",
         }}
       >
         {/* Toggle + date picker: same row on all sizes */}
@@ -564,6 +566,7 @@ export default function Dashboard() {
         onClose={() => setFabOpen(false)}
         onSuccess={loadData}
       />
+      </Box>
     </LocalizationProvider>
   );
 }

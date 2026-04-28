@@ -51,8 +51,8 @@ export default function AppShell({ children }) {
             sx={{
               flex: 1,
               minWidth: 0,
-              p: 3,
-              mt: "64px",
+              p: isMobile ? 0 : 3,
+              mt: isMobile ? "56px" : "64px",
               ml: 0,
               pb: isMobile ? "88px" : 3,
               transition: theme.transitions.create("margin-left", {

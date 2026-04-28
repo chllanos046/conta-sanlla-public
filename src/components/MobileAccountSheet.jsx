@@ -10,7 +10,6 @@ import List from "@mui/material/List";
 import ListItemButton from "@mui/material/ListItemButton";
 import ListItemIcon from "@mui/material/ListItemIcon";
 import ListItemText from "@mui/material/ListItemText";
-import Divider from "@mui/material/Divider";
 import PersonIcon from "@mui/icons-material/Person";
 import LogoutIcon from "@mui/icons-material/Logout";
 import { useTheme } from "@mui/material/styles";
@@ -31,6 +30,9 @@ export default function MobileAccountSheet() {
           alignItems: "center",
           py: 3,
           px: 2,
+          bgcolor: "background.paper",
+          borderBottom: 1,
+          borderColor: "divider",
         }}
       >
         <Avatar
@@ -51,7 +53,6 @@ export default function MobileAccountSheet() {
           {session?.user?.email ?? ""}
         </Typography>
       </Box>
-      <Divider />
       <List disablePadding>
         <ListItemButton onClick={() => router.push("/profile")}>
           <ListItemIcon>

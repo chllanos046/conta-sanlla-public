@@ -2,6 +2,39 @@ import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { query } from "@/lib/db";
 
+export async function GET(_request, { params }) {
+  try {
+    const session = await auth();
+    if (!session?.user?.id)
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+    const { id } = await params;
+
+    const rows = await query(
+      `SELECT t.*,
+              a1.name AS source_name, a1.currency AS source_currency,
+              a2.name AS target_name, a2.currency AS target_currency,
+              c.name AS category_name
+       FROM transactions t
+       LEFT JOIN accounts a1 ON t.source_account_id = a1.id
+       LEFT JOIN accounts a2 ON t.target_account_id = a2.id
+       LEFT JOIN categories c ON t.category_id = c.id
+       WHERE t.id = ?`,
+      [id],
+    );
+
+    if (!rows.length)
+      return NextResponse.json({ error: "Not found" }, { status: 404 });
+
+    return NextResponse.json({ transaction: rows[0] });
+  } catch (error) {
+    return NextResponse.json(
+      { error: "Failed to fetch transaction" },
+      { status: 500 },
+    );
+  }
+}
+
 export async function PUT(request, { params }) {
   try {
     const session = await auth();

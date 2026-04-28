@@ -13,7 +13,7 @@ import { useTransactionDialog } from "@/contexts/TransactionDialogContext";
 
 const NAV_ITEMS = [
   { label: "Dashboard", icon: <DashboardIcon />, path: "/dashboard" },
-  { label: "Transactions", icon: <ReceiptLongIcon />, path: "/transactions" },
+  { label: "Transactions", icon: <ReceiptLongIcon />, path: "/transactions/mobile" },
   { label: "Add", icon: <AddCircleIcon />, path: null },
   { label: "Settings", icon: <SettingsIcon />, path: "/settings/mobile" },
   { label: "Account", icon: <AccountCircleIcon />, path: "/account/mobile" },

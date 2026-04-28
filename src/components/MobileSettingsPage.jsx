@@ -6,7 +6,6 @@ import List from "@mui/material/List";
 import ListItemButton from "@mui/material/ListItemButton";
 import ListItemIcon from "@mui/material/ListItemIcon";
 import ListItemText from "@mui/material/ListItemText";
-import Divider from "@mui/material/Divider";
 import AccountBalanceIcon from "@mui/icons-material/AccountBalance";
 import CategoryIcon from "@mui/icons-material/Category";
 
@@ -20,10 +19,9 @@ export default function MobileSettingsPage() {
 
   return (
     <>
-      <Typography variant="h6" sx={{ px: 2, pt: 2, pb: 1 }}>
+      <Typography variant="h6" sx={{ px: 2, pt: 2, pb: 1, bgcolor: "background.paper", borderBottom: 1, borderColor: "divider" }}>
         Settings
       </Typography>
-      <Divider />
       <List disablePadding>
         {SETTINGS_ITEMS.map((item) => (
           <ListItemButton key={item.label} onClick={() => router.push(item.path)}>

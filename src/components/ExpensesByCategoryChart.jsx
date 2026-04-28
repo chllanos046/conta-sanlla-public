@@ -67,6 +67,9 @@ export function ExpensesByCategoryChart({ transactions }) {
 
   const total = entries.reduce((s, e) => s + e.value, 0);
   const pieData = entries.map(({ name, value }) => ({ label: name, value }));
+  const legendEntries = entries.filter(({ value }) =>
+    total > 0 ? (value / total) * 100 >= 3 : true,
+  );
 
   return (
     <Card
@@ -107,33 +110,36 @@ export function ExpensesByCategoryChart({ transactions }) {
             No expenses for this period
           </Typography>
         ) : (
-          entries.map(({ name, value }, i) => (
-            <Stack key={name} direction="row" sx={{ alignItems: "center", gap: 2, pb: 2 }}>
-              <Stack sx={{ gap: 1, flexGrow: 1 }}>
-                <Stack
-                  direction="row"
-                  sx={{ justifyContent: "space-between", alignItems: "center", gap: 2 }}
-                >
-                  <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                    {name}
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    {total > 0 ? Math.round((value / total) * 100) : 0}%
-                  </Typography>
+          legendEntries.map(({ name, value }) => {
+            const i = entries.findIndex((e) => e.name === name);
+            return (
+              <Stack key={name} direction="row" sx={{ alignItems: "center", gap: 2, pb: 2 }}>
+                <Stack sx={{ gap: 1, flexGrow: 1 }}>
+                  <Stack
+                    direction="row"
+                    sx={{ justifyContent: "space-between", alignItems: "center", gap: 2 }}
+                  >
+                    <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                      {name}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      {total > 0 ? Math.round((value / total) * 100) : 0}%
+                    </Typography>
+                  </Stack>
+                  <LinearProgress
+                    variant="determinate"
+                    aria-label={`${name} expense percentage`}
+                    value={total > 0 ? (value / total) * 100 : 0}
+                    sx={{
+                      [`& .${linearProgressClasses.bar}`]: {
+                        backgroundColor: COLORS[i % COLORS.length],
+                      },
+                    }}
+                  />
                 </Stack>
-                <LinearProgress
-                  variant="determinate"
-                  aria-label={`${name} expense percentage`}
-                  value={total > 0 ? (value / total) * 100 : 0}
-                  sx={{
-                    [`& .${linearProgressClasses.bar}`]: {
-                      backgroundColor: COLORS[i % COLORS.length],
-                    },
-                  }}
-                />
               </Stack>
-            </Stack>
-          ))
+            );
+          })
         )}
       </CardContent>
     </Card>

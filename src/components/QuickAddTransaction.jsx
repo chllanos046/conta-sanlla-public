@@ -350,7 +350,7 @@ export default function QuickAddTransaction({ accounts = [], categories = [], op
             />
           </Box>
         </DialogContent>
-        <DialogActions>
+        <DialogActions sx={{ mb: isMobile ? "30px" : 0 }}>
           <Button onClick={onClose}>Cancel</Button>
           <Button
             variant="contained"
