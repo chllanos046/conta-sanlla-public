@@ -6,6 +6,7 @@ import { SessionProvider } from "next-auth/react";
 import AppShell from "@/components/AppShell";
 import theme from "@/styles/theme";
 import { PwaUpdatePrompt } from "@/components/PwaUpdatePrompt";
+import SplashScreen from "@/components/SplashScreen";
 
 export default function RootClientLayout({ children }) {
   return (
@@ -13,6 +14,7 @@ export default function RootClientLayout({ children }) {
       <AppRouterCacheProvider>
         <ThemeProvider theme={theme}>
           <CssBaseline />
+          <SplashScreen />
           <PwaUpdatePrompt />
           <AppShell>{children}</AppShell>
         </ThemeProvider>
