@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import axios from "axios";
-import { format } from "date-fns";
+import { format, parseISO } from "date-fns";
 import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
 import List from "@mui/material/List";
@@ -91,7 +91,7 @@ export function MobileTransactionsList() {
       ) : (
         <List disablePadding>
           {transactions.map((tx, i) => {
-            const dateLabel = format(new Date(tx.date), "d MMM");
+            const dateLabel = format(parseISO(tx.date), "d MMM");
             const subtitle = `${dateLabel}${tx.category_name ? ` — ${tx.category_name}` : ""}`;
 
             return (

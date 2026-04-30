@@ -71,7 +71,7 @@ const makeSchema = (accounts) =>
       }
     });
 
-const today = () => new Date().toISOString().split("T")[0];
+const today = () => format(new Date(), "yyyy-MM-dd");
 
 const EMPTY_TX = {
   type: "expense",
@@ -143,7 +143,7 @@ export function TransactionFormDialog({ open, onClose, editingTx, accounts, cate
       reset({
         type: editingTx.type,
         amount: String(Math.abs(parseFloat(editingTx.amount))),
-        date: editingTx.date ? formatDateParam(new Date(editingTx.date)) : today(),
+        date: editingTx.date ? formatDateParam(parseISO(editingTx.date)) : today(),
         source_account_id: editingTx.source_account_id ? String(editingTx.source_account_id) : "",
         target_account_id: editingTx.target_account_id ? String(editingTx.target_account_id) : "",
         category_id: editingTx.category_id ? String(editingTx.category_id) : "",
@@ -382,6 +382,5 @@ export function TransactionFormDialog({ open, onClose, editingTx, accounts, cate
 
 function formatDateParam(date) {
   if (!date) return null;
-  const d = new Date(date);
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  return format(date, "yyyy-MM-dd");
 }

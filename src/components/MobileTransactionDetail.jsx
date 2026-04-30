@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import axios from "axios";
-import { format } from "date-fns";
+import { format, parseISO } from "date-fns";
 import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
 import IconButton from "@mui/material/IconButton";
@@ -126,7 +126,7 @@ export function MobileTransactionDetail({ id }) {
           />
           <DetailRow
             label="Date"
-            value={format(new Date(tx.date), "MMMM d, yyyy")}
+            value={format(parseISO(tx.date), "MMMM d, yyyy")}
           />
           <DetailRow label="Concept" value={tx.description} />
           <DetailRow label="Category" value={tx.category_name} />
