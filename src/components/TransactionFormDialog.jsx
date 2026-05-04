@@ -143,7 +143,7 @@ export function TransactionFormDialog({ open, onClose, editingTx, accounts, cate
       reset({
         type: editingTx.type,
         amount: String(Math.abs(parseFloat(editingTx.amount))),
-        date: editingTx.date ? formatDateParam(parseISO(editingTx.date)) : today(),
+        date: editingTx.date ? String(editingTx.date).slice(0, 10) : today(),
         source_account_id: editingTx.source_account_id ? String(editingTx.source_account_id) : "",
         target_account_id: editingTx.target_account_id ? String(editingTx.target_account_id) : "",
         category_id: editingTx.category_id ? String(editingTx.category_id) : "",
@@ -381,7 +381,3 @@ export function TransactionFormDialog({ open, onClose, editingTx, accounts, cate
   );
 }
 
-function formatDateParam(date) {
-  if (!date) return null;
-  return format(date, "yyyy-MM-dd");
-}

@@ -47,8 +47,8 @@ export function txContribution(tx, accountId) {
 export function calculateAccountBalance(initialBalance, transactions, accountId, upToDate = null) {
   let filtered = transactions;
   if (upToDate) {
-    const cutoff = new Date(upToDate);
-    filtered = transactions.filter((tx) => new Date(tx.date) < cutoff);
+    const cutoff = String(upToDate).slice(0, 10);
+    filtered = transactions.filter((tx) => String(tx.date).slice(0, 10) < cutoff);
   }
   return filtered.reduce(
     (bal, tx) => bal + txContribution(tx, accountId),

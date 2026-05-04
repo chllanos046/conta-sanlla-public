@@ -1,4 +1,3 @@
-import { format } from "date-fns";
 
 export function formatCurrency(amount, currency = "USD") {
   return new Intl.NumberFormat("en-US", {
@@ -8,6 +7,7 @@ export function formatCurrency(amount, currency = "USD") {
 }
 
 export function formatDate(dateString) {
-  return format(new Date(dateString), "yyyy-MM-dd");
+  if (!dateString) return "";
+  return String(dateString).slice(0, 10);
 }
 

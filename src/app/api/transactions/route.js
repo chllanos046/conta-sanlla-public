@@ -84,7 +84,7 @@ export async function GET(request) {
       if (acc) {
         // Find the earliest date in the filtered set
         const earliest = transactions.reduce(
-          (min, tx) => (new Date(tx.date) < new Date(min) ? tx.date : min),
+          (min, tx) => (String(tx.date).slice(0, 10) < String(min).slice(0, 10) ? tx.date : min),
           transactions[0].date,
         );
         // Sum all transactions for this account strictly before the earliest date

@@ -91,7 +91,7 @@ export function MobileTransactionsList() {
       ) : (
         <List disablePadding>
           {transactions.map((tx, i) => {
-            const dateLabel = format(parseISO(tx.date), "d MMM");
+            const dateLabel = format(parseISO(String(tx.date).slice(0, 10)), "d MMM");
             const subtitle = `${dateLabel}${tx.category_name ? ` — ${tx.category_name}` : ""}`;
 
             return (

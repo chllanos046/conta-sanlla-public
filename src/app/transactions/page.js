@@ -96,7 +96,7 @@ export default function TransactionsPage() {
 
   const transactionsWithBalance = useMemo(() => {
     const accountId = appliedFilters.account || null;
-    const ascending = [...rows].sort((a, b) => new Date(a.date) - new Date(b.date));
+    const ascending = [...rows].sort((a, b) => a.date.localeCompare(b.date));
     const withBalance = addRunningBalance(ascending, openingBalance ?? 0, accountId);
     return withBalance.reverse();
   }, [rows, openingBalance, appliedFilters.account]);

@@ -169,9 +169,9 @@ export default function Dashboard() {
     ];
 
     const getKey = (dateStr) => {
-      const d = new Date(dateStr);
-      if (period === "year") return String(d.getMonth() + 1).padStart(2, "0");
-      return String(d.getDate()).padStart(2, "0");
+      const ymd = String(dateStr).slice(0, 10);
+      if (period === "year") return ymd.slice(5, 7);
+      return ymd.slice(8, 10);
     };
 
     const getLabel = (key) => {
@@ -222,7 +222,7 @@ export default function Dashboard() {
   })();
 
   const recentTransactions = [...data.transactions]
-    .sort((a, b) => new Date(b.date) - new Date(a.date))
+    .sort((a, b) => b.date.localeCompare(a.date))
     .slice(0, 10);
 
   const pctChange = (current, previous) => {
@@ -500,13 +500,7 @@ export default function Dashboard() {
                       return (
                         <TableRow key={tx.id} hover>
                           <TableCell sx={{ whiteSpace: "nowrap" }}>
-                            {(() => {
-                              if (!tx.date) return "—";
-                              const d = new Date(tx.date);
-                              return isNaN(d.getTime())
-                                ? "—"
-                                : format(d, "yyyy-MM-dd");
-                            })()}
+                            {tx.date ? String(tx.date).slice(0, 10) : "—"}
                           </TableCell>
                           <TableCell>{tx.description || "—"}</TableCell>
                           <TableCell>{tx.category_name || "—"}</TableCell>

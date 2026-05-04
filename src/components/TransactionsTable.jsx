@@ -5,7 +5,6 @@ import Chip from "@mui/material/Chip";
 import Typography from "@mui/material/Typography";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
-import { format, parseISO } from "date-fns";
 
 export function TransactionsTable({ rows, accounts, openingBalance, onEditRow, onDeleteRow }) {
   const columns = [
@@ -13,7 +12,7 @@ export function TransactionsTable({ rows, accounts, openingBalance, onEditRow, o
       field: "date",
       headerName: "Date",
       width: 120,
-      valueFormatter: (value) => (value ? format(parseISO(value), "yyyy-MM-dd") : ""),
+      valueFormatter: (value) => (value ? String(value).slice(0, 10) : ""),
     },
     {
       field: "type",

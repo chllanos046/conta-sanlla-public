@@ -126,7 +126,7 @@ export function MobileTransactionDetail({ id }) {
           />
           <DetailRow
             label="Date"
-            value={format(parseISO(tx.date), "MMMM d, yyyy")}
+            value={format(parseISO(String(tx.date).slice(0, 10)), "MMMM d, yyyy")}
           />
           <DetailRow label="Concept" value={tx.description} />
           <DetailRow label="Category" value={tx.category_name} />
