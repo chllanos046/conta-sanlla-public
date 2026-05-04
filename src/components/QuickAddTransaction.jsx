@@ -146,7 +146,7 @@ export default function QuickAddTransaction({ accounts = [], categories = [], op
         type: data.type,
         amount: signedAmount,
         exchange_rate: exchangeRate,
-        date: data.date,
+        date: data.date instanceof Date ? data.date.toISOString().split("T")[0] : data.date,
         description: data.description || "",
         category_id: data.category_id || null,
         source_account_id: data.source_account_id || null,

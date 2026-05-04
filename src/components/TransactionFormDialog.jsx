@@ -173,6 +173,7 @@ export function TransactionFormDialog({ open, onClose, editingTx, accounts, cate
         source_account_id: data.source_account_id || null,
         target_account_id: data.target_account_id || null,
         category_id: data.category_id || null,
+        date: data.date instanceof Date ? data.date.toISOString().split("T")[0] : data.date, 
       };
 
       if (editingTx) {
