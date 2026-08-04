@@ -1,29 +1,19 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import axios from "axios";
 import { format, parseISO } from "date-fns";
 import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
+import IconButton from "@mui/material/IconButton";
 import List from "@mui/material/List";
 import ListItem from "@mui/material/ListItem";
 import ListItemText from "@mui/material/ListItemText";
 import Divider from "@mui/material/Divider";
 import CircularProgress from "@mui/material/CircularProgress";
+import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
 import ChevronRightIcon from "@mui/icons-material/ChevronRight";
-
-function getCurrentMonthRange() {
-  const now = new Date();
-  const y = now.getFullYear();
-  const m = String(now.getMonth() + 1).padStart(2, "0");
-  const lastDay = new Date(y, now.getMonth() + 1, 0).getDate();
-  return {
-    dateFrom: `${y}-${m}-01`,
-    dateTo: `${y}-${m}-${String(lastDay).padStart(2, "0")}`,
-    monthLabel: format(now, "MMMM yyyy"),
-  };
-}
 
 function formatAmount(tx) {
   const currency =
@@ -46,9 +36,24 @@ export function MobileTransactionsList() {
   const accountId = searchParams.get("account");
   const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(true);
-  const { dateFrom, dateTo, monthLabel } = getCurrentMonthRange();
+  const [monthOffset, setMonthOffset] = useState(0);
+
+  const { dateFrom, dateTo, monthLabel } = useMemo(() => {
+    const d = new Date();
+    d.setDate(1);
+    d.setMonth(d.getMonth() + monthOffset);
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    const lastDay = new Date(y, d.getMonth() + 1, 0).getDate();
+    return {
+      dateFrom: `${y}-${m}-01`,
+      dateTo: `${y}-${m}-${String(lastDay).padStart(2, "0")}`,
+      monthLabel: format(d, "MMMM yyyy"),
+    };
+  }, [monthOffset]);
 
   useEffect(() => {
+    setLoading(true);
     const params = { dateFrom, dateTo };
     if (accountId) params.account = accountId;
     axios
@@ -68,14 +73,27 @@ export function MobileTransactionsList() {
           bgcolor: "background.paper",
           borderBottom: 1,
           borderColor: "divider",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
         }}
       >
-        <Typography variant="h6" fontWeight={700}>
-          Transactions
-        </Typography>
-        <Typography variant="body2" color="text.secondary">
-          {monthLabel}
-        </Typography>
+        <Box>
+          <Typography variant="h6" fontWeight={700}>
+            Transactions
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            {monthLabel}
+          </Typography>
+        </Box>
+        <Box sx={{ display: "flex", gap: 0.5 }}>
+          <IconButton size="small" onClick={() => setMonthOffset((o) => o - 1)}>
+            <ChevronLeftIcon />
+          </IconButton>
+          <IconButton size="small" onClick={() => setMonthOffset((o) => o + 1)}>
+            <ChevronRightIcon />
+          </IconButton>
+        </Box>
       </Box>
 
       {loading ? (
@@ -85,7 +103,7 @@ export function MobileTransactionsList() {
       ) : transactions.length === 0 ? (
         <Box sx={{ textAlign: "center", pt: 6 }}>
           <Typography color="text.secondary">
-            No transactions this month.
+            No transactions in {monthLabel}.
           </Typography>
         </Box>
       ) : (

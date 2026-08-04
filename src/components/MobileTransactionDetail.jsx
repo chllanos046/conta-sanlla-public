@@ -13,6 +13,8 @@ import ListItemText from "@mui/material/ListItemText";
 import Divider from "@mui/material/Divider";
 import CircularProgress from "@mui/material/CircularProgress";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
+import EditIcon from "@mui/icons-material/Edit";
+import { TransactionFormDialog } from "@/components/TransactionFormDialog";
 
 function formatAmount(tx) {
   const currency =
@@ -60,14 +62,28 @@ export function MobileTransactionDetail({ id }) {
   const [tx, setTx] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
+  const [accounts, setAccounts] = useState([]);
+  const [categories, setCategories] = useState([]);
 
   useEffect(() => {
-    axios
-      .get(`/api/transactions/${id}`)
-      .then(({ data }) => setTx(data.transaction))
+    Promise.all([
+      axios.get(`/api/transactions/${id}`),
+      axios.get("/api/accounts"),
+      axios.get("/api/categories"),
+    ])
+      .then(([txRes, accRes, catRes]) => {
+        setTx(txRes.data.transaction);
+        setAccounts(accRes.data.accounts ?? []);
+        setCategories(catRes.data.categories ?? []);
+      })
       .catch(() => setError(true))
       .finally(() => setLoading(false));
   }, [id]);
+
+  const refreshTx = () => {
+    axios.get(`/api/transactions/${id}`).then(({ data }) => setTx(data.transaction));
+  };
 
   return (
     <Box>
@@ -75,7 +91,7 @@ export function MobileTransactionDetail({ id }) {
         sx={{
           display: "flex",
           alignItems: "center",
-          gap: 1,
+          justifyContent: "space-between",
           px: 1,
           pt: 1.5,
           pb: 1,
@@ -84,12 +100,19 @@ export function MobileTransactionDetail({ id }) {
           bgcolor: "background.paper",
         }}
       >
-        <IconButton onClick={() => router.back()} size="small">
-          <ArrowBackIcon />
-        </IconButton>
-        <Typography variant="h6" fontWeight={700}>
-          Transaction
-        </Typography>
+        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+          <IconButton onClick={() => router.back()} size="small">
+            <ArrowBackIcon />
+          </IconButton>
+          <Typography variant="h6" fontWeight={700}>
+            Transaction
+          </Typography>
+        </Box>
+        {tx && (
+          <IconButton onClick={() => setEditOpen(true)} size="small" sx={{ mr: 1 }}>
+            <EditIcon />
+          </IconButton>
+        )}
       </Box>
 
       {loading ? (
@@ -140,6 +163,18 @@ export function MobileTransactionDetail({ id }) {
           )}
         </List>
       )}
+
+      <TransactionFormDialog
+        open={editOpen}
+        onClose={() => setEditOpen(false)}
+        editingTx={tx}
+        accounts={accounts}
+        categories={categories}
+        onSaved={() => {
+          setEditOpen(false);
+          refreshTx();
+        }}
+      />
     </Box>
   );
 }
