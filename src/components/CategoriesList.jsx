@@ -20,6 +20,8 @@ import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
 import AddIcon from "@mui/icons-material/Add";
 import axios from "axios";
+import { useConfirm } from "@/components/ConfirmDialogProvider";
+import { useNotify } from "@/components/NotificationProvider";
 
 const schema = z.object({
   name: z.string().min(1, "Name is required"),
@@ -29,7 +31,10 @@ const schema = z.object({
 const EMPTY_FORM = { name: "", type: "income" };
 
 export default function CategoriesList() {
+  const confirm = useConfirm();
+  const { notifySuccess, notifyError } = useNotify();
   const [categories, setCategories] = useState([]);
+  const [loading, setLoading] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editCategory, setEditCategory] = useState(null);
   const [submitError, setSubmitError] = useState(null);
@@ -45,8 +50,13 @@ export default function CategoriesList() {
   });
 
   const loadCategories = async () => {
-    const { data } = await axios.get("/api/categories");
-    setCategories(data);
+    setLoading(true);
+    try {
+      const { data } = await axios.get("/api/categories");
+      setCategories(data);
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -96,9 +106,13 @@ export default function CategoriesList() {
   };
 
   const handleDelete = async (id) => {
-    if (confirm("Delete this category?")) {
+    if (!(await confirm("Delete this category?"))) return;
+    try {
       await axios.delete(`/api/categories/${id}`);
       loadCategories();
+      notifySuccess("Category deleted");
+    } catch (err) {
+      notifyError(err.response?.data?.error || "Failed to delete category");
     }
   };
 
@@ -147,6 +161,7 @@ export default function CategoriesList() {
         <DataGrid
           rows={categories}
           columns={columns}
+          loading={loading}
           initialState={{ pagination: { paginationModel: { pageSize: 10 } } }}
           pageSizeOptions={[5, 10, 25]}
           getRowId={(row) => row.id}

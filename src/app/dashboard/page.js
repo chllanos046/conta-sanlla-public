@@ -31,6 +31,9 @@ import AccountCarousel from "@/components/AccountCarousel";
 import QuickAddTransaction, {
   QuickAddFab,
 } from "@/components/QuickAddTransaction";
+import { useCurrency } from "@/hooks/useCurrency";
+import { convertAmount } from "@/lib/currency";
+import { formatCurrency } from "@/lib/utils";
 
 const PERIODS = [
   { value: "month", label: "Month" },
@@ -52,6 +55,7 @@ export default function Dashboard() {
   const [fabOpen, setFabOpen] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [pullY, setPullY] = useState(0);
+  const [displayCurrency] = useCurrency();
 
   useEffect(() => {
     axios
@@ -140,15 +144,24 @@ export default function Dashboard() {
       ? rates.ARS > prevArsRef.current
       : null;
 
-  // Amounts are stored in USD — sum directly
+  const accountMap = Object.fromEntries(data.accounts.map((a) => [String(a.id), a]));
+  const arsRate = rates.ARS || 1;
+
+  const toDisplay = (t) => {
+    const isIncome = t.type === "income";
+    const accountId = isIncome ? t.target_account_id : t.source_account_id;
+    const txCurrency = accountMap[String(accountId)]?.currency || "USD";
+    const txRate = parseFloat(t.exchange_rate) || arsRate;
+    return convertAmount(Math.abs(parseFloat(t.amount || 0)), txCurrency, displayCurrency, txRate);
+  };
+
   const income = data.transactions
     .filter((t) => t.type === "income")
-    .reduce((sum, t) => sum + parseFloat(t.amount || 0), 0);
+    .reduce((sum, t) => sum + toDisplay(t), 0);
 
-  // Expenses stored as negative — use Math.abs for correct sum
   const expenses = data.transactions
     .filter((t) => t.type === "expense")
-    .reduce((sum, t) => sum + Math.abs(parseFloat(t.amount || 0)), 0);
+    .reduce((sum, t) => sum + toDisplay(t), 0);
 
   const balance = income - expenses;
 
@@ -203,7 +216,10 @@ export default function Dashboard() {
       if (!t.date) continue;
       const key = getKey(t.date);
       if (!buckets[key]) buckets[key] = { key, income: 0, expense: 0 };
-      const amt = Math.abs(parseFloat(t.amount || 0));
+      const accountId = t.type === "income" ? t.target_account_id : t.source_account_id;
+      const txCurrency = accountMap[String(accountId)]?.currency || "USD";
+      const txRate = parseFloat(t.exchange_rate) || arsRate;
+      const amt = convertAmount(Math.abs(parseFloat(t.amount || 0)), txCurrency, displayCurrency, txRate);
       buckets[key][t.type] += amt;
     }
 
@@ -235,8 +251,8 @@ export default function Dashboard() {
     return "From previous month";
   })();
 
-  const prevIncome = data.prevMonthSummary?.income ?? 0;
-  const prevExpense = data.prevMonthSummary?.expense ?? 0;
+  const prevIncome = convertAmount(data.prevMonthSummary?.income ?? 0, "USD", displayCurrency, arsRate);
+  const prevExpense = convertAmount(data.prevMonthSummary?.expense ?? 0, "USD", displayCurrency, arsRate);
   const prevBalance = prevIncome - prevExpense;
 
   const xAxisData =
@@ -247,7 +263,7 @@ export default function Dashboard() {
   const summaryCards = [
     {
       title: "Income",
-      value: `$${income.toFixed(2)}`,
+      value: formatCurrency(income, displayCurrency),
       trend: "up",
       data: chartData.map((d) => d.income),
       xAxisData,
@@ -256,7 +272,7 @@ export default function Dashboard() {
     },
     {
       title: "Expenses",
-      value: `$${expenses.toFixed(2)}`,
+      value: formatCurrency(expenses, displayCurrency),
       trend: "down",
       data: chartData.map((d) => d.expense),
       xAxisData,
@@ -265,7 +281,7 @@ export default function Dashboard() {
     },
     {
       title: "Balance",
-      value: `$${balance.toFixed(2)}`,
+      value: formatCurrency(balance, displayCurrency),
       trend: "neutral",
       data: chartData.map((d) => d.balance),
       xAxisData,
@@ -459,6 +475,7 @@ export default function Dashboard() {
                 xAxisData={xAxisData}
                 percentChange={percentChange}
                 interval={interval}
+                loading={refreshing}
               />
             </Grid>
           ),
@@ -473,7 +490,11 @@ export default function Dashboard() {
               <Typography variant="h6" gutterBottom>
                 Recent Transactions
               </Typography>
-              {recentTransactions.length === 0 ? (
+              {refreshing ? (
+                <Box sx={{ display: "flex", justifyContent: "center", py: 4 }}>
+                  <CircularProgress size={32} />
+                </Box>
+              ) : recentTransactions.length === 0 ? (
                 <Typography
                   variant="body2"
                   color="text.secondary"
@@ -494,9 +515,12 @@ export default function Dashboard() {
                   </TableHead>
                   <TableBody>
                     {recentTransactions.map((tx) => {
-                      const amt = Math.abs(parseFloat(tx.amount || 0));
                       const isIncome = tx.type === "income";
                       const isExpense = tx.type === "expense";
+                      const txAccountId = isIncome ? tx.target_account_id : tx.source_account_id;
+                      const txCurrency = accountMap[String(txAccountId)]?.currency || "USD";
+                      const txRate = parseFloat(tx.exchange_rate) || arsRate;
+                      const amt = convertAmount(Math.abs(parseFloat(tx.amount || 0)), txCurrency, displayCurrency, txRate);
                       return (
                         <TableRow key={tx.id} hover>
                           <TableCell sx={{ whiteSpace: "nowrap" }}>
@@ -519,8 +543,7 @@ export default function Dashboard() {
                               whiteSpace: "nowrap",
                             }}
                           >
-                            {isIncome ? "+" : isExpense ? "-" : ""}$
-                            {amt.toFixed(2)}
+                            {isIncome ? "+" : isExpense ? "-" : ""}{formatCurrency(amt, displayCurrency)}
                           </TableCell>
                         </TableRow>
                       );
@@ -532,7 +555,13 @@ export default function Dashboard() {
           </Card>
         </Grid>
         <Grid size={{ xs: 12, md: 4 }}>
-          <ExpensesByCategoryChart transactions={data.transactions} />
+          <ExpensesByCategoryChart
+            transactions={data.transactions}
+            accountMap={accountMap}
+            displayCurrency={displayCurrency}
+            arsRate={arsRate}
+            loading={refreshing}
+          />
         </Grid>
 
       </Grid>

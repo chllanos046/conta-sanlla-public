@@ -13,8 +13,11 @@ import FilterListIcon from "@mui/icons-material/FilterList";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import ExpandLessIcon from "@mui/icons-material/ExpandLess";
 
-export function TransactionFilters({ filters, onChange, onApply, onClear, accounts }) {
+export function TransactionFilters({ filters, onChange, onApply, onClear, accounts, categories = [] }) {
   const [open, setOpen] = useState(false);
+  // Guard Select values: if accounts haven't loaded yet, the URL-seeded value won't match any option.
+  const safeAccId = (val) => (accounts.some((a) => String(a.id) === val) ? val : "");
+  const safeCatId = (val) => (categories.some((c) => String(c.id) === val) ? val : "");
 
   return (
     <Box sx={{ mb: 2 }}>
@@ -53,7 +56,7 @@ export function TransactionFilters({ filters, onChange, onApply, onClear, accoun
             <FormControl sx={{ minWidth: 150 }}>
               <InputLabel>Account</InputLabel>
               <Select
-                value={filters.account}
+                value={safeAccId(filters.account)}
                 label="Account"
                 onChange={(e) =>
                   onChange({
@@ -88,9 +91,25 @@ export function TransactionFilters({ filters, onChange, onApply, onClear, accoun
             </FormControl>
 
             <FormControl sx={{ minWidth: 150 }}>
+              <InputLabel>Category</InputLabel>
+              <Select
+                value={safeCatId(filters.category)}
+                label="Category"
+                onChange={(e) => onChange({ ...filters, category: e.target.value })}
+              >
+                <MenuItem value="">All Categories</MenuItem>
+                {categories.map((cat) => (
+                  <MenuItem key={cat.id} value={String(cat.id)}>
+                    {cat.name}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+
+            <FormControl sx={{ minWidth: 150 }}>
               <InputLabel>Source Account</InputLabel>
               <Select
-                value={filters.sourceAccount}
+                value={safeAccId(filters.sourceAccount)}
                 label="Source Account"
                 onChange={(e) =>
                   onChange({ ...filters, sourceAccount: e.target.value, account: "" })
@@ -108,7 +127,7 @@ export function TransactionFilters({ filters, onChange, onApply, onClear, accoun
             <FormControl sx={{ minWidth: 150 }}>
               <InputLabel>Target Account</InputLabel>
               <Select
-                value={filters.targetAccount}
+                value={safeAccId(filters.targetAccount)}
                 label="Target Account"
                 onChange={(e) =>
                   onChange({ ...filters, targetAccount: e.target.value, account: "" })

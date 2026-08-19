@@ -23,6 +23,8 @@ import Alert from "@mui/material/Alert";
 import Tooltip from "@mui/material/Tooltip";
 import { useTheme } from "@mui/material/styles";
 import axios from "axios";
+import { useConfirm } from "@/components/ConfirmDialogProvider";
+import { useNotify } from "@/components/NotificationProvider";
 
 const schema = z.object({
   name: z.string().min(1, "Name is required"),
@@ -36,8 +38,11 @@ const EMPTY_FORM = { name: "", currency: "USD", type: "bank", initial_balance: 0
 
 export default function AccountsList() {
   const theme = useTheme();
+  const confirm = useConfirm();
+  const { notifySuccess, notifyError } = useNotify();
   const [accounts, setAccounts] = useState([]);
   const [availableImages, setAvailableImages] = useState([]);
+  const [loading, setLoading] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editAccount, setEditAccount] = useState(null);
   const [submitError, setSubmitError] = useState(null);
@@ -67,8 +72,8 @@ export default function AccountsList() {
   };
 
   useEffect(() => {
-    loadAccounts();
-    loadImages();
+    setLoading(true);
+    Promise.all([loadAccounts(), loadImages()]).finally(() => setLoading(false));
   }, []);
 
   const columns = [
@@ -146,9 +151,13 @@ export default function AccountsList() {
   };
 
   const handleDelete = async (id) => {
-    if (confirm("Delete this account?")) {
+    if (!(await confirm("Delete this account?"))) return;
+    try {
       await axios.delete(`/api/accounts/${id}`);
       loadAccounts();
+      notifySuccess("Account deleted");
+    } catch (err) {
+      notifyError(err.response?.data?.error || "Failed to delete account");
     }
   };
 
@@ -195,6 +204,7 @@ export default function AccountsList() {
         <DataGrid
           rows={accounts}
           columns={columns}
+          loading={loading}
           initialState={{ pagination: { paginationModel: { pageSize: 10 } } }}
           pageSizeOptions={[5, 10, 25]}
           getRowId={(row) => row.id}

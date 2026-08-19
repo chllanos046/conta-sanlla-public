@@ -1,11 +1,13 @@
+import { convertAmount } from "@/lib/currency";
+
 /**
  * Balance calculation utilities.
  *
  * Amount sign convention:
- *   income   → amount is positive (+), target_account required, no source_account
- *   expense  → amount is negative (−), source_account required, no target_account
- *   transfer → amount is positive (+), both source and target required
- *              contributes +amount to target, -amount to source
+ *   income   → amount is positive (+) in target account's currency
+ *   expense  → amount is negative (−) in source account's currency
+ *   transfer → amount is positive (+) in source account's currency
+ *              contributes +converted_amount to target, -amount to source
  */
 
 /**
@@ -19,8 +21,17 @@
 export function txContribution(tx, accountId) {
   const id = String(accountId);
   if (String(tx.target_account_id) === id) {
-    // income(+) and transfer(+) credit the target account
-    return parseFloat(tx.amount);
+    const amt = parseFloat(tx.amount);
+    // Cross-currency transfer: amount is in source currency — convert to target currency
+    if (
+      tx.type === "transfer" &&
+      tx.source_currency && tx.target_currency &&
+      tx.source_currency !== tx.target_currency &&
+      tx.exchange_rate
+    ) {
+      return convertAmount(amt, tx.source_currency, tx.target_currency, parseFloat(tx.exchange_rate));
+    }
+    return amt;
   }
   if (String(tx.source_account_id) === id) {
     if (tx.type === "expense") {

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { query } from "@/lib/db";
+import { calculateAccountBalance } from "@/lib/balanceUtils";
 
 export async function GET(request) {
   try {
@@ -16,24 +17,24 @@ export async function GET(request) {
     const dateFrom   = searchParams.get("dateFrom");
     const dateTo     = searchParams.get("dateTo");
 
-    // Accounts with computed current_balance (all-time)
-    const accounts = await query(
-      `SELECT a.id, a.name, a.currency, a.type, a.initial_balance, a.image_path, a.created_at,
-        a.initial_balance + COALESCE(SUM(CASE
-          WHEN t.target_account_id = a.id
-            THEN t.amount * CASE WHEN a.currency = 'USD' THEN 1 ELSE COALESCE(t.exchange_rate, 1) END
-          WHEN t.source_account_id = a.id AND t.type = 'expense'
-            THEN t.amount * CASE WHEN a.currency = 'USD' THEN 1 ELSE COALESCE(t.exchange_rate, 1) END
-          WHEN t.source_account_id = a.id AND t.type = 'transfer'
-            THEN -t.amount * CASE WHEN a.currency = 'USD' THEN 1 ELSE COALESCE(t.exchange_rate, 1) END
-          ELSE 0
-        END), 0) AS current_balance
-      FROM accounts a
-      LEFT JOIN transactions t ON (t.target_account_id = a.id OR t.source_account_id = a.id)
-      GROUP BY a.id
-      ORDER BY a.name`,
+    // Accounts with computed current_balance (all-time), via the shared txContribution model
+    const accountRows = await query(
+      `SELECT id, name, currency, type, initial_balance, image_path, created_at
+       FROM accounts ORDER BY name`,
       [],
     );
+    const txForBalance = await query(
+      `SELECT t.type, t.amount, t.date, t.source_account_id, t.target_account_id, t.exchange_rate,
+              a1.currency as source_currency, a2.currency as target_currency
+       FROM transactions t
+       LEFT JOIN accounts a1 ON t.source_account_id = a1.id
+       LEFT JOIN accounts a2 ON t.target_account_id = a2.id`,
+      [],
+    );
+    const accounts = accountRows.map((acc) => ({
+      ...acc,
+      current_balance: calculateAccountBalance(acc.initial_balance, txForBalance, acc.id),
+    }));
 
     // Build date filter for period transactions
     const now = new Date();
@@ -81,25 +82,10 @@ export async function GET(request) {
     // For custom range, compute per-account balance as of dateFrom (opening balance of the range)
     let accountsWithPeriodBalance = accounts;
     if (period === "custom" && dateFrom) {
-      accountsWithPeriodBalance = await Promise.all(
-        accounts.map(async (acc) => {
-          const priorRows = await query(
-            `SELECT type, amount, source_account_id, target_account_id
-             FROM transactions
-             WHERE (source_account_id = ? OR target_account_id = ?) AND date < ?`,
-            [acc.id, acc.id, dateFrom],
-          );
-          const openingBalance = priorRows.reduce((bal, tx) => {
-            if (String(tx.target_account_id) === String(acc.id)) return bal + parseFloat(tx.amount);
-            if (String(tx.source_account_id) === String(acc.id)) {
-              if (tx.type === "expense") return bal + parseFloat(tx.amount);
-              if (tx.type === "transfer") return bal - parseFloat(tx.amount);
-            }
-            return bal;
-          }, parseFloat(acc.initial_balance) || 0);
-          return { ...acc, current_balance: openingBalance };
-        }),
-      );
+      accountsWithPeriodBalance = accounts.map((acc) => ({
+        ...acc,
+        current_balance: calculateAccountBalance(acc.initial_balance, txForBalance, acc.id, dateFrom),
+      }));
     }
 
     const totalBalance = accountsWithPeriodBalance.reduce(

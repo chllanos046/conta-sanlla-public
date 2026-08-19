@@ -156,6 +156,7 @@ export default function QuickAddTransaction({ accounts = [], categories = [], op
       await axios.post("/api/transactions", payload);
       onSuccess();
       onClose();
+      window.dispatchEvent(new CustomEvent("accounts-updated"));
       if (navigateOnSuccess) router.push("/transactions");
     } catch (err) {
       setError("root", { message: err.response?.data?.error || "Failed to save transaction" });

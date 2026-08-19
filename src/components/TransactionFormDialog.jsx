@@ -57,11 +57,9 @@ const makeSchema = (accounts) =>
       const srcAcc = accounts.find((a) => String(a.id) === data.source_account_id);
       const tgtAcc = accounts.find((a) => String(a.id) === data.target_account_id);
       const needsRate =
-        (data.type === "expense" && srcAcc?.currency && srcAcc.currency !== "USD") ||
-        (data.type === "income" && tgtAcc?.currency && tgtAcc.currency !== "USD") ||
-        (data.type === "transfer" &&
-          ((srcAcc?.currency && srcAcc.currency !== "USD") ||
-            (tgtAcc?.currency && tgtAcc.currency !== "USD")));
+        data.type === "transfer" &&
+        srcAcc?.currency && tgtAcc?.currency &&
+        srcAcc.currency !== tgtAcc.currency;
       if (needsRate && !data.exchange_rate) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
@@ -118,11 +116,9 @@ export function TransactionFormDialog({ open, onClose, editingTx, accounts, cate
   const tgtAcc = accounts.find((a) => String(a.id) === targetAccountId);
 
   const showExchangeRate =
-    (txType === "expense" && srcAcc?.currency && srcAcc.currency !== "USD") ||
-    (txType === "income" && tgtAcc?.currency && tgtAcc.currency !== "USD") ||
-    (txType === "transfer" &&
-      ((srcAcc?.currency && srcAcc.currency !== "USD") ||
-        (tgtAcc?.currency && tgtAcc.currency !== "USD")));
+    txType === "transfer" &&
+    srcAcc?.currency && tgtAcc?.currency &&
+    srcAcc.currency !== tgtAcc.currency;
 
   const foreignCurrency =
     txType === "income"
@@ -163,8 +159,9 @@ export function TransactionFormDialog({ open, onClose, editingTx, accounts, cate
     try {
       const rawAmount = Math.abs(parseFloat(data.amount));
       const exchangeRate = data.exchange_rate ? parseFloat(data.exchange_rate) : null;
-      const usdAmount = exchangeRate ? rawAmount / exchangeRate : rawAmount;
-      const signedAmount = data.type === "expense" ? -usdAmount : usdAmount;
+      // Amount stored in account's native currency (source for expense/transfer, target for income).
+      // exchange_rate is only set for cross-currency transfers and used by txContribution for balance.
+      const signedAmount = data.type === "expense" ? -rawAmount : rawAmount;
 
       const payload = {
         ...data,
@@ -184,6 +181,7 @@ export function TransactionFormDialog({ open, onClose, editingTx, accounts, cate
 
       onClose();
       onSaved();
+      window.dispatchEvent(new CustomEvent("accounts-updated"));
     } catch (err) {
       setSubmitError(err.response?.data?.error || "Failed to save transaction");
     }

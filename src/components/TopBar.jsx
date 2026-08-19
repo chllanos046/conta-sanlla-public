@@ -4,10 +4,15 @@ import Toolbar from "@mui/material/Toolbar";
 import Typography from "@mui/material/Typography";
 import IconButton from "@mui/material/IconButton";
 import Box from "@mui/material/Box";
+import ToggleButtonGroup from "@mui/material/ToggleButtonGroup";
+import ToggleButton from "@mui/material/ToggleButton";
 import MenuIcon from "@mui/icons-material/Menu";
 import Image from "next/image";
+import { useCurrency } from "@/hooks/useCurrency";
 
 export default function TopBar({ onMenuClick, isMobile }) {
+  const [currency, setCurrency] = useCurrency();
+
   return (
     <AppBar position="fixed" sx={{ zIndex: (theme) => theme.zIndex.drawer + 1 }}>
       <Toolbar>
@@ -23,9 +28,8 @@ export default function TopBar({ onMenuClick, isMobile }) {
             display: "flex",
             alignItems: "center",
             gap: 1,
-            flexGrow: { xs: 1, sm: 0 },
+            flexGrow: { xs: 1, sm: 1 },
             justifyContent: { xs: "center", sm: "flex-start" },
-            mr: { xs: 0, sm: 0 },
           }}
         >
           <Image
@@ -39,6 +43,35 @@ export default function TopBar({ onMenuClick, isMobile }) {
             Conta Sanlla
           </Typography>
         </Box>
+
+        <ToggleButtonGroup
+          value={currency}
+          exclusive
+          onChange={(_, val) => { if (val) setCurrency(val); }}
+          size="small"
+          sx={{ ml: 1 }}
+        >
+          <ToggleButton
+            value="USD"
+            sx={{
+              color: "inherit",
+              borderColor: "rgba(255,255,255,0.3)",
+              "&.Mui-selected": { color: "inherit", bgcolor: "rgba(255,255,255,0.2)" },
+            }}
+          >
+            USD
+          </ToggleButton>
+          <ToggleButton
+            value="ARS"
+            sx={{
+              color: "inherit",
+              borderColor: "rgba(255,255,255,0.3)",
+              "&.Mui-selected": { color: "inherit", bgcolor: "rgba(255,255,255,0.2)" },
+            }}
+          >
+            ARS
+          </ToggleButton>
+        </ToggleButtonGroup>
       </Toolbar>
     </AppBar>
   );

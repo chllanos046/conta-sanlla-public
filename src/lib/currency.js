@@ -9,6 +9,17 @@ export function convertToUSD(amount, currency, rates) {
 }
 
 /**
+ * Convert an amount between USD and ARS.
+ * arsRate: how many ARS per 1 USD (Frankfurter format, rates.ARS).
+ */
+export function convertAmount(amount, fromCurrency, toCurrency, arsRate) {
+  if (!fromCurrency || !toCurrency || fromCurrency === toCurrency || !arsRate) return amount;
+  if (fromCurrency === "USD" && toCurrency === "ARS") return amount * arsRate;
+  if (fromCurrency === "ARS" && toCurrency === "USD") return amount / arsRate;
+  return amount;
+}
+
+/**
  * Return the currency symbol for a given ISO 4217 code.
  * Always returns "$" for USD. Falls back to the currency code if unknown.
  */
