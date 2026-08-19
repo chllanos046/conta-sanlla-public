@@ -31,7 +31,9 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut, useSession } from "next-auth/react";
 import axios from "axios";
-import { convertToUSD, getCurrencySymbol } from "@/lib/currency";
+import { convertAmount, getCurrencySymbol } from "@/lib/currency";
+import { formatCurrency } from "@/lib/utils";
+import { useCurrency } from "@/hooks/useCurrency";
 
 
 const ACCOUNT_TYPE_ORDER = ["bank", "cash", "investment", "credit"];
@@ -50,6 +52,7 @@ export default function Sidebar({
   const expanded = open || isMobile;
   const { data: session } = useSession();
 
+  const [displayCurrency] = useCurrency();
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [openGroups, setOpenGroups] = useState(
     ACCOUNT_TYPE_ORDER.reduce((acc, type) => ({ ...acc, [type]: true }), {})
@@ -118,8 +121,9 @@ export default function Sidebar({
 
         {/* Accounts grouped by type */}
         {Object.entries(groupedAccounts).map(([type, items]) => {
+          const arsRate = rates.ARS || 1;
           const groupBalance = items.reduce(
-            (sum, a) => sum + convertToUSD(parseFloat(a.current_balance || 0), a.currency, rates),
+            (sum, a) => sum + convertAmount(parseFloat(a.current_balance || 0), a.currency, displayCurrency, arsRate),
             0
           );
           const isOpen = openGroups[type];
@@ -158,7 +162,7 @@ export default function Sidebar({
                         color: groupBalance > 0 ? "income.main" : groupBalance < 0 ? "expense.main" : "text.disabled",
                       }}
                     >
-                      ${groupBalance.toFixed(2)}
+                      {formatCurrency(groupBalance, displayCurrency)}
                     </Typography>
                   </ListItemButton>
 
@@ -198,7 +202,7 @@ export default function Sidebar({
                                   color: bal > 0 ? "income.main" : bal < 0 ? "expense.main" : "text.disabled",
                                 }}
                               >
-                                ${convertToUSD(bal, acc.currency, rates).toFixed(2)}
+                                {formatCurrency(bal, acc.currency)}
                               </Typography>
                             </Box>
                           </ListItemButton>

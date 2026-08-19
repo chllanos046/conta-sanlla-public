@@ -8,6 +8,9 @@ import Typography from "@mui/material/Typography";
 import Box from "@mui/material/Box";
 import Stack from "@mui/material/Stack";
 import LinearProgress, { linearProgressClasses } from "@mui/material/LinearProgress";
+import Skeleton from "@mui/material/Skeleton";
+import { convertAmount } from "@/lib/currency";
+import { formatCurrency } from "@/lib/utils";
 
 const COLORS = [
   "#0ea5e9", // sky blue
@@ -40,9 +43,10 @@ function PieCenterLabel({ primaryText, secondaryText }) {
   const { width, height, left, top } = useDrawingArea();
   const primaryY = top + height / 2 - 10;
   const secondaryY = primaryY + 24;
+  const fontSize = primaryText.length > 10 ? "0.85rem" : undefined;
   return (
     <>
-      <StyledText variant="primary" x={left + width / 2} y={primaryY}>
+      <StyledText variant="primary" x={left + width / 2} y={primaryY} style={fontSize ? { fontSize } : undefined}>
         {primaryText}
       </StyledText>
       <StyledText variant="secondary" x={left + width / 2} y={secondaryY}>
@@ -52,13 +56,15 @@ function PieCenterLabel({ primaryText, secondaryText }) {
   );
 }
 
-export function ExpensesByCategoryChart({ transactions }) {
+export function ExpensesByCategoryChart({ transactions, accountMap = {}, displayCurrency = "USD", arsRate = 1, loading = false }) {
   const expensesByCategory = {};
   for (const t of transactions) {
     if (t.type !== "expense") continue;
     const cat = t.category_name || "Uncategorized";
-    expensesByCategory[cat] =
-      (expensesByCategory[cat] || 0) + Math.abs(parseFloat(t.amount || 0));
+    const txCurrency = accountMap[String(t.source_account_id)]?.currency || "USD";
+    const txRate = parseFloat(t.exchange_rate) || arsRate;
+    const converted = convertAmount(Math.abs(parseFloat(t.amount || 0)), txCurrency, displayCurrency, txRate);
+    expensesByCategory[cat] = (expensesByCategory[cat] || 0) + converted;
   }
 
   const entries = Object.entries(expensesByCategory)
@@ -81,65 +87,76 @@ export function ExpensesByCategoryChart({ transactions }) {
           Expenses by Category
         </Typography>
 
-        <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
-          <PieChart
-            colors={COLORS}
-            margin={{ left: 80, right: 80, top: 80, bottom: 80 }}
-            series={[
-              {
-                data: pieData.length > 0 ? pieData : [{ label: "No data", value: 1 }],
-                innerRadius: 75,
-                outerRadius: 100,
-                paddingAngle: 0,
-                highlightScope: { fade: "global", highlight: "item" },
-              },
-            ]}
-            height={260}
-            width={260}
-            hideLegend
-          >
-            <PieCenterLabel
-              primaryText={`$${total.toFixed(2)}`}
-              secondaryText="Expenses"
-            />
-          </PieChart>
-        </Box>
-
-        {entries.length === 0 ? (
-          <Typography variant="body2" color="text.secondary" sx={{ textAlign: "center", py: 2 }}>
-            No expenses for this period
-          </Typography>
+        {loading ? (
+          <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 2 }}>
+            <Skeleton variant="circular" width={260} height={260} />
+            {[80, 60, 45].map((w) => (
+              <Skeleton key={w} variant="rectangular" height={36} width={`${w}%`} />
+            ))}
+          </Box>
         ) : (
-          legendEntries.map(({ name, value }) => {
-            const i = entries.findIndex((e) => e.name === name);
-            return (
-              <Stack key={name} direction="row" sx={{ alignItems: "center", gap: 2, pb: 2 }}>
-                <Stack sx={{ gap: 1, flexGrow: 1 }}>
-                  <Stack
-                    direction="row"
-                    sx={{ justifyContent: "space-between", alignItems: "center", gap: 2 }}
-                  >
-                    <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                      {name}
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      {total > 0 ? Math.round((value / total) * 100) : 0}%
-                    </Typography>
+          <>
+            <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <PieChart
+                colors={COLORS}
+                margin={{ left: 80, right: 80, top: 80, bottom: 80 }}
+                series={[
+                  {
+                    data: pieData.length > 0 ? pieData : [{ label: "No data", value: 1 }],
+                    innerRadius: 75,
+                    outerRadius: 100,
+                    paddingAngle: 0,
+                    highlightScope: { fade: "global", highlight: "item" },
+                  },
+                ]}
+                height={260}
+                width={260}
+                hideLegend
+              >
+                <PieCenterLabel
+                  primaryText={formatCurrency(total, displayCurrency)}
+                  secondaryText="Expenses"
+                />
+              </PieChart>
+            </Box>
+
+            {entries.length === 0 ? (
+              <Typography variant="body2" color="text.secondary" sx={{ textAlign: "center", py: 2 }}>
+                No expenses for this period
+              </Typography>
+            ) : (
+              legendEntries.map(({ name, value }) => {
+                const i = entries.findIndex((e) => e.name === name);
+                return (
+                  <Stack key={name} direction="row" sx={{ alignItems: "center", gap: 2, pb: 2 }}>
+                    <Stack sx={{ gap: 1, flexGrow: 1 }}>
+                      <Stack
+                        direction="row"
+                        sx={{ justifyContent: "space-between", alignItems: "center", gap: 2 }}
+                      >
+                        <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                          {name}
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          {total > 0 ? Math.round((value / total) * 100) : 0}%
+                        </Typography>
+                      </Stack>
+                      <LinearProgress
+                        variant="determinate"
+                        aria-label={`${name} expense percentage`}
+                        value={total > 0 ? (value / total) * 100 : 0}
+                        sx={{
+                          [`& .${linearProgressClasses.bar}`]: {
+                            backgroundColor: COLORS[i % COLORS.length],
+                          },
+                        }}
+                      />
+                    </Stack>
                   </Stack>
-                  <LinearProgress
-                    variant="determinate"
-                    aria-label={`${name} expense percentage`}
-                    value={total > 0 ? (value / total) * 100 : 0}
-                    sx={{
-                      [`& .${linearProgressClasses.bar}`]: {
-                        backgroundColor: COLORS[i % COLORS.length],
-                      },
-                    }}
-                  />
-                </Stack>
-              </Stack>
-            );
-          })
+                );
+              })
+            )}
+          </>
         )}
       </CardContent>
     </Card>

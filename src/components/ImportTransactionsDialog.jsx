@@ -215,6 +215,7 @@ export function ImportTransactionsDialog({ open, onClose, onSuccess, accounts = 
       await axios.post("/api/transactions/import", { transactions: validRows });
       onSuccess?.();
       handleClose();
+      window.dispatchEvent(new CustomEvent("accounts-updated"));
     } catch (err) {
       setError(err.response?.data?.error || "Import failed.");
       setImporting(false);

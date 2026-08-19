@@ -8,6 +8,7 @@ import Box from "@mui/material/Box";
 import { useTheme } from "@mui/material/styles";
 import { SparkLineChart } from "@mui/x-charts/SparkLineChart";
 import { areaElementClasses, lineElementClasses } from "@mui/x-charts/LineChart";
+import Skeleton from "@mui/material/Skeleton";
 import TrendingUpIcon from "@mui/icons-material/TrendingUp";
 import TrendingDownIcon from "@mui/icons-material/TrendingDown";
 import TrendingFlatIcon from "@mui/icons-material/TrendingFlat";
@@ -32,7 +33,7 @@ function getBadgeProps(percentChange) {
   return { icon: <TrendingFlatIcon fontSize="small" />, chipColor: "default" };
 }
 
-export function SummaryStatCard({ title, value, interval, trend, data, xAxisData, percentChange }) {
+export function SummaryStatCard({ title, value, interval, trend, data, xAxisData, percentChange, loading = false }) {
   const theme = useTheme();
 
   const trendColor = {
@@ -61,22 +62,36 @@ export function SummaryStatCard({ title, value, interval, trend, data, xAxisData
               direction="row"
               sx={{ justifyContent: "space-between", alignItems: "center" }}
             >
-              <Typography variant="h4" component="p">
-                {value}
-              </Typography>
-              <Chip
-                size="small"
-                color={chipColor}
-                icon={icon}
-                label={chipLabel}
-              />
+              {loading ? (
+                <Skeleton variant="rectangular" height={32} width="60%" />
+              ) : (
+                <Typography
+                  variant="h4"
+                  component="p"
+                  sx={{ fontSize: String(value).length > 10 ? { xs: "1.1rem", sm: "1.3rem" } : undefined }}
+                >
+                  {value}
+                </Typography>
+              )}
+              {loading ? (
+                <Skeleton variant="rectangular" height={24} width={48} sx={{ borderRadius: 4 }} />
+              ) : (
+                <Chip
+                  size="small"
+                  color={chipColor}
+                  icon={icon}
+                  label={chipLabel}
+                />
+              )}
             </Stack>
             <Typography variant="caption" sx={{ color: "text.secondary" }}>
-              {interval}
+              {loading ? <Skeleton width={100} /> : interval}
             </Typography>
           </Stack>
           <Box sx={{ width: "100%", height: 50 }}>
-            {data && data.length > 1 ? (
+            {loading ? (
+              <Skeleton variant="rectangular" height={50} />
+            ) : data && data.length > 1 ? (
               <SparkLineChart
                 colors={[trendColor]}
                 data={data}
@@ -98,6 +113,7 @@ export function SummaryStatCard({ title, value, interval, trend, data, xAxisData
             ) : (
               <Box sx={{ height: 50 }} />
             )}
+
           </Box>
         </Stack>
       </CardContent>

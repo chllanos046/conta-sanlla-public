@@ -5,8 +5,30 @@ import Chip from "@mui/material/Chip";
 import Typography from "@mui/material/Typography";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
+import { convertAmount } from "@/lib/currency";
+import { formatCurrency } from "@/lib/utils";
 
-export function TransactionsTable({ rows, accounts, openingBalance, onEditRow, onDeleteRow }) {
+export function TransactionsTable({
+  rows,
+  accounts,
+  openingBalance,
+  onEditRow,
+  onDeleteRow,
+  displayCurrency = "USD",
+  arsRate = 1,
+  loading = false,
+}) {
+  const accountMap = Object.fromEntries((accounts || []).map((a) => [String(a.id), a]));
+
+  const fmtAmount = (value, row) => {
+    if (value == null) return "";
+    const accountId = row.type === "income" ? row.target_account_id : row.source_account_id;
+    const txCurrency = accountMap[String(accountId)]?.currency || "USD";
+    const txRate = parseFloat(row.exchange_rate) || arsRate;
+    const converted = convertAmount(parseFloat(value), txCurrency, displayCurrency, txRate);
+    return formatCurrency(converted, displayCurrency);
+  };
+
   const columns = [
     {
       field: "date",
@@ -56,16 +78,15 @@ export function TransactionsTable({ rows, accounts, openingBalance, onEditRow, o
     {
       field: "amount",
       headerName: "Amount",
-      width: 120,
-      valueFormatter: (value) =>
-        value != null ? `$${parseFloat(value).toFixed(2)}` : "",
+      width: displayCurrency === "ARS" ? 180 : 120,
+      valueFormatter: (value, row) => fmtAmount(value, row),
     },
     {
       field: "balance",
       headerName: "Balance",
-      width: 130,
+      width: displayCurrency === "ARS" ? 190 : 130,
       valueFormatter: (value) =>
-        value != null ? `$${parseFloat(value).toFixed(2)}` : "",
+        value != null ? formatCurrency(parseFloat(value), displayCurrency) : "",
     },
     {
       field: "actions",
@@ -115,7 +136,7 @@ export function TransactionsTable({ rows, accounts, openingBalance, onEditRow, o
               fontWeight={600}
               sx={{ color: openingBalance >= 0 ? "income.main" : "expense.main" }}
             >
-              ${openingBalance.toFixed(2)}
+              {formatCurrency(openingBalance, displayCurrency)}
             </Typography>
           </Box>
           <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
@@ -127,7 +148,7 @@ export function TransactionsTable({ rows, accounts, openingBalance, onEditRow, o
               fontWeight={600}
               sx={{ color: closingBalance >= 0 ? "income.main" : "expense.main" }}
             >
-              ${closingBalance.toFixed(2)}
+              {formatCurrency(closingBalance, displayCurrency)}
             </Typography>
           </Box>
         </Box>
@@ -136,6 +157,7 @@ export function TransactionsTable({ rows, accounts, openingBalance, onEditRow, o
         <DataGrid
           rows={rows}
           columns={columns}
+          loading={loading}
           initialState={{
             pagination: { paginationModel: { pageSize: 25 } },
             sorting: { sortModel: [{ field: "date", sort: "desc" }] },

@@ -15,11 +15,17 @@ import { TransactionFilters } from "@/components/TransactionFilters";
 import { TransactionsTable } from "@/components/TransactionsTable";
 import { TransactionFormDialog } from "@/components/TransactionFormDialog";
 import { ImportTransactionsDialog } from "@/components/ImportTransactionsDialog";
+import { useCurrency } from "@/hooks/useCurrency";
+import { useConfirm } from "@/components/ConfirmDialogProvider";
+import { useNotify } from "@/components/NotificationProvider";
 
 export default function TransactionsPage() {
   const searchParams = useSearchParams();
+  const confirm = useConfirm();
+  const { notifySuccess, notifyError } = useNotify();
 
   const [rows, setRows] = useState([]);
+  const [loading, setLoading] = useState(false);
   const [accounts, setAccounts] = useState([]);
   const [categories, setCategories] = useState([]);
   const [openingBalance, setOpeningBalance] = useState(null);
@@ -29,18 +35,28 @@ export default function TransactionsPage() {
     account: searchParams.get("account") || "",
     sourceAccount: "",
     targetAccount: "",
+    category: "",
   }));
   const [appliedFilters, setAppliedFilters] = useState(() => ({
     type: "",
     account: searchParams.get("account") || "",
     sourceAccount: "",
     targetAccount: "",
+    category: "",
   }));
   const [refreshKey, setRefreshKey] = useState(0);
 
   const [txDialogOpen, setTxDialogOpen] = useState(false);
   const [editingTx, setEditingTx] = useState(null);
   const [importOpen, setImportOpen] = useState(false);
+  const [globalCurrency] = useCurrency();
+  const [arsRate, setArsRate] = useState(1);
+
+  useEffect(() => {
+    axios.get("/api/exchange-rates").then(({ data }) => {
+      if (data.ARS) setArsRate(data.ARS);
+    }).catch(() => {});
+  }, []);
 
   // Sync URL account param during render (React-recommended alternative to an effect).
   // When searchParams changes Next.js re-renders this component; we detect the drift
@@ -48,35 +64,42 @@ export default function TransactionsPage() {
   const urlAccount = searchParams.get("account") || "";
   const [prevUrlAccount, setPrevUrlAccount] = useState(urlAccount);
   if (urlAccount !== prevUrlAccount) {
-    const updated = { type: "", account: urlAccount, sourceAccount: "", targetAccount: "" };
+    const updated = { type: "", account: urlAccount, sourceAccount: "", targetAccount: "", category: "" };
     setPrevUrlAccount(urlAccount);
     setFilters(updated);
     setAppliedFilters(updated);
   }
 
   // Reactive data loading — all setState calls are inside .then(), never synchronous.
-  const { type: af_type, account: af_account, sourceAccount: af_source, targetAccount: af_target } = appliedFilters;
+  const { type: af_type, account: af_account, sourceAccount: af_source, targetAccount: af_target, category: af_category } = appliedFilters;
   useEffect(() => {
     const params = {};
     if (af_type) params.type = af_type;
     if (af_account) params.account = af_account;
     if (af_source) params.sourceAccount = af_source;
     if (af_target) params.targetAccount = af_target;
+    if (af_category) params.category = af_category;
 
     let cancelled = false;
+    setLoading(true);
     axios.get("/api/transactions", { params }).then(({ data }) => {
       if (cancelled) return;
       setRows(data.transactions || []);
       setAccounts(data.accounts || []);
       setCategories(data.categories || []);
       setOpeningBalance(data.opening_balance ?? null);
+    }).finally(() => {
+      if (!cancelled) setLoading(false);
     });
     return () => { cancelled = true; };
-  }, [af_type, af_account, af_source, af_target, refreshKey]);
+  }, [af_type, af_account, af_source, af_target, af_category, refreshKey]);
 
   const refresh = () => setRefreshKey((k) => k + 1);
 
-  const accountName = accounts.find((a) => String(a.id) === String(appliedFilters.account))?.name;
+  const filteredAccount = accounts.find((a) => String(a.id) === String(appliedFilters.account));
+  const accountName = filteredAccount?.name;
+  // Single account filtered → show in that account's currency; otherwise use global preference
+  const displayCurrency = filteredAccount?.currency || globalCurrency;
 
   const openNewTx = () => {
     setEditingTx(null);
@@ -89,9 +112,15 @@ export default function TransactionsPage() {
   };
 
   const handleDelete = async (id) => {
-    if (!confirm("Delete this transaction?")) return;
-    await axios.delete(`/api/transactions/${id}`);
-    refresh();
+    if (!(await confirm("Delete this transaction?"))) return;
+    try {
+      await axios.delete(`/api/transactions/${id}`);
+      refresh();
+      window.dispatchEvent(new CustomEvent("accounts-updated"));
+      notifySuccess("Transaction deleted");
+    } catch (err) {
+      notifyError(err.response?.data?.error || "Failed to delete transaction");
+    }
   };
 
   const transactionsWithBalance = useMemo(() => {
@@ -149,6 +178,7 @@ export default function TransactionsPage() {
       <TransactionFilters
         filters={filters}
         accounts={accounts}
+        categories={categories}
         onChange={setFilters}
         onApply={() => setAppliedFilters({ ...filters })}
         onClear={() => {
@@ -157,6 +187,7 @@ export default function TransactionsPage() {
             account: "",
             sourceAccount: "",
             targetAccount: "",
+            category: "",
           };
           setFilters(cleared);
           setAppliedFilters(cleared);
@@ -169,6 +200,9 @@ export default function TransactionsPage() {
         openingBalance={openingBalance}
         onEditRow={openEditTx}
         onDeleteRow={handleDelete}
+        displayCurrency={displayCurrency}
+        arsRate={arsRate}
+        loading={loading}
       />
 
       <ImportTransactionsDialog

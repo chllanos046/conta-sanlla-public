@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { query } from "@/lib/db";
+import { txContribution } from "@/lib/balanceUtils";
 
 export async function GET(request) {
   try {
@@ -89,20 +90,18 @@ export async function GET(request) {
         );
         // Sum all transactions for this account strictly before the earliest date
         const priorRows = await query(
-          `SELECT type, amount, source_account_id, target_account_id
-           FROM transactions
-           WHERE (source_account_id = ? OR target_account_id = ?) AND date < ?`,
+          `SELECT t.type, t.amount, t.source_account_id, t.target_account_id,
+                  t.exchange_rate, a1.currency as source_currency, a2.currency as target_currency
+           FROM transactions t
+           LEFT JOIN accounts a1 ON a1.id = t.source_account_id
+           LEFT JOIN accounts a2 ON a2.id = t.target_account_id
+           WHERE (t.source_account_id = ? OR t.target_account_id = ?) AND t.date < ?`,
           [account, account, earliest],
         );
-        const prior = priorRows.reduce((bal, tx) => {
-          const id = String(account);
-          if (String(tx.target_account_id) === id) return bal + parseFloat(tx.amount);
-          if (String(tx.source_account_id) === id) {
-            if (tx.type === "expense") return bal + parseFloat(tx.amount);
-            if (tx.type === "transfer") return bal - parseFloat(tx.amount);
-          }
-          return bal;
-        }, parseFloat(acc.initial_balance) || 0);
+        const prior = priorRows.reduce(
+          (bal, tx) => bal + txContribution(tx, account),
+          parseFloat(acc.initial_balance) || 0,
+        );
         opening_balance = prior;
       }
     }
