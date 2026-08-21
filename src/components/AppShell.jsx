@@ -33,40 +33,38 @@ export default function AppShell({ children }) {
 
   return (
     <TransactionDialogProvider>
-      <Suspense fallback={<Loading />}>
-        <Box sx={{ display: "flex", minHeight: "100vh" }}>
-          <TopBar onMenuClick={isMobile ? toggleMobile : toggleDesktop} isMobile={isMobile} />
-          {!isMobile && (
-            <Sidebar
-              open={open}
-              mobileOpen={mobileOpen}
-              onMobileClose={() => setMobileOpen(false)}
-              isMobile={isMobile}
-              drawerWidth={DRAWER_WIDTH}
-              miniWidth={MINI_DRAWER_WIDTH}
-            />
-          )}
-          <Box
-            component="main"
-            sx={{
-              flex: 1,
-              minWidth: 0,
-              p: isMobile ? 0 : 3,
-              mt: isMobile ? "56px" : "64px",
-              ml: 0,
-              pb: isMobile ? "88px" : 3,
-              transition: theme.transitions.create("margin-left", {
-                easing: theme.transitions.easing.sharp,
-                duration: theme.transitions.duration.enteringScreen,
-              }),
-              minHeight: "calc(100vh - 64px)",
-            }}
-          >
-            {children}
-          </Box>
-          {isMobile && <MobileBottomNav />}
+      <Box sx={{ display: "flex", minHeight: "100vh" }}>
+        <TopBar onMenuClick={isMobile ? toggleMobile : toggleDesktop} isMobile={isMobile} />
+        {!isMobile && (
+          <Sidebar
+            open={open}
+            mobileOpen={mobileOpen}
+            onMobileClose={() => setMobileOpen(false)}
+            isMobile={isMobile}
+            drawerWidth={DRAWER_WIDTH}
+            miniWidth={MINI_DRAWER_WIDTH}
+          />
+        )}
+        <Box
+          component="main"
+          sx={{
+            flex: 1,
+            minWidth: 0,
+            p: isMobile ? 0 : 3,
+            mt: isMobile ? "56px" : "64px",
+            ml: 0,
+            pb: isMobile ? "88px" : 3,
+            transition: theme.transitions.create("margin-left", {
+              easing: theme.transitions.easing.sharp,
+              duration: theme.transitions.duration.enteringScreen,
+            }),
+            minHeight: "calc(100vh - 64px)",
+          }}
+        >
+          <Suspense fallback={<Loading />}>{children}</Suspense>
         </Box>
-      </Suspense>
+        {isMobile && <MobileBottomNav />}
+      </Box>
     </TransactionDialogProvider>
   );
 }
