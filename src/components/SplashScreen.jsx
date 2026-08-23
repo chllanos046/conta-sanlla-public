@@ -28,7 +28,7 @@ export default function SplashScreen() {
         width: "100vw",
         height: "100dvh",
         zIndex: 9999,
-        backgroundColor: "#0f766e",
+        backgroundColor: "#DB5D3B",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
@@ -48,7 +48,7 @@ export default function SplashScreen() {
         }}
       >
         <Image
-          src="/logo.png"
+          src="/logo.svg"
           alt="Conta Sanlla"
           width={96}
           height={96}

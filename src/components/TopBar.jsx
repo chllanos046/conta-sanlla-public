@@ -14,7 +14,7 @@ export default function TopBar({ onMenuClick, isMobile }) {
   const [currency, setCurrency] = useCurrency();
 
   return (
-    <AppBar position="fixed" sx={{ zIndex: (theme) => theme.zIndex.drawer + 1 }}>
+    <AppBar position="fixed" enableColorOnDark sx={{ zIndex: (theme) => theme.zIndex.drawer + 1 }}>
       <Toolbar>
         {!isMobile && (
           <IconButton color="inherit" edge="start" onClick={onMenuClick} sx={{ mr: 1 }}>
@@ -33,7 +33,7 @@ export default function TopBar({ onMenuClick, isMobile }) {
           }}
         >
           <Image
-            src="/logo.png"
+            src="/logo.svg"
             alt="Conta Sanlla"
             width={32}
             height={32}
@@ -56,7 +56,11 @@ export default function TopBar({ onMenuClick, isMobile }) {
             sx={{
               color: "inherit",
               borderColor: "rgba(255,255,255,0.3)",
-              "&.Mui-selected": { color: "inherit", bgcolor: "rgba(255,255,255,0.2)" },
+              "&.Mui-selected": {
+                color: "primary.main",
+                bgcolor: "#F1EBE1",
+                "&:hover": { bgcolor: "#F1EBE1" },
+              },
             }}
           >
             USD
@@ -66,7 +70,11 @@ export default function TopBar({ onMenuClick, isMobile }) {
             sx={{
               color: "inherit",
               borderColor: "rgba(255,255,255,0.3)",
-              "&.Mui-selected": { color: "inherit", bgcolor: "rgba(255,255,255,0.2)" },
+              "&.Mui-selected": {
+                color: "primary.main",
+                bgcolor: "#F1EBE1",
+                "&:hover": { bgcolor: "#F1EBE1" },
+              },
             }}
           >
             ARS

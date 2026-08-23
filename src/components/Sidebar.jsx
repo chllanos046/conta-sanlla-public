@@ -135,13 +135,13 @@ export default function Sidebar({
                   <ListItemButton
                     onClick={() => setOpenGroups((prev) => ({ ...prev, [type]: !prev[type] }))}
                     sx={{
-                      bgcolor: "grey.100",
-                      borderTop: "1px solid rgba(0,0,0,0.08)",
-                      borderBottom: "1px solid rgba(0,0,0,0.08)",
+                      borderTop: "1px solid",
+                      borderBottom: "1px solid",
+                      borderColor: "divider",
                       px: 2,
                       py: 0.75,
                       minHeight: 36,
-                      "&:hover": { bgcolor: "grey.200" },
+                      "&:hover": { bgcolor: "action.hover" },
                     }}
                   >
                     {isOpen ? (
@@ -178,7 +178,8 @@ export default function Sidebar({
                             sx={{
                               px: 2,
                               py: 1,
-                              borderBottom: "1px solid rgba(0,0,0,0.06)",
+                              borderBottom: "1px solid",
+                              borderColor: "divider",
                             }}
                           >
                             <ListItemIcon sx={{ minWidth: 0, mr: 1.5, flexShrink: 0 }}>
