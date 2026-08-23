@@ -368,6 +368,14 @@ export default function Dashboard() {
             exclusive
             onChange={handlePeriodChange}
             size="small"
+            color="primary"
+            sx={{
+              "& .MuiToggleButton-root.Mui-selected": {
+                bgcolor: "primary.main",
+                color: "#F1EBE1",
+                "&:hover": { bgcolor: "primary.dark" },
+              },
+            }}
           >
             {PERIODS.map((p) => (
               <ToggleButton key={p.value} value={p.value}>

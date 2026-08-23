@@ -1,6 +1,4 @@
 /**
- * @jest-environment jsdom
- *
  * Smoke tests for AccountsList component.
  * These tests render the component and interact with it to catch issues like
  * missing hook return values (e.g. setValue not destructured from useForm).
@@ -10,35 +8,37 @@ import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import "@testing-library/jest-dom";
 
 // ── Next.js / auth stubs ────────────────────────────────────────────────────
-jest.mock("next-auth/react", () => ({
+vi.mock("next-auth/react", () => ({
   useSession: () => ({ data: { user: { id: 1, name: "Test", email: "test@example.com" } }, status: "authenticated" }),
 }));
-jest.mock("next/navigation", () => ({
-  useRouter: () => ({ push: jest.fn() }),
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ push: vi.fn() }),
   usePathname: () => "/accounts",
 }));
 
 // ── axios stub ──────────────────────────────────────────────────────────────
-jest.mock("axios", () => ({
-  get: jest.fn((url) => {
-    if (url === "/api/accounts")
-      return Promise.resolve({
-        data: [
-          { id: 1, name: "Main Bank", currency: "USD", type: "bank", initial_balance: 1000, current_balance: 1500, image_path: null },
-        ],
-      });
-    if (url === "/api/account-images")
-      return Promise.resolve({ data: ["/images/bank.png"] });
-    return Promise.resolve({ data: [] });
-  }),
-  put: jest.fn(() => Promise.resolve({ data: {} })),
-  post: jest.fn(() => Promise.resolve({ data: { id: 2 } })),
-  delete: jest.fn(() => Promise.resolve({ data: {} })),
+vi.mock("axios", () => ({
+  default: {
+    get: vi.fn((url) => {
+      if (url === "/api/accounts")
+        return Promise.resolve({
+          data: [
+            { id: 1, name: "Main Bank", currency: "USD", type: "bank", initial_balance: 1000, current_balance: 1500, image_path: null },
+          ],
+        });
+      if (url === "/api/account-images")
+        return Promise.resolve({ data: ["/images/bank.png"] });
+      return Promise.resolve({ data: [] });
+    }),
+    put: vi.fn(() => Promise.resolve({ data: {} })),
+    post: vi.fn(() => Promise.resolve({ data: { id: 2 } })),
+    delete: vi.fn(() => Promise.resolve({ data: {} })),
+  },
 }));
 
 // ── MUI / DataGrid stubs ────────────────────────────────────────────────────
 // DataGrid requires a DOM measurement env — stub it to a simple table.
-jest.mock("@mui/x-data-grid", () => ({
+vi.mock("@mui/x-data-grid", () => ({
   DataGrid: ({ rows, columns }) => (
     <table data-testid="data-grid">
       <tbody>
@@ -58,10 +58,19 @@ jest.mock("@mui/x-data-grid", () => ({
 }));
 
 import AccountsList from "@/components/AccountsList";
+import { NotificationProvider } from "@/components/NotificationProvider";
+import { ConfirmDialogProvider } from "@/components/ConfirmDialogProvider";
 
 // ── helpers ─────────────────────────────────────────────────────────────────
 
-const renderComponent = () => render(<AccountsList />);
+const renderComponent = () =>
+  render(
+    <NotificationProvider>
+      <ConfirmDialogProvider>
+        <AccountsList />
+      </ConfirmDialogProvider>
+    </NotificationProvider>,
+  );
 
 // ── tests ────────────────────────────────────────────────────────────────────
 

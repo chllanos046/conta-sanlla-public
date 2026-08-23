@@ -8,10 +8,14 @@ import CardContent from "@mui/material/CardContent";
 import Typography from "@mui/material/Typography";
 import Avatar from "@mui/material/Avatar";
 import Divider from "@mui/material/Divider";
+import FormControlLabel from "@mui/material/FormControlLabel";
+import Switch from "@mui/material/Switch";
+import { useThemeMode } from "@/hooks/useThemeMode";
 
 export default function ProfilePage() {
   const { data: session, status } = useSession();
   const router = useRouter();
+  const [mode, setMode] = useThemeMode();
 
   useEffect(() => {
     if (status === "unauthenticated") router.replace("/login");
@@ -51,6 +55,22 @@ export default function ProfilePage() {
               </Typography>
               <Typography variant="body1">{session.user.email}</Typography>
             </Box>
+          </Box>
+          <Divider sx={{ my: 2 }} />
+          <Box>
+            <Typography variant="caption" color="text.secondary" sx={{ textTransform: "uppercase", letterSpacing: 0.5 }}>
+              Appearance
+            </Typography>
+            <FormControlLabel
+              sx={{ display: "flex", mt: 0.5 }}
+              control={
+                <Switch
+                  checked={mode === "dark"}
+                  onChange={(e) => setMode(e.target.checked ? "dark" : "light")}
+                />
+              }
+              label="Dark mode"
+            />
           </Box>
         </CardContent>
       </Card>

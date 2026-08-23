@@ -4,8 +4,8 @@
 import { GET } from '@/app/api/dashboard/route'
 import { NextRequest } from 'next/server'
 
-jest.mock('@/lib/db', () => ({ query: jest.fn() }))
-jest.mock('@/auth', () => ({ auth: jest.fn() }))
+vi.mock('@/lib/db', () => ({ query: vi.fn() }))
+vi.mock('@/auth', () => ({ auth: vi.fn() }))
 
 import { query } from '@/lib/db'
 import { auth } from '@/auth'
@@ -14,20 +14,22 @@ const makeRequest = (search = '') =>
   new NextRequest(`http://localhost/api/dashboard${search}`)
 
 beforeEach(() => {
-  jest.clearAllMocks()
+  vi.clearAllMocks()
   auth.mockResolvedValue({ user: { id: 1 } })
 })
 
 describe('GET /api/dashboard', () => {
   it('returns 200 with accounts (including current_balance), transactions, categories, and summary', async () => {
     const mockAccounts = [
-      { id: 1, name: 'Bank', currency: 'USD', type: 'bank', initial_balance: 1000, current_balance: 1500 },
+      { id: 1, name: 'Bank', currency: 'USD', type: 'bank', initial_balance: 1000 },
     ]
+    const mockTxForBalance = [{ type: 'income', amount: 500, target_account_id: 1 }]
     const mockTransactions = [{ id: 1, type: 'income', amount: 500 }]
     const mockCategories = [{ id: 1, name: 'Salary', type: 'income' }]
 
     query
-      .mockResolvedValueOnce(mockAccounts)                         // accounts with current_balance
+      .mockResolvedValueOnce(mockAccounts)                         // accounts
+      .mockResolvedValueOnce(mockTxForBalance)                     // transactions for current_balance calc
       .mockResolvedValueOnce(mockTransactions)                     // period transactions
       .mockResolvedValueOnce(mockCategories)                       // categories
       .mockResolvedValueOnce([{ income: 400, expense: 100 }])     // prevMonthSummary
@@ -62,16 +64,18 @@ describe('GET /api/dashboard', () => {
       .mockResolvedValueOnce([])
       .mockResolvedValueOnce([])
       .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([])
       .mockResolvedValueOnce([{ income: 0, expense: 0 }])
 
     const res = await GET(makeRequest('?period=year'))
 
     expect(res.status).toBe(200)
-    expect(query).toHaveBeenCalledTimes(4)
+    expect(query).toHaveBeenCalledTimes(5)
   })
 
   it('returns totalBalance = 0 when no accounts', async () => {
     query
+      .mockResolvedValueOnce([])
       .mockResolvedValueOnce([])
       .mockResolvedValueOnce([])
       .mockResolvedValueOnce([])

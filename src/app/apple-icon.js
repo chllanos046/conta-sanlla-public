@@ -6,10 +6,7 @@ export const size = { width: 180, height: 180 };
 export const contentType = "image/png";
 
 export default function AppleIcon() {
-  const logoData = readFileSync(join(process.cwd(), "public/logo.png"));
-  const base64 = `data:image/png;base64,${logoData.toString("base64")}`;
-  return new ImageResponse(
-    <img src={base64} width={180} height={180} />,
-    { ...size }
-  );
+  const svg = readFileSync(join(process.cwd(), "public/logo.svg"), "utf-8");
+  const base64 = `data:image/svg+xml;base64,${Buffer.from(svg).toString("base64")}`;
+  return new ImageResponse(<img src={base64} width={180} height={180} />, { ...size });
 }

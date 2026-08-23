@@ -16,7 +16,7 @@ export default function AboutPage() {
       }}
     >
       <Image
-        src="/logo.png"
+        src="/logo.svg"
         alt="Conta Sanlla"
         width={120}
         height={120}

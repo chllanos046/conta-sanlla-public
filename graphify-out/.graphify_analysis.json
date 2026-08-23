@@ -1,0 +1,610 @@
+{
+  "communities": {
+    "0": [
+      "src_app_api_accounts_id_route",
+      "src_app_api_accounts_id_route_delete",
+      "src_app_api_accounts_id_route_put",
+      "src_app_api_accounts_route",
+      "src_app_api_accounts_route_get",
+      "src_app_api_accounts_route_post",
+      "src_app_api_auth_complete_google_route",
+      "src_app_api_auth_complete_google_route_post",
+      "src_app_api_auth_nextauth_route",
+      "src_app_api_auth_register_route",
+      "src_app_api_auth_register_route_post",
+      "src_app_api_categories_id_route",
+      "src_app_api_categories_id_route_delete",
+      "src_app_api_categories_id_route_put",
+      "src_app_api_categories_route",
+      "src_app_api_categories_route_get",
+      "src_app_api_categories_route_post",
+      "src_app_api_dashboard_route",
+      "src_app_api_dashboard_route_get",
+      "src_app_api_transactions_id_route",
+      "src_app_api_transactions_id_route_delete",
+      "src_app_api_transactions_id_route_get",
+      "src_app_api_transactions_id_route_put",
+      "src_app_api_transactions_import_route",
+      "src_app_api_transactions_import_route_applysignconvention",
+      "src_app_api_transactions_import_route_post",
+      "src_app_api_transactions_import_route_valid_types",
+      "src_app_page",
+      "src_app_page_homepage",
+      "src_auth",
+      "src_auth_config",
+      "src_auth_config_authconfig",
+      "src_auth_handlers_signin_signout_auth",
+      "src_lib_balanceutils_calculateaccountbalance",
+      "src_lib_db",
+      "src_lib_db_convertplaceholders",
+      "src_lib_db_query",
+      "src_lib_db_queryconn",
+      "src_lib_db_withtransaction",
+      "src_lib_ratelimit",
+      "src_lib_ratelimit_checkratelimit",
+      "src_lib_ratelimit_store",
+      "src_proxy",
+      "src_proxy_auth",
+      "src_proxy_config",
+      "tests_api_accounts_id_test",
+      "tests_api_accounts_id_test_makerequest",
+      "tests_api_accounts_id_test_params",
+      "tests_api_accounts_test",
+      "tests_api_accounts_test_makerequest",
+      "tests_api_auth_register_test",
+      "tests_api_auth_register_test_makerequest",
+      "tests_api_categories_id_test",
+      "tests_api_categories_id_test_makerequest",
+      "tests_api_categories_id_test_params",
+      "tests_api_categories_test",
+      "tests_api_categories_test_makerequest",
+      "tests_api_dashboard_test",
+      "tests_api_dashboard_test_makerequest",
+      "tests_api_transactions_id_test",
+      "tests_api_transactions_id_test_makerequest",
+      "tests_api_transactions_id_test_params",
+      "tests_api_transactions_import_test",
+      "tests_api_transactions_import_test_makerequest"
+    ],
+    "1": [
+      "axios",
+      "bcryptjs",
+      "date_fns",
+      "ducanh2912_next_pwa",
+      "emotion_cache",
+      "emotion_react",
+      "emotion_styled",
+      "hookform_resolvers",
+      "mui_icons_material",
+      "mui_material",
+      "mui_material_nextjs",
+      "mui_x_charts",
+      "mui_x_data_grid",
+      "mui_x_date_pickers",
+      "next_auth",
+      "package_dependencies",
+      "package_dependencies_axios",
+      "package_dependencies_bcryptjs",
+      "package_dependencies_date_fns",
+      "package_dependencies_ducanh2912_next_pwa",
+      "package_dependencies_emotion_cache",
+      "package_dependencies_emotion_react",
+      "package_dependencies_emotion_styled",
+      "package_dependencies_hookform_resolvers",
+      "package_dependencies_mui_icons_material",
+      "package_dependencies_mui_material",
+      "package_dependencies_mui_material_nextjs",
+      "package_dependencies_mui_x_charts",
+      "package_dependencies_mui_x_data_grid",
+      "package_dependencies_mui_x_date_pickers",
+      "package_dependencies_next",
+      "package_dependencies_next_auth",
+      "package_dependencies_postgres",
+      "package_dependencies_react",
+      "package_dependencies_react_dom",
+      "package_dependencies_react_hook_form",
+      "package_dependencies_zod",
+      "package_json_next",
+      "postgres",
+      "react",
+      "react_dom",
+      "react_hook_form",
+      "zod"
+    ],
+    "2": [
+      "src_app_dashboard_page",
+      "src_app_dashboard_page_dashboard",
+      "src_app_dashboard_page_periods",
+      "src_components_accountcarousel",
+      "src_components_accountcarousel_accountcarousel",
+      "src_components_accounttypeicon",
+      "src_components_accounttypeicon_accounttypeicon",
+      "src_components_accounttypeicon_icons",
+      "src_components_expensesbycategorychart",
+      "src_components_expensesbycategorychart_colors",
+      "src_components_expensesbycategorychart_expensesbycategorychart",
+      "src_components_expensesbycategorychart_piecenterlabel",
+      "src_components_expensesbycategorychart_styledtext",
+      "src_components_sidebar",
+      "src_components_sidebar_account_type_labels",
+      "src_components_sidebar_account_type_order",
+      "src_components_sidebar_sidebar",
+      "src_components_statcard",
+      "src_components_statcard_statcard",
+      "src_components_summarystatcard",
+      "src_components_summarystatcard_areagradient",
+      "src_components_summarystatcard_getbadgeprops",
+      "src_components_summarystatcard_summarystatcard",
+      "src_components_topbar",
+      "src_components_topbar_topbar",
+      "src_components_transactionstable",
+      "src_components_transactionstable_transactionstable",
+      "src_hooks_usecurrency",
+      "src_hooks_usecurrency_usecurrency",
+      "src_lib_currency",
+      "src_lib_currency_convertamount",
+      "src_lib_currency_converttousd",
+      "src_lib_currency_getcurrencysymbol",
+      "src_lib_utils",
+      "src_lib_utils_formatcurrency",
+      "src_lib_utils_formatdate",
+      "tests_lib_currency_test"
+    ],
+    "3": [
+      "src_app_accounts_page",
+      "src_app_accounts_page_accountspage",
+      "src_app_api_transactions_route",
+      "src_app_api_transactions_route_get",
+      "src_app_api_transactions_route_post",
+      "src_app_categories_page",
+      "src_app_categories_page_categoriespage",
+      "src_app_transactions_page",
+      "src_app_transactions_page_transactionspage",
+      "src_components_accountslist",
+      "src_components_accountslist_accountslist",
+      "src_components_accountslist_empty_form",
+      "src_components_accountslist_schema",
+      "src_components_categorieslist",
+      "src_components_categorieslist_categorieslist",
+      "src_components_categorieslist_empty_form",
+      "src_components_categorieslist_schema",
+      "src_components_confirmdialogprovider",
+      "src_components_confirmdialogprovider_confirmdialogcontext",
+      "src_components_confirmdialogprovider_useconfirm",
+      "src_components_notificationprovider",
+      "src_components_notificationprovider_notificationcontext",
+      "src_components_notificationprovider_usenotify",
+      "src_components_transactionfilters",
+      "src_components_transactionfilters_transactionfilters",
+      "src_lib_balanceutils",
+      "src_lib_balanceutils_addrunningbalance",
+      "src_lib_balanceutils_txcontribution",
+      "tests_api_transactions_test",
+      "tests_api_transactions_test_makerequest",
+      "tests_components_accountslist_test",
+      "tests_components_accountslist_test_rendercomponent"
+    ],
+    "4": [
+      "babel_jest",
+      "eslint",
+      "eslint_config_next",
+      "jest",
+      "jest_environment_jsdom",
+      "package",
+      "package_devdependencies",
+      "package_devdependencies_babel_jest",
+      "package_devdependencies_eslint",
+      "package_devdependencies_eslint_config_next",
+      "package_devdependencies_jest",
+      "package_devdependencies_jest_environment_jsdom",
+      "package_devdependencies_testing_library_jest_dom",
+      "package_devdependencies_testing_library_react",
+      "package_devdependencies_testing_library_user_event",
+      "package_name",
+      "package_private",
+      "package_scripts",
+      "package_scripts_build",
+      "package_scripts_dev",
+      "package_scripts_lint",
+      "package_scripts_start",
+      "package_scripts_test",
+      "package_version",
+      "src_app_settings_about_page",
+      "src_app_settings_about_page_aboutpage",
+      "testing_library_jest_dom",
+      "testing_library_react",
+      "testing_library_user_event"
+    ],
+    "5": [
+      "src_app_layout",
+      "src_app_layout_rootlayout",
+      "src_components_appshell",
+      "src_components_appshell_appshell",
+      "src_components_appshell_auth_routes",
+      "src_components_confirmdialogprovider_confirmdialogprovider",
+      "src_components_loading",
+      "src_components_loading_loading",
+      "src_components_mobilebottomnav",
+      "src_components_mobilebottomnav_mobilebottomnav",
+      "src_components_mobilebottomnav_nav_items",
+      "src_components_notificationprovider_notificationprovider",
+      "src_components_pwaupdateprompt",
+      "src_components_pwaupdateprompt_pwaupdateprompt",
+      "src_components_quickaddtransaction",
+      "src_components_quickaddtransaction_empty_form",
+      "src_components_quickaddtransaction_makeschema",
+      "src_components_quickaddtransaction_quickaddfab",
+      "src_components_quickaddtransaction_quickaddtransaction",
+      "src_components_rootclientlayout",
+      "src_components_rootclientlayout_rootclientlayout",
+      "src_components_splashscreen",
+      "src_components_splashscreen_splashscreen",
+      "src_contexts_transactiondialogcontext",
+      "src_contexts_transactiondialogcontext_transactiondialogcontext",
+      "src_contexts_transactiondialogcontext_transactiondialogprovider",
+      "src_contexts_transactiondialogcontext_usetransactiondialog",
+      "src_styles_theme",
+      "src_styles_theme_theme"
+    ],
+    "6": [
+      "claude_settings",
+      "claude_settings_env",
+      "claude_settings_env_node_env",
+      "claude_settings_hooks",
+      "claude_settings_hooks_pretooluse",
+      "claude_settings_model",
+      "claude_settings_permissions",
+      "claude_settings_permissions_allow",
+      "claude_settings_permissions_deny",
+      "claude_settings_schema",
+      "ref_bash_curl",
+      "ref_bash_git_diff",
+      "ref_bash_git_log",
+      "ref_bash_git_status",
+      "ref_bash_npm_run",
+      "ref_bash_npx",
+      "ref_bash_pnpm",
+      "ref_bash_rm_rf",
+      "ref_bash_yarn",
+      "ref_read_env",
+      "ref_read_secrets"
+    ],
+    "7": [
+      "src_app_transactions_mobile_id_page",
+      "src_app_transactions_mobile_id_page_transactiondetailpage",
+      "src_components_mobiletransactiondetail",
+      "src_components_mobiletransactiondetail_amountcolor",
+      "src_components_mobiletransactiondetail_detailrow",
+      "src_components_mobiletransactiondetail_formatamount",
+      "src_components_mobiletransactiondetail_mobiletransactiondetail",
+      "src_components_transactionformdialog",
+      "src_components_transactionformdialog_empty_tx",
+      "src_components_transactionformdialog_makeschema",
+      "src_components_transactionformdialog_today",
+      "src_components_transactionformdialog_transactionformdialog",
+      "tests_components_transactionformdialog_test",
+      "tests_components_transactionformdialog_test_accounts",
+      "tests_components_transactionformdialog_test_baseprops",
+      "tests_components_transactionformdialog_test_categories",
+      "tests_components_transactionformdialog_test_selectmuioption"
+    ],
+    "8": [
+      "tests_lib_balanceutils_test",
+      "tests_lib_balanceutils_test_acc1",
+      "tests_lib_balanceutils_test_acc2",
+      "tests_lib_balanceutils_test_acc3",
+      "tests_lib_balanceutils_test_acc4",
+      "tests_lib_balanceutils_test_acc5",
+      "tests_lib_balanceutils_test_alltx",
+      "tests_lib_balanceutils_test_tx1",
+      "tests_lib_balanceutils_test_tx2",
+      "tests_lib_balanceutils_test_tx3",
+      "tests_lib_balanceutils_test_tx4",
+      "tests_lib_balanceutils_test_tx5",
+      "tests_lib_balanceutils_test_tx6",
+      "tests_lib_balanceutils_test_tx7",
+      "tests_lib_balanceutils_test_tx8"
+    ],
+    "9": [
+      "src_components_importtransactionsdialog",
+      "src_components_importtransactionsdialog_importtransactionsdialog",
+      "src_components_importtransactionsdialog_normalizeamount",
+      "src_components_importtransactionsdialog_normalizedate",
+      "src_components_importtransactionsdialog_parsecsv",
+      "src_components_importtransactionsdialog_resolverow",
+      "src_components_importtransactionsdialog_steps",
+      "src_components_importtransactionsdialog_tx_fields",
+      "src_components_importtransactionsdialog_uniquecolvalues"
+    ],
+    "10": [
+      "resources_db_export_mysql",
+      "resources_db_export_mysql_date_only_columns",
+      "resources_db_export_mysql_dirname",
+      "resources_db_export_mysql_exporttable",
+      "resources_db_export_mysql_main",
+      "resources_db_export_mysql_serializevalue",
+      "resources_db_export_mysql_table_order"
+    ],
+    "11": [
+      "src_app_transactions_mobile_page",
+      "src_app_transactions_mobile_page_transactionsmobilepage",
+      "src_components_mobiletransactionslist",
+      "src_components_mobiletransactionslist_amountcolor",
+      "src_components_mobiletransactionslist_formatamount",
+      "src_components_mobiletransactionslist_mobiletransactionslist"
+    ],
+    "12": [
+      "src_app_settings_mobile_page",
+      "src_app_settings_mobile_page_settingsmobilepage",
+      "src_components_mobilesettingspage",
+      "src_components_mobilesettingspage_mobilesettingspage",
+      "src_components_mobilesettingspage_settings_items"
+    ],
+    "13": [
+      "src_app_account_mobile_page",
+      "src_app_account_mobile_page_accountmobilepage",
+      "src_components_mobileaccountsheet",
+      "src_components_mobileaccountsheet_mobileaccountsheet"
+    ],
+    "14": [
+      "src_app_apple_icon",
+      "src_app_apple_icon_appleicon",
+      "src_app_apple_icon_contenttype",
+      "src_app_apple_icon_size"
+    ],
+    "15": [
+      "src_app_icon",
+      "src_app_icon_contenttype",
+      "src_app_icon_icon",
+      "src_app_icon_size"
+    ],
+    "16": [
+      "jest_config",
+      "jest_config_createjestconfig",
+      "jest_config_nextjest"
+    ],
+    "17": [
+      "jsconfig",
+      "jsconfig_compileroptions",
+      "jsconfig_compileroptions_paths"
+    ],
+    "18": [
+      "src_app_api_account_images_route",
+      "src_app_api_account_images_route_allowed_ext",
+      "src_app_api_account_images_route_get"
+    ],
+    "19": [
+      "src_app_auth_login_page",
+      "src_app_auth_login_page_loginpage",
+      "src_app_auth_login_page_schema"
+    ],
+    "20": [
+      "src_app_auth_register_page",
+      "src_app_auth_register_page_registerpage",
+      "src_app_auth_register_page_schema"
+    ],
+    "21": [
+      "src_app_verify_code_page",
+      "src_app_verify_code_page_schema",
+      "src_app_verify_code_page_verifycodepage"
+    ],
+    "22": [
+      "eslint_config",
+      "eslint_config_eslintconfig"
+    ],
+    "23": [
+      "next_config",
+      "next_config_nextconfig"
+    ],
+    "24": [
+      "src_app_api_exchange_rates_route",
+      "src_app_api_exchange_rates_route_get"
+    ],
+    "25": [
+      "src_app_global_error",
+      "src_app_global_error_globalerror"
+    ],
+    "26": [
+      "src_app_manifest",
+      "src_app_manifest_manifest"
+    ],
+    "27": [
+      "src_app_profile_page",
+      "src_app_profile_page_profilepage"
+    ],
+    "28": [
+      "src_components_dashboardcharts",
+      "src_components_dashboardcharts_dashboardcharts"
+    ],
+    "29": [
+      "src_components_footer",
+      "src_components_footer_footer"
+    ],
+    "30": [
+      "src_app_api_auth_nextauth_route_get_post"
+    ],
+    "31": [
+      "vercel"
+    ]
+  },
+  "cohesion": {
+    "0": 0.07490079365079365,
+    "1": 0.046511627906976744,
+    "2": 0.11861861861861862,
+    "3": 0.11290322580645161,
+    "4": 0.06896551724137931,
+    "5": 0.10098522167487685,
+    "6": 0.09523809523809523,
+    "7": 0.16911764705882354,
+    "8": 0.13333333333333333,
+    "9": 0.3611111111111111,
+    "10": 0.38095238095238093,
+    "11": 0.5333333333333333,
+    "12": 0.5,
+    "13": 0.6666666666666666,
+    "14": 0.5,
+    "15": 0.5,
+    "16": 0.6666666666666666,
+    "17": 0.6666666666666666,
+    "18": 0.6666666666666666,
+    "19": 0.6666666666666666,
+    "20": 0.6666666666666666,
+    "21": 0.6666666666666666,
+    "22": 1.0,
+    "23": 1.0,
+    "24": 1.0,
+    "25": 1.0,
+    "26": 1.0,
+    "27": 1.0,
+    "28": 1.0,
+    "29": 1.0,
+    "30": 1.0,
+    "31": 1.0
+  },
+  "gods": [
+    {
+      "id": "src_lib_db_query",
+      "label": "query()",
+      "degree": 36
+    },
+    {
+      "id": "src_lib_currency_convertamount",
+      "label": "convertAmount()",
+      "degree": 12
+    },
+    {
+      "id": "src_hooks_usecurrency_usecurrency",
+      "label": "useCurrency()",
+      "degree": 9
+    },
+    {
+      "id": "src_lib_utils_formatcurrency",
+      "label": "formatCurrency()",
+      "degree": 9
+    },
+    {
+      "id": "claude_settings_permissions_allow",
+      "label": "allow",
+      "degree": 8
+    },
+    {
+      "id": "src_lib_balanceutils_calculateaccountbalance",
+      "label": "calculateAccountBalance()",
+      "degree": 7
+    },
+    {
+      "id": "src_lib_ratelimit_checkratelimit",
+      "label": "checkRateLimit()",
+      "degree": 7
+    },
+    {
+      "id": "src_components_confirmdialogprovider_useconfirm",
+      "label": "useConfirm()",
+      "degree": 7
+    },
+    {
+      "id": "src_components_notificationprovider_usenotify",
+      "label": "useNotify()",
+      "degree": 7
+    },
+    {
+      "id": "src_lib_balanceutils_txcontribution",
+      "label": "txContribution()",
+      "degree": 7
+    }
+  ],
+  "surprises": [
+    {
+      "source": "GET()",
+      "target": "query()",
+      "source_files": [
+        "src/app/api/transactions/[id]/route.js",
+        "src/lib/db.js"
+      ],
+      "confidence": "EXTRACTED",
+      "relation": "calls",
+      "why": "peripheral node `GET()` unexpectedly reaches hub `query()`"
+    },
+    {
+      "source": "GET()",
+      "target": "query()",
+      "source_files": [
+        "src/app/api/transactions/route.js",
+        "src/lib/db.js"
+      ],
+      "confidence": "EXTRACTED",
+      "relation": "calls",
+      "why": "bridges separate communities"
+    },
+    {
+      "source": "POST()",
+      "target": "query()",
+      "source_files": [
+        "src/app/api/transactions/route.js",
+        "src/lib/db.js"
+      ],
+      "confidence": "EXTRACTED",
+      "relation": "calls",
+      "why": "bridges separate communities"
+    },
+    {
+      "source": "TransactionsPage()",
+      "target": "useCurrency()",
+      "source_files": [
+        "src/app/transactions/page.js",
+        "src/hooks/useCurrency.js"
+      ],
+      "confidence": "EXTRACTED",
+      "relation": "calls",
+      "why": "bridges separate communities"
+    },
+    {
+      "source": "txContribution()",
+      "target": "convertAmount()",
+      "source_files": [
+        "src/lib/balanceUtils.js",
+        "src/lib/currency.js"
+      ],
+      "confidence": "EXTRACTED",
+      "relation": "calls",
+      "why": "bridges separate communities"
+    }
+  ],
+  "questions": [
+    {
+      "type": "bridge_node",
+      "question": "Why does `query()` connect `query` to `transactions/page.js`?",
+      "why": "High betweenness centrality (0.052) - this node is a cross-community bridge."
+    },
+    {
+      "type": "bridge_node",
+      "question": "Why does `convertAmount()` connect `dashboard/page.js` to `transactions/page.js`?",
+      "why": "High betweenness centrality (0.041) - this node is a cross-community bridge."
+    },
+    {
+      "type": "bridge_node",
+      "question": "Why does `dependencies` connect `dependencies` to `devDependencies`?",
+      "why": "High betweenness centrality (0.032) - this node is a cross-community bridge."
+    },
+    {
+      "type": "isolated_nodes",
+      "question": "What connects `VALID_TYPES`, `{ handlers, signIn, signOut, auth }`, `store` to the rest of the system?",
+      "why": "114 weakly-connected nodes found - possible documentation gaps or missing edges."
+    },
+    {
+      "type": "low_cohesion",
+      "question": "Should `query` be split into smaller, more focused modules?",
+      "why": "Cohesion score 0.07490079365079365 - nodes in this community are weakly interconnected."
+    },
+    {
+      "type": "low_cohesion",
+      "question": "Should `dependencies` be split into smaller, more focused modules?",
+      "why": "Cohesion score 0.046511627906976744 - nodes in this community are weakly interconnected."
+    },
+    {
+      "type": "low_cohesion",
+      "question": "Should `dashboard/page.js` be split into smaller, more focused modules?",
+      "why": "Cohesion score 0.11861861861861862 - nodes in this community are weakly interconnected."
+    }
+  ]
+}
