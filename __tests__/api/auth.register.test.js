@@ -4,9 +4,9 @@
 import { POST } from '@/app/api/auth/register/route'
 import { NextRequest } from 'next/server'
 
-jest.mock('@/lib/db', () => ({ query: jest.fn() }))
-jest.mock('bcryptjs', () => ({ hash: jest.fn() }))
-jest.mock('@/lib/rateLimit', () => ({ checkRateLimit: jest.fn() }))
+vi.mock('@/lib/db', () => ({ query: vi.fn() }))
+vi.mock('bcryptjs', () => ({ default: { hash: vi.fn() } }))
+vi.mock('@/lib/rateLimit', () => ({ checkRateLimit: vi.fn() }))
 
 import { query } from '@/lib/db'
 import bcrypt from 'bcryptjs'
@@ -20,7 +20,7 @@ const makeRequest = (body) =>
   })
 
 beforeEach(() => {
-  jest.clearAllMocks()
+  vi.clearAllMocks()
   checkRateLimit.mockReturnValue({ allowed: true, retryAfter: 0 })
 })
 

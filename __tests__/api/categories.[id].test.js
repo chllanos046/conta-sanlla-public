@@ -4,8 +4,8 @@
 import { PUT, DELETE } from '@/app/api/categories/[id]/route'
 import { NextRequest } from 'next/server'
 
-jest.mock('@/lib/db', () => ({ query: jest.fn() }))
-jest.mock('@/auth', () => ({ auth: jest.fn() }))
+vi.mock('@/lib/db', () => ({ query: vi.fn() }))
+vi.mock('@/auth', () => ({ auth: vi.fn() }))
 
 import { query } from '@/lib/db'
 import { auth } from '@/auth'
@@ -19,7 +19,7 @@ const makeRequest = (method, body = null) =>
 const params = { id: '1' }
 
 beforeEach(() => {
-  jest.clearAllMocks()
+  vi.clearAllMocks()
   auth.mockResolvedValue({ user: { id: 1 } })
 })
 

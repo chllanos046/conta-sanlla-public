@@ -1,6 +1,4 @@
 /**
- * @jest-environment jsdom
- *
  * Component tests for TransactionFormDialog.
  *
  * These tests verify that the sign conversion in onSubmit fires correctly:
@@ -22,15 +20,17 @@ import "@testing-library/jest-dom";
 
 // ── Stubs ────────────────────────────────────────────────────────────────────
 
-jest.mock("axios", () => ({
-  get: jest.fn(() => Promise.resolve({ data: { USD: 1, ARS: 1200 } })),
-  post: jest.fn(() => Promise.resolve({ data: {} })),
-  put: jest.fn(() => Promise.resolve({ data: {} })),
+vi.mock("axios", () => ({
+  default: {
+    get: vi.fn(() => Promise.resolve({ data: { USD: 1, ARS: 1200 } })),
+    post: vi.fn(() => Promise.resolve({ data: {} })),
+    put: vi.fn(() => Promise.resolve({ data: {} })),
+  },
 }));
 
 // Stub DatePicker — avoids LocalizationProvider requirement and transition complexity.
 // The date value is irrelevant for sign conversion tests.
-jest.mock("@mui/x-date-pickers/DatePicker", () => ({
+vi.mock("@mui/x-date-pickers/DatePicker", () => ({
   DatePicker: () => <input aria-label="Date" defaultValue="2024-01-15" readOnly />,
 }));
 
@@ -51,8 +51,8 @@ const CATEGORIES = [
 
 const baseProps = {
   open: true,
-  onClose: jest.fn(),
-  onSaved: jest.fn(),
+  onClose: vi.fn(),
+  onSaved: vi.fn(),
   editingTx: null,
   accounts: ACCOUNTS,
   categories: CATEGORIES,
@@ -79,7 +79,7 @@ async function selectMuiOption(comboboxIndex, optionText) {
 
 afterEach(() => {
   cleanup();
-  jest.clearAllMocks();
+  vi.clearAllMocks();
 });
 
 // ── Tests ─────────────────────────────────────────────────────────────────────

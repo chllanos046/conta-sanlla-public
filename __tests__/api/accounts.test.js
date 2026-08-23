@@ -4,10 +4,10 @@
 import { GET, POST } from '@/app/api/accounts/route'
 import { NextRequest } from 'next/server'
 
-jest.mock('@/lib/db', () => ({
-  query: jest.fn(),
+vi.mock('@/lib/db', () => ({
+  query: vi.fn(),
 }))
-jest.mock('@/auth', () => ({ auth: jest.fn() }))
+vi.mock('@/auth', () => ({ auth: vi.fn() }))
 
 import { query } from '@/lib/db'
 import { auth } from '@/auth'
@@ -19,16 +19,19 @@ const makeRequest = (method = 'GET', body = null) =>
   })
 
 beforeEach(() => {
-  jest.clearAllMocks()
+  vi.clearAllMocks()
   auth.mockResolvedValue({ user: { id: 1 } })
 })
 
 describe('GET /api/accounts', () => {
   it('returns 200 with accounts including initial_balance and current_balance', async () => {
     const mockAccounts = [
-      { id: 1, name: 'Savings', currency: 'USD', type: 'bank', initial_balance: 1000, current_balance: 1500 },
+      { id: 1, name: 'Savings', currency: 'USD', type: 'bank', initial_balance: 1000 },
     ]
-    query.mockResolvedValue(mockAccounts)
+    const mockTransactions = [{ id: 1, type: 'income', amount: 500, target_account_id: 1 }]
+    query
+      .mockResolvedValueOnce(mockAccounts)
+      .mockResolvedValueOnce(mockTransactions)
 
     const res = await GET(makeRequest())
 
