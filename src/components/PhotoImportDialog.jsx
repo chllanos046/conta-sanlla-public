@@ -25,6 +25,7 @@ import MenuItem from "@mui/material/MenuItem";
 import Select from "@mui/material/Select";
 import TextField from "@mui/material/TextField";
 import FormControl from "@mui/material/FormControl";
+import InputLabel from "@mui/material/InputLabel";
 import useMediaQuery from "@mui/material/useMediaQuery";
 import { useTheme } from "@mui/material/styles";
 import CloudUploadIcon from "@mui/icons-material/CloudUpload";
@@ -37,9 +38,9 @@ export default function PhotoImportDialog({ open, onClose, accountId, accountCur
   const fileRef = useRef(null);
 
   const [step, setStep] = useState(0);
-  const [file, setFile] = useState(null);
-  const [preview, setPreview] = useState(null);
-  const [extracting, setExtracting] = useState(false);
+  const [files, setFiles] = useState([]);
+  const [previews, setPreviews] = useState([]);
+  const [extractProgress, setExtractProgress] = useState("");
   const [error, setError] = useState(null);
   const [rows, setRows] = useState([]);
   const [categories, setCategories] = useState([]);
@@ -47,18 +48,24 @@ export default function PhotoImportDialog({ open, onClose, accountId, accountCur
   const [exchangeRate, setExchangeRate] = useState("");
   const [importing, setImporting] = useState(false);
   const [importCount, setImportCount] = useState(null);
+  const [selectedAccountId, setSelectedAccountId] = useState("");
 
-  const needsRate = accountCurrency !== "USD";
+  const effectiveAccountId = accountId || selectedAccountId || null;
+  const effectiveAccount = accounts.find((a) => String(a.id) === String(effectiveAccountId));
+  const effectiveCurrency = effectiveAccount?.currency ?? accountCurrency;
+  const needsRate = effectiveCurrency !== "USD";
 
   useEffect(() => {
     if (!open) return;
     setStep(0);
-    setFile(null);
-    setPreview(null);
+    setFiles([]);
+    setPreviews([]);
     setRows([]);
     setError(null);
     setImportCount(null);
     setExchangeRate("");
+    setSelectedAccountId("");
+    setExtractProgress("");
   }, [open]);
 
   useEffect(() => {
@@ -68,50 +75,62 @@ export default function PhotoImportDialog({ open, onClose, accountId, accountCur
   }, [open]);
 
   const handleFileChange = (e) => {
-    const f = e.target.files?.[0];
-    if (!f) return;
-    setFile(f);
+    const selected = Array.from(e.target.files || []);
+    if (!selected.length) return;
+    setFiles(selected);
     setError(null);
-    const reader = new FileReader();
-    reader.onload = (ev) => setPreview(ev.target.result);
-    reader.readAsDataURL(f);
+    Promise.all(
+      selected.map(
+        (f) =>
+          new Promise((res) => {
+            const reader = new FileReader();
+            reader.onload = (ev) => res(ev.target.result);
+            reader.readAsDataURL(f);
+          })
+      )
+    ).then(setPreviews);
   };
 
   const handleExtract = async () => {
-    if (!preview) return;
+    if (!previews.length) return;
     setStep(1);
-    setExtracting(true);
     setError(null);
+    let allExtracted = [];
     try {
-      const base64 = preview.split(",")[1];
-      const { data: aiData } = await axios.post("/api/ai/extract-transactions", {
-        imageBase64: base64,
-        mimeType: file.type || "image/jpeg",
-        accountCurrency,
-      });
+      for (let i = 0; i < files.length; i++) {
+        setExtractProgress(
+          files.length > 1 ? `Analyzing image ${i + 1} of ${files.length}…` : "Analyzing photo…"
+        );
+        const base64 = previews[i].split(",")[1];
+        const { data: aiData } = await axios.post("/api/ai/extract-transactions", {
+          imageBase64: base64,
+          mimeType: files[i].type || "image/jpeg",
+          accountCurrency: effectiveCurrency,
+        });
+        allExtracted = allExtracted.concat(aiData.transactions ?? []);
+      }
 
-      const extracted = aiData.transactions ?? [];
-      if (extracted.length === 0) {
-        setError("No transactions found in this image. Try a clearer photo.");
+      if (allExtracted.length === 0) {
+        setError("No transactions found in these images. Try clearer photos.");
         setStep(0);
         return;
       }
 
-      // Fetch existing transactions for duplicate detection
-      const dates = extracted.map((t) => t.date).filter(Boolean).sort();
+      // Duplicate detection
+      const dates = allExtracted.map((t) => t.date).filter(Boolean).sort();
       let existing = [];
-      if (dates.length > 0 && accountId) {
+      if (dates.length > 0 && effectiveAccountId) {
         try {
           const { data: txData } = await axios.get("/api/transactions", {
-            params: { account: accountId, dateFrom: dates[0], dateTo: dates[dates.length - 1] },
+            params: { account: effectiveAccountId, dateFrom: dates[0], dateTo: dates[dates.length - 1] },
           });
           existing = txData.transactions ?? [];
         } catch {
-          // non-fatal, duplicate detection won't work
+          // non-fatal
         }
       }
 
-      const mapped = extracted.map((t) => {
+      const mapped = allExtracted.map((t) => {
         const isDuplicate = existing.some(
           (ex) =>
             String(ex.date).slice(0, 10) === t.date &&
@@ -125,8 +144,6 @@ export default function PhotoImportDialog({ open, onClose, accountId, accountCur
     } catch (err) {
       setError(err.response?.data?.error ?? err.message ?? "Extraction failed");
       setStep(0);
-    } finally {
-      setExtracting(false);
     }
   };
 
@@ -149,10 +166,10 @@ export default function PhotoImportDialog({ open, onClose, accountId, accountCur
         return {
           type: r.type,
           amount: usdAmount,
-          source_account_id: r.type === "income" ? null : accountId,
+          source_account_id: r.type === "income" ? null : effectiveAccountId,
           target_account_id:
             r.type === "income"
-              ? accountId
+              ? effectiveAccountId
               : r.type === "transfer"
               ? r.target_account_id || null
               : null,
@@ -183,6 +200,7 @@ export default function PhotoImportDialog({ open, onClose, accountId, accountCur
   };
 
   const selectedCount = rows.filter((r) => r.checked).length;
+  const canExtract = previews.length > 0 && (accountId || selectedAccountId);
 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth fullScreen={isMobile}>
@@ -205,11 +223,27 @@ export default function PhotoImportDialog({ open, onClose, accountId, accountCur
         {/* Step 0 — Upload */}
         {step === 0 && (
           <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 2 }}>
+            {!accountId && (
+              <FormControl size="small" sx={{ width: "100%", maxWidth: 320 }}>
+                <InputLabel>Account</InputLabel>
+                <Select
+                  value={selectedAccountId}
+                  label="Account"
+                  onChange={(e) => setSelectedAccountId(e.target.value)}
+                >
+                  {accounts.map((a) => (
+                    <MenuItem key={a.id} value={String(a.id)}>
+                      {a.name}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            )}
             <input
               ref={fileRef}
               type="file"
               accept="image/*"
-              capture="environment"
+              multiple
               hidden
               onChange={handleFileChange}
             />
@@ -219,19 +253,24 @@ export default function PhotoImportDialog({ open, onClose, accountId, accountCur
               onClick={() => fileRef.current?.click()}
               size="large"
             >
-              {file ? "Change Photo" : "Select or Take Photo"}
+              {files.length > 0 ? "Change Photos" : "Select Photos"}
             </Button>
-            {preview && (
-              <Box
-                component="img"
-                src={preview}
-                alt="Preview"
-                sx={{ maxWidth: "100%", maxHeight: 320, borderRadius: 1, objectFit: "contain" }}
-              />
+            {previews.length > 0 && (
+              <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1, justifyContent: "center" }}>
+                {previews.map((src, i) => (
+                  <Box
+                    key={i}
+                    component="img"
+                    src={src}
+                    alt={`Preview ${i + 1}`}
+                    sx={{ height: 120, maxWidth: 160, borderRadius: 1, objectFit: "cover" }}
+                  />
+                ))}
+              </Box>
             )}
-            {!file && (
+            {files.length === 0 && (
               <Typography variant="body2" color="text.secondary" textAlign="center">
-                Take a photo of a receipt or bank statement. AI will extract the transactions.
+                Take photos of receipts or bank statements. AI will extract the transactions.
               </Typography>
             )}
           </Box>
@@ -241,7 +280,7 @@ export default function PhotoImportDialog({ open, onClose, accountId, accountCur
         {step === 1 && (
           <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 2, py: 4 }}>
             <CircularProgress />
-            <Typography color="text.secondary">Analyzing photo…</Typography>
+            <Typography color="text.secondary">{extractProgress || "Analyzing photo…"}</Typography>
           </Box>
         )}
 
@@ -255,7 +294,7 @@ export default function PhotoImportDialog({ open, onClose, accountId, accountCur
 
             {needsRate && (
               <TextField
-                label={`Exchange rate (${accountCurrency} per USD)`}
+                label={`Exchange rate (${effectiveCurrency} per USD)`}
                 type="number"
                 size="small"
                 value={exchangeRate}
@@ -282,7 +321,7 @@ export default function PhotoImportDialog({ open, onClose, accountId, accountCur
                     const isTransfer = row.type === "transfer";
                     const filteredCats = categories.filter((c) => c.type === row.type);
                     const transferTargets = accounts.filter(
-                      (a) => a.currency === accountCurrency && String(a.id) !== String(accountId)
+                      (a) => a.currency === effectiveCurrency && String(a.id) !== String(effectiveAccountId)
                     );
                     return (
                       <TableRow key={i} sx={{ opacity: row.checked ? 1 : 0.45 }}>
@@ -305,7 +344,7 @@ export default function PhotoImportDialog({ open, onClose, accountId, accountCur
                           />
                         </TableCell>
                         <TableCell align="right" sx={{ whiteSpace: "nowrap" }}>
-                          {accountCurrency} {Math.abs(row.amount).toFixed(2)}
+                          {effectiveCurrency} {Math.abs(row.amount).toFixed(2)}
                         </TableCell>
                         <TableCell>
                           <FormControl size="small" sx={{ minWidth: 100 }}>
@@ -383,12 +422,12 @@ export default function PhotoImportDialog({ open, onClose, accountId, accountCur
         )}
       </DialogContent>
 
-      <DialogActions>
+      <DialogActions sx={{ px: { xs: 2, sm: 1 }, pb: { xs: 3, sm: 1 } }}>
         <Button onClick={onClose} disabled={importing}>
           {step === 3 ? "Close" : "Cancel"}
         </Button>
         {step === 0 && (
-          <Button variant="contained" onClick={handleExtract} disabled={!file}>
+          <Button variant="contained" onClick={handleExtract} disabled={!canExtract}>
             Extract
           </Button>
         )}

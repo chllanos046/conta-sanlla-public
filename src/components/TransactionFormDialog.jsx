@@ -15,6 +15,8 @@ import FormHelperText from "@mui/material/FormHelperText";
 import InputLabel from "@mui/material/InputLabel";
 import Select from "@mui/material/Select";
 import MenuItem from "@mui/material/MenuItem";
+import ToggleButtonGroup from "@mui/material/ToggleButtonGroup";
+import ToggleButton from "@mui/material/ToggleButton";
 import { DatePicker } from "@mui/x-date-pickers/DatePicker";
 import { format, parseISO } from "date-fns";
 import { useState, useMemo, useEffect } from "react";
@@ -200,28 +202,24 @@ export function TransactionFormDialog({ open, onClose, editingTx, accounts, cate
             name="type"
             control={control}
             render={({ field }) => (
-              <FormControl fullWidth error={!!errors.type}>
-                <InputLabel>{t("transactions.type")}</InputLabel>
-                <Select
-                  {...field}
-                  label={t("transactions.type")}
-                  onChange={(e) => {
-                    const newType = e.target.value;
-                    field.onChange(newType);
-                    setValue("target_account_id", "");
-                    setValue("category_id", "");
-                    setValue("exchange_rate", "");
-                    if (newType === "transfer") {
-                      setValue("description", t("transactions.transferDefault"));
-                    }
-                  }}
-                >
-                  <MenuItem value="expense">{t("common.expense")}</MenuItem>
-                  <MenuItem value="income">{t("common.income")}</MenuItem>
-                  <MenuItem value="transfer">{t("common.transfer")}</MenuItem>
-                </Select>
-                {errors.type && <FormHelperText>{errors.type.message}</FormHelperText>}
-              </FormControl>
+              <ToggleButtonGroup
+                exclusive
+                fullWidth
+                size="small"
+                value={field.value}
+                onChange={(_, val) => {
+                  if (!val) return;
+                  field.onChange(val);
+                  setValue("target_account_id", "");
+                  setValue("category_id", "");
+                  setValue("exchange_rate", "");
+                  if (val === "transfer") setValue("description", t("transactions.transferDefault"));
+                }}
+              >
+                <ToggleButton value="expense">{t("common.expense")}</ToggleButton>
+                <ToggleButton value="income">{t("common.income")}</ToggleButton>
+                <ToggleButton value="transfer">{t("common.transfer")}</ToggleButton>
+              </ToggleButtonGroup>
             )}
           />
 
@@ -371,7 +369,7 @@ export function TransactionFormDialog({ open, onClose, editingTx, accounts, cate
           />
         </Box>
       </DialogContent>
-      <DialogActions sx={{ px: 3, pb: 2 }}>
+      <DialogActions sx={{ px: 3, pb: { xs: 4, sm: 2 } }}>
         <Button onClick={onClose}>{t("common.cancel")}</Button>
         <Button variant="contained" onClick={handleSubmit(onSubmit)} disabled={isSubmitting}>
           {t("common.save")}

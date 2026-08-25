@@ -5,7 +5,7 @@ import Box from "@mui/material/Box";
 import IconButton from "@mui/material/IconButton";
 import Tooltip from "@mui/material/Tooltip";
 import AddIcon from "@mui/icons-material/Add";
-import UploadFileIcon from "@mui/icons-material/UploadFile";
+import CameraAltIcon from "@mui/icons-material/CameraAlt";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 import { useSearchParams } from "next/navigation";
@@ -14,7 +14,7 @@ import { addRunningBalance } from "@/lib/balanceUtils";
 import { TransactionFilters } from "@/components/TransactionFilters";
 import { TransactionsTable } from "@/components/TransactionsTable";
 import { TransactionFormDialog } from "@/components/TransactionFormDialog";
-import { ImportTransactionsDialog } from "@/components/ImportTransactionsDialog";
+import PhotoImportDialog from "@/components/PhotoImportDialog";
 import { useCurrency } from "@/hooks/useCurrency";
 import { useConfirm } from "@/components/ConfirmDialogProvider";
 import { useNotify } from "@/components/NotificationProvider";
@@ -50,7 +50,7 @@ export default function TransactionsPage() {
 
   const [txDialogOpen, setTxDialogOpen] = useState(false);
   const [editingTx, setEditingTx] = useState(null);
-  const [importOpen, setImportOpen] = useState(false);
+  const [photoOpen, setPhotoOpen] = useState(false);
   const [globalCurrency] = useCurrency();
   const [arsRate, setArsRate] = useState(1);
 
@@ -146,10 +146,10 @@ export default function TransactionsPage() {
           {t("transactions.title")}{accountName ? ` — ${accountName}` : ""}
         </Typography>
         <Box sx={{ display: "flex", gap: 1 }}>
-          <Tooltip title={t("transactions.importCsv")}>
+          <Tooltip title={t("common.importFromPhoto")}>
             <IconButton
               color="primary"
-              onClick={() => setImportOpen(true)}
+              onClick={() => setPhotoOpen(true)}
               sx={{
                 bgcolor: "primary.main",
                 color: "primary.contrastText",
@@ -157,7 +157,7 @@ export default function TransactionsPage() {
                 display: { xs: "none", sm: "flex" },
               }}
             >
-              <UploadFileIcon />
+              <CameraAltIcon />
             </IconButton>
           </Tooltip>
           <Tooltip title={t("transactions.newTransaction")}>
@@ -207,12 +207,12 @@ export default function TransactionsPage() {
         loading={loading}
       />
 
-      <ImportTransactionsDialog
-        open={importOpen}
-        onClose={() => setImportOpen(false)}
-        onSuccess={refresh}
-        accounts={accounts}
-        categories={categories}
+      <PhotoImportDialog
+        open={photoOpen}
+        onClose={() => setPhotoOpen(false)}
+        accountId={appliedFilters.account || null}
+        accountCurrency={filteredAccount?.currency ?? "USD"}
+        onImported={refresh}
       />
 
       <TransactionFormDialog

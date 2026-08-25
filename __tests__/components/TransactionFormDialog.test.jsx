@@ -65,9 +65,8 @@ const baseProps = {
  * Open a MUI Select combobox by index (among all rendered comboboxes) and
  * pick the option matching optionText.
  *
- * MUI Select renders each Select as a div[role="combobox"]. The accessible name
- * is the currently selected value text (e.g., "Expense" for the Type select).
- * Combobox order in the DOM mirrors the visual order on screen.
+ * Type is now a ToggleButtonGroup (not a combobox), so combobox[0] is
+ * Source Account, combobox[1] is Target Account, etc.
  */
 async function selectMuiOption(comboboxIndex, optionText) {
   const comboboxes = screen.getAllByRole("combobox");
@@ -75,6 +74,11 @@ async function selectMuiOption(comboboxIndex, optionText) {
   fireEvent.mouseDown(select);
   const option = await screen.findByRole("option", { name: new RegExp(optionText, "i") });
   fireEvent.click(option);
+}
+
+/** Click a ToggleButton by its visible label text. */
+function clickTypeToggle(label) {
+  fireEvent.click(screen.getByRole("button", { name: new RegExp(`^${label}$`, "i") }));
 }
 
 afterEach(() => {
@@ -86,10 +90,9 @@ afterEach(() => {
 
 describe("TransactionFormDialog — sign conversion", () => {
   /**
-   * Combobox layout for expense (default):
-   *   [0] Type            → "Expense"
-   *   [1] Source Account  → "" (none selected)
-   *   [2] Category        → "" (none selected)
+   * Combobox layout for expense (default) — Type is a ToggleButtonGroup, not a combobox:
+   *   [0] Source Account  → "" (none selected)
+   *   [1] Category        → "" (none selected)
    */
   it("sends negative amount to API when creating an expense", async () => {
     render(<TransactionFormDialog {...baseProps} />);
@@ -100,8 +103,8 @@ describe("TransactionFormDialog — sign conversion", () => {
     const amountInput = screen.getByRole("spinbutton", { name: /amount/i });
     fireEvent.change(amountInput, { target: { value: "50" } });
 
-    // Source Account is required for expense — combobox[1]
-    await selectMuiOption(1, "Bank Account");
+    // Source Account is required for expense — combobox[0] (type is now a ToggleButtonGroup, not a combobox)
+    await selectMuiOption(0, "Bank Account");
 
     fireEvent.click(screen.getByRole("button", { name: /save/i }));
 
@@ -113,24 +116,23 @@ describe("TransactionFormDialog — sign conversion", () => {
   });
 
   /**
-   * Combobox layout after switching to income:
-   *   [0] Type            → "Income"
-   *   [1] Target Account  → "" (none selected)
-   *   [2] Category        → "" (none selected)
+   * Combobox layout after switching to income (type via ToggleButtonGroup):
+   *   [0] Target Account  → "" (none selected)
+   *   [1] Category        → "" (none selected)
    */
   it("sends positive amount to API when creating an income", async () => {
     render(<TransactionFormDialog {...baseProps} />);
 
     await waitFor(() => expect(screen.getByRole("dialog")).toBeInTheDocument());
 
-    // Switch type to Income — Type is combobox[0], currently shows "Expense"
-    await selectMuiOption(0, "Income");
+    // Switch type to Income via ToggleButton
+    clickTypeToggle("Income");
 
     const amountInput = screen.getByRole("spinbutton", { name: /amount/i });
     fireEvent.change(amountInput, { target: { value: "500" } });
 
-    // Target Account is required for income — combobox[1] after type change
-    await selectMuiOption(1, "Cash Wallet");
+    // Target Account is required for income — combobox[0] (type is no longer a combobox)
+    await selectMuiOption(0, "Cash Wallet");
 
     fireEvent.click(screen.getByRole("button", { name: /save/i }));
 
@@ -142,26 +144,26 @@ describe("TransactionFormDialog — sign conversion", () => {
   });
 
   /**
-   * Combobox layout after switching to transfer:
-   *   [0] Type            → "Transfer"
-   *   [1] Source Account  → "" (none selected)
-   *   [2] Target Account  → "" (none selected)
+   * Combobox layout after switching to transfer (type via ToggleButtonGroup):
+   *   [0] Source Account  → "" (none selected)
+   *   [1] Target Account  → "" (none selected)
    */
   it("sends positive amount to API when creating a transfer", async () => {
     render(<TransactionFormDialog {...baseProps} />);
 
     await waitFor(() => expect(screen.getByRole("dialog")).toBeInTheDocument());
 
-    await selectMuiOption(0, "Transfer");
+    // Switch type to Transfer via ToggleButton
+    clickTypeToggle("Transfer");
 
     const amountInput = screen.getByRole("spinbutton", { name: /amount/i });
     fireEvent.change(amountInput, { target: { value: "200" } });
 
-    // Source Account — combobox[1]
-    await selectMuiOption(1, "Bank Account");
+    // Source Account — combobox[0] (type is no longer a combobox)
+    await selectMuiOption(0, "Bank Account");
 
-    // Target Account — combobox[2] (Bank Account is now selected as source, so Cash Wallet for target)
-    await selectMuiOption(2, "Cash Wallet");
+    // Target Account — combobox[1]
+    await selectMuiOption(1, "Cash Wallet");
 
     fireEvent.click(screen.getByRole("button", { name: /save/i }));
 

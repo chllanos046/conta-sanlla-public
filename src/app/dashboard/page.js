@@ -28,9 +28,8 @@ import { format, subMonths, addMonths, isSameMonth } from "date-fns";
 import axios from "axios";
 import { SummaryStatCard } from "@/components/SummaryStatCard";
 import AccountCarousel from "@/components/AccountCarousel";
-import QuickAddTransaction, {
-  QuickAddFab,
-} from "@/components/QuickAddTransaction";
+import { QuickAddFab } from "@/components/QuickAddTransaction";
+import { TransactionFormDialog } from "@/components/TransactionFormDialog";
 import { useCurrency } from "@/hooks/useCurrency";
 import { convertAmount } from "@/lib/currency";
 import { formatCurrency } from "@/lib/utils";
@@ -595,12 +594,13 @@ export default function Dashboard() {
       )}
 
       <QuickAddFab onClick={() => setFabOpen(true)} />
-      <QuickAddTransaction
+      <TransactionFormDialog
         accounts={data.accounts}
         categories={data.categories}
         open={fabOpen}
         onClose={() => setFabOpen(false)}
-        onSuccess={loadData}
+        onSaved={loadData}
+        editingTx={null}
       />
       </Box>
     </LocalizationProvider>

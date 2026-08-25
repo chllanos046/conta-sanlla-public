@@ -201,39 +201,35 @@ export function MobileTransactionsList() {
         </List>
       )}
 
-      {accountId && (
-        <>
-          <SpeedDial
-            ariaLabel="Account actions"
-            sx={{ position: "fixed", bottom: 96, right: 16, zIndex: 10 }}
-            icon={<SpeedDialIcon />}
-          >
-            <SpeedDialAction
-              icon={<AddIcon />}
-              tooltipTitle={t("common.newTransaction")}
-              tooltipOpen
-              onClick={handleAddTx}
-              FabProps={{ sx: { flexShrink: 0 } }}
-              sx={{ "& .MuiSpeedDialAction-staticTooltipLabel": { whiteSpace: "nowrap" } }}
-            />
-            <SpeedDialAction
-              icon={<CameraAltIcon />}
-              tooltipTitle={t("common.importFromPhoto")}
-              tooltipOpen
-              onClick={() => setPhotoOpen(true)}
-              FabProps={{ sx: { flexShrink: 0 } }}
-              sx={{ "& .MuiSpeedDialAction-staticTooltipLabel": { whiteSpace: "nowrap" } }}
-            />
-          </SpeedDial>
-          <PhotoImportDialog
-            open={photoOpen}
-            onClose={() => setPhotoOpen(false)}
-            accountId={accountId}
-            accountCurrency={currentAccount?.currency ?? "USD"}
-            onImported={handleImported}
-          />
-        </>
-      )}
+      <SpeedDial
+        ariaLabel="Account actions"
+        sx={{ position: "fixed", bottom: 96, right: 16, zIndex: 10 }}
+        icon={<SpeedDialIcon />}
+      >
+        <SpeedDialAction
+          icon={<AddIcon />}
+          tooltipTitle={t("common.newTransaction")}
+          tooltipOpen
+          onClick={handleAddTx}
+          FabProps={{ sx: { flexShrink: 0 } }}
+          sx={{ "& .MuiSpeedDialAction-staticTooltipLabel": { whiteSpace: "nowrap" } }}
+        />
+        <SpeedDialAction
+          icon={<CameraAltIcon />}
+          tooltipTitle={t("common.importFromPhoto")}
+          tooltipOpen
+          onClick={() => setPhotoOpen(true)}
+          FabProps={{ sx: { flexShrink: 0 } }}
+          sx={{ "& .MuiSpeedDialAction-staticTooltipLabel": { whiteSpace: "nowrap" } }}
+        />
+      </SpeedDial>
+      <PhotoImportDialog
+        open={photoOpen}
+        onClose={() => setPhotoOpen(false)}
+        accountId={accountId || null}
+        accountCurrency={currentAccount?.currency ?? "USD"}
+        onImported={handleImported}
+      />
     </Box>
   );
 }

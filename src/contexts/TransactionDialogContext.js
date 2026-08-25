@@ -1,12 +1,14 @@
 "use client";
 
 import { createContext, useContext, useState, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import axios from "axios";
-import QuickAddTransaction from "@/components/QuickAddTransaction";
+import { TransactionFormDialog } from "@/components/TransactionFormDialog";
 
 const TransactionDialogContext = createContext(null);
 
 export function TransactionDialogProvider({ children }) {
+  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [accounts, setAccounts] = useState([]);
   const [categories, setCategories] = useState([]);
@@ -33,17 +35,22 @@ export function TransactionDialogProvider({ children }) {
 
   const handleClose = useCallback(() => setOpen(false), []);
 
+  const handleSaved = useCallback(() => {
+    setOpen(false);
+    if (dialogOpts.navigateOnSuccess) router.push("/transactions");
+  }, [dialogOpts.navigateOnSuccess, router]);
+
   return (
     <TransactionDialogContext.Provider value={{ openTransactionDialog }}>
       {children}
-      <QuickAddTransaction
+      <TransactionFormDialog
         accounts={accounts}
         categories={categories}
         open={open}
         onClose={handleClose}
-        onSuccess={handleClose}
-        navigateOnSuccess={dialogOpts.navigateOnSuccess}
-        initialValues={dialogOpts.initialValues}
+        onSaved={handleSaved}
+        editingTx={null}
+        defaultSourceAccountId={dialogOpts.initialValues?.source_account_id || ""}
       />
     </TransactionDialogContext.Provider>
   );
