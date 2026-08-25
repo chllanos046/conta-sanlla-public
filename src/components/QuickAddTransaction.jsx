@@ -75,10 +75,14 @@ const EMPTY_FORM = {
   exchange_rate: "",
 };
 
-export default function QuickAddTransaction({ accounts = [], categories = [], open, onClose, onSuccess, navigateOnSuccess }) {
+export default function QuickAddTransaction({ accounts = [], categories = [], open, onClose, onSuccess, navigateOnSuccess, initialValues = {} }) {
   const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
+  const isMobileQuery = useMediaQuery(theme.breakpoints.down("sm"));
+  const [mounted, setMounted] = useState(false);
+  const isMobile = mounted && isMobileQuery;
   const router = useRouter();
+
+  useEffect(() => { setMounted(true); }, []);
   const [arsRate, setArsRate] = useState(null);
 
   useEffect(() => {
@@ -126,8 +130,8 @@ export default function QuickAddTransaction({ accounts = [], categories = [], op
         : srcAcc?.currency ?? tgtAcc?.currency;
 
   useEffect(() => {
-    if (open) reset(EMPTY_FORM);
-  }, [open, reset]);
+    if (open) reset({ ...EMPTY_FORM, ...initialValues });
+  }, [open, reset, initialValues]);
 
   useEffect(() => {
     if (showExchangeRate && !getValues("exchange_rate") && arsRate) {

@@ -1,7 +1,6 @@
 "use client";
 import { useState, Suspense } from "react";
 import Box from "@mui/material/Box";
-import useMediaQuery from "@mui/material/useMediaQuery";
 import { useTheme } from "@mui/material/styles";
 import { usePathname } from "next/navigation";
 import TopBar from "@/components/TopBar";
@@ -18,7 +17,6 @@ const AUTH_ROUTES = ["/login", "/register"];
 export default function AppShell({ children }) {
   const theme = useTheme();
   const pathname = usePathname();
-  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
   const [open, setOpen] = useState(true);
   const [mobileOpen, setMobileOpen] = useState(false);
 
@@ -29,31 +27,30 @@ export default function AppShell({ children }) {
   }
 
   const toggleDesktop = () => setOpen((prev) => !prev);
-  const toggleMobile = () => setMobileOpen((prev) => !prev);
 
   return (
     <TransactionDialogProvider>
       <Box sx={{ display: "flex", minHeight: "100vh" }}>
-        <TopBar onMenuClick={isMobile ? toggleMobile : toggleDesktop} isMobile={isMobile} />
-        {!isMobile && (
+        <TopBar onMenuClick={toggleDesktop} />
+        <Box sx={{ display: { xs: "none", sm: "block" } }}>
           <Sidebar
             open={open}
             mobileOpen={mobileOpen}
             onMobileClose={() => setMobileOpen(false)}
-            isMobile={isMobile}
+            isMobile={false}
             drawerWidth={DRAWER_WIDTH}
             miniWidth={MINI_DRAWER_WIDTH}
           />
-        )}
+        </Box>
         <Box
           component="main"
           sx={{
             flex: 1,
             minWidth: 0,
-            p: isMobile ? 0 : 3,
-            mt: isMobile ? "56px" : "64px",
+            p: { xs: 0, sm: 3 },
+            mt: { xs: "56px", sm: "64px" },
             ml: 0,
-            pb: isMobile ? "88px" : 3,
+            pb: { xs: "88px", sm: 3 },
             transition: theme.transitions.create("margin-left", {
               easing: theme.transitions.easing.sharp,
               duration: theme.transitions.duration.enteringScreen,
@@ -63,7 +60,9 @@ export default function AppShell({ children }) {
         >
           <Suspense fallback={<Loading />}>{children}</Suspense>
         </Box>
-        {isMobile && <MobileBottomNav />}
+        <Box sx={{ display: { xs: "block", sm: "none" } }}>
+          <MobileBottomNav />
+        </Box>
       </Box>
     </TransactionDialogProvider>
   );

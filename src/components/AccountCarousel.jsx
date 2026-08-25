@@ -11,15 +11,11 @@ import Typography from "@mui/material/Typography";
 import Divider from "@mui/material/Divider";
 import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
 import ChevronRightIcon from "@mui/icons-material/ChevronRight";
-import useMediaQuery from "@mui/material/useMediaQuery";
-import { useTheme } from "@mui/material/styles";
 import StatCard from "@/components/StatCard";
 import AccountTypeIcon from "@/components/AccountTypeIcon";
 import { getCurrencySymbol } from "@/lib/currency";
 
 export default function AccountCarousel({ accounts, balanceColor }) {
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
   const [startIndex, setStartIndex] = useState(0);
   const router = useRouter();
 
@@ -45,106 +41,108 @@ export default function AccountCarousel({ accounts, balanceColor }) {
     );
   };
 
-  if (isMobile) {
-    return (
-      <List
-        disablePadding
-        sx={{
-          border: "1px solid",
-          borderColor: "divider",
-          borderRadius: 1,
-          bgcolor: "background.paper",
-          overflow: "hidden",
-        }}
-      >
-        {accounts.map((acc, i) => {
-          const bal = parseFloat(acc.current_balance);
-          const symbol = getCurrencySymbol(acc.currency);
-          const currencyLabel = acc.currency !== "USD" ? ` ${acc.currency}` : "";
-          return (
-            <Box key={acc.id}>
-              <ListItem
-                onClick={() => router.push(`/transactions/mobile?account=${acc.id}`)}
-                sx={{ cursor: "pointer", px: 2, py: 1.5 }}
-              >
-                <Box
-                  sx={{
-                    width: 36,
-                    height: 36,
-                    borderRadius: 1,
-                    bgcolor: "grey.200",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    mr: 2,
-                    flexShrink: 0,
-                    overflow: "hidden",
-                  }}
-                >
-                  {acc.image_path ? (
-                    <Box
-                      component="img"
-                      src={acc.image_path}
-                      alt={acc.name}
-                      sx={{ width: 36, height: 36, objectFit: "cover" }}
-                    />
-                  ) : (
-                    <AccountTypeIcon
-                      type={acc.type}
-                      sx={{ fontSize: 20, color: "grey.600" }}
-                    />
-                  )}
-                </Box>
-                <ListItemText primary={acc.name} />
-                <Typography
-                  variant="body2"
-                  fontWeight={600}
-                  color={balanceColor(bal)}
-                  sx={{ flexShrink: 0, ml: 1 }}
-                >
-                  {symbol}{bal.toFixed(2)}{currencyLabel}
-                </Typography>
-              </ListItem>
-              {i < accounts.length - 1 && <Divider component="li" />}
-            </Box>
-          );
-        })}
-      </List>
-    );
-  }
-
   const visibleCount = 3;
   const visibleAccounts = accounts.slice(startIndex, startIndex + visibleCount);
   const canGoPrev = startIndex > 0;
   const canGoNext = startIndex + visibleCount < accounts.length;
 
   return (
-    <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-      <IconButton
-        onClick={() => setStartIndex((i) => i - 1)}
-        disabled={!canGoPrev}
-        size="small"
-        sx={{ flexShrink: 0 }}
-      >
-        <ChevronLeftIcon />
-      </IconButton>
+    <>
+      {/* Mobile list — CSS hidden on sm+ */}
+      <Box sx={{ display: { xs: "block", sm: "none" } }}>
+        <List
+          disablePadding
+          sx={{
+            border: "1px solid",
+            borderColor: "divider",
+            borderRadius: 1,
+            bgcolor: "background.paper",
+            overflow: "hidden",
+          }}
+        >
+          {accounts.map((acc, i) => {
+            const bal = parseFloat(acc.current_balance);
+            const symbol = getCurrencySymbol(acc.currency);
+            const currencyLabel = acc.currency !== "USD" ? ` ${acc.currency}` : "";
+            return (
+              <Box key={acc.id}>
+                <ListItem
+                  onClick={() => router.push(`/transactions/mobile?account=${acc.id}`)}
+                  sx={{ cursor: "pointer", px: 2, py: 1.5 }}
+                >
+                  <Box
+                    sx={{
+                      width: 36,
+                      height: 36,
+                      borderRadius: 1,
+                      bgcolor: "grey.200",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      mr: 2,
+                      flexShrink: 0,
+                      overflow: "hidden",
+                    }}
+                  >
+                    {acc.image_path ? (
+                      <Box
+                        component="img"
+                        src={acc.image_path}
+                        alt={acc.name}
+                        sx={{ width: 36, height: 36, objectFit: "cover" }}
+                      />
+                    ) : (
+                      <AccountTypeIcon
+                        type={acc.type}
+                        sx={{ fontSize: 20, color: "grey.600" }}
+                      />
+                    )}
+                  </Box>
+                  <ListItemText primary={acc.name} />
+                  <Typography
+                    variant="body2"
+                    fontWeight={600}
+                    color={balanceColor(bal)}
+                    sx={{ flexShrink: 0, ml: 1 }}
+                  >
+                    {symbol}{bal.toFixed(2)}{currencyLabel}
+                  </Typography>
+                </ListItem>
+                {i < accounts.length - 1 && <Divider component="li" />}
+              </Box>
+            );
+          })}
+        </List>
+      </Box>
 
-      <Grid container spacing={2} sx={{ flex: 1 }}>
-        {visibleAccounts.map((acc) => (
-          <Grid key={acc.id} size={{ xs: 12, sm: 4 }}>
-            {renderAccountCard(acc)}
-          </Grid>
-        ))}
-      </Grid>
+      {/* Desktop carousel — CSS hidden on xs */}
+      <Box sx={{ display: { xs: "none", sm: "flex" }, alignItems: "center", gap: 1 }}>
+        <IconButton
+          onClick={() => setStartIndex((i) => i - 1)}
+          disabled={!canGoPrev}
+          size="small"
+          sx={{ flexShrink: 0 }}
+        >
+          <ChevronLeftIcon />
+        </IconButton>
 
-      <IconButton
-        onClick={() => setStartIndex((i) => i + 1)}
-        disabled={!canGoNext}
-        size="small"
-        sx={{ flexShrink: 0 }}
-      >
-        <ChevronRightIcon />
-      </IconButton>
-    </Box>
+        <Grid container spacing={2} sx={{ flex: 1 }}>
+          {visibleAccounts.map((acc) => (
+            <Grid key={acc.id} size={{ xs: 12, sm: 4 }}>
+              {renderAccountCard(acc)}
+            </Grid>
+          ))}
+        </Grid>
+
+        <IconButton
+          onClick={() => setStartIndex((i) => i + 1)}
+          disabled={!canGoNext}
+          size="small"
+          sx={{ flexShrink: 0 }}
+        >
+          <ChevronRightIcon />
+        </IconButton>
+      </Box>
+    </>
   );
 }

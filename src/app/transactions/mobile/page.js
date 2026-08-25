@@ -1,5 +1,10 @@
+import { Suspense } from "react";
 import { MobileTransactionsList } from "@/components/MobileTransactionsList";
 
 export default function TransactionsMobilePage() {
-  return <MobileTransactionsList />;
+  return (
+    <Suspense fallback={null}>
+      <MobileTransactionsList />
+    </Suspense>
+  );
 }

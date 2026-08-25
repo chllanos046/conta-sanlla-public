@@ -10,17 +10,20 @@ import MenuIcon from "@mui/icons-material/Menu";
 import Image from "next/image";
 import { useCurrency } from "@/hooks/useCurrency";
 
-export default function TopBar({ onMenuClick, isMobile }) {
+export default function TopBar({ onMenuClick }) {
   const [currency, setCurrency] = useCurrency();
 
   return (
     <AppBar position="fixed" enableColorOnDark sx={{ zIndex: (theme) => theme.zIndex.drawer + 1 }}>
       <Toolbar>
-        {!isMobile && (
-          <IconButton color="inherit" edge="start" onClick={onMenuClick} sx={{ mr: 1 }}>
-            <MenuIcon />
-          </IconButton>
-        )}
+        <IconButton
+          color="inherit"
+          edge="start"
+          onClick={onMenuClick}
+          sx={{ mr: 1, display: { xs: "none", sm: "flex" } }}
+        >
+          <MenuIcon />
+        </IconButton>
 
         {/* Logo + Title — centered on mobile, left-aligned on desktop */}
         <Box

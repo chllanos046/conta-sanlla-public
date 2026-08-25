@@ -10,8 +10,9 @@ export function TransactionDialogProvider({ children }) {
   const [open, setOpen] = useState(false);
   const [accounts, setAccounts] = useState([]);
   const [categories, setCategories] = useState([]);
+  const [dialogOpts, setDialogOpts] = useState({ initialValues: {}, navigateOnSuccess: false });
 
-  const openTransactionDialog = useCallback(async () => {
+  const openTransactionDialog = useCallback(async (options = {}) => {
     try {
       const [accRes, catRes] = await Promise.all([
         axios.get("/api/accounts"),
@@ -23,6 +24,10 @@ export function TransactionDialogProvider({ children }) {
       setAccounts([]);
       setCategories([]);
     }
+    setDialogOpts({
+      initialValues: options.initialValues ?? {},
+      navigateOnSuccess: options.navigateOnSuccess ?? false,
+    });
     setOpen(true);
   }, []);
 
@@ -37,7 +42,8 @@ export function TransactionDialogProvider({ children }) {
         open={open}
         onClose={handleClose}
         onSuccess={handleClose}
-        navigateOnSuccess
+        navigateOnSuccess={dialogOpts.navigateOnSuccess}
+        initialValues={dialogOpts.initialValues}
       />
     </TransactionDialogContext.Provider>
   );

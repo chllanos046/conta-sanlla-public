@@ -12,8 +12,15 @@ import ListItem from "@mui/material/ListItem";
 import ListItemText from "@mui/material/ListItemText";
 import Divider from "@mui/material/Divider";
 import CircularProgress from "@mui/material/CircularProgress";
+import SpeedDial from "@mui/material/SpeedDial";
+import SpeedDialAction from "@mui/material/SpeedDialAction";
+import SpeedDialIcon from "@mui/material/SpeedDialIcon";
 import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
 import ChevronRightIcon from "@mui/icons-material/ChevronRight";
+import AddIcon from "@mui/icons-material/Add";
+import CameraAltIcon from "@mui/icons-material/CameraAlt";
+import { useTransactionDialog } from "@/contexts/TransactionDialogContext";
+import PhotoImportDialog from "@/components/PhotoImportDialog";
 
 function formatAmount(tx) {
   const currency =
@@ -35,8 +42,11 @@ export function MobileTransactionsList() {
   const searchParams = useSearchParams();
   const accountId = searchParams.get("account");
   const [transactions, setTransactions] = useState([]);
+  const [accounts, setAccounts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [monthOffset, setMonthOffset] = useState(0);
+  const [photoOpen, setPhotoOpen] = useState(false);
+  const { openTransactionDialog } = useTransactionDialog();
 
   const { dateFrom, dateTo, monthLabel } = useMemo(() => {
     const d = new Date();
@@ -58,13 +68,45 @@ export function MobileTransactionsList() {
     if (accountId) params.account = accountId;
     axios
       .get("/api/transactions", { params })
-      .then(({ data }) => setTransactions(data.transactions ?? []))
-      .catch(() => setTransactions([]))
+      .then(({ data }) => {
+        setTransactions(data.transactions ?? []);
+        setAccounts(data.accounts ?? []);
+      })
+      .catch(() => {
+        setTransactions([]);
+        setAccounts([]);
+      })
       .finally(() => setLoading(false));
   }, [dateFrom, dateTo, accountId]);
 
+  const currentAccount = useMemo(
+    () => (accountId ? accounts.find((a) => String(a.id) === accountId) : null),
+    [accounts, accountId]
+  );
+
+  const handleAddTx = () => {
+    const initialValues = accountId ? { source_account_id: String(accountId) } : {};
+    openTransactionDialog({ initialValues, navigateOnSuccess: false });
+  };
+
+  const handleImported = () => {
+    setMonthOffset((o) => o); // triggers re-fetch via dependency
+    // force re-fetch by resetting
+    setLoading(true);
+    const params = { dateFrom, dateTo };
+    if (accountId) params.account = accountId;
+    axios
+      .get("/api/transactions", { params })
+      .then(({ data }) => {
+        setTransactions(data.transactions ?? []);
+        setAccounts(data.accounts ?? []);
+      })
+      .catch(() => setTransactions([]))
+      .finally(() => setLoading(false));
+  };
+
   return (
-    <Box>
+    <Box sx={{ pb: accountId ? "160px" : undefined }}>
       <Box
         sx={{
           px: 2,
@@ -80,9 +122,9 @@ export function MobileTransactionsList() {
       >
         <Box>
           <Typography variant="h6" fontWeight={700}>
-            Transactions
+            {currentAccount ? currentAccount.name : "Transactions"}
           </Typography>
-          <Typography variant="body2" color="text.secondary">
+          <Typography variant="body2" color="text.secondary" suppressHydrationWarning>
             {monthLabel}
           </Typography>
         </Box>
@@ -155,6 +197,40 @@ export function MobileTransactionsList() {
             );
           })}
         </List>
+      )}
+
+      {accountId && (
+        <>
+          <SpeedDial
+            ariaLabel="Account actions"
+            sx={{ position: "fixed", bottom: 96, right: 16, zIndex: 10 }}
+            icon={<SpeedDialIcon />}
+          >
+            <SpeedDialAction
+              icon={<AddIcon />}
+              tooltipTitle="New transaction"
+              tooltipOpen
+              onClick={handleAddTx}
+              FabProps={{ sx: { flexShrink: 0 } }}
+              sx={{ "& .MuiSpeedDialAction-staticTooltipLabel": { whiteSpace: "nowrap" } }}
+            />
+            <SpeedDialAction
+              icon={<CameraAltIcon />}
+              tooltipTitle="Import from photo"
+              tooltipOpen
+              onClick={() => setPhotoOpen(true)}
+              FabProps={{ sx: { flexShrink: 0 } }}
+              sx={{ "& .MuiSpeedDialAction-staticTooltipLabel": { whiteSpace: "nowrap" } }}
+            />
+          </SpeedDial>
+          <PhotoImportDialog
+            open={photoOpen}
+            onClose={() => setPhotoOpen(false)}
+            accountId={accountId}
+            accountCurrency={currentAccount?.currency ?? "USD"}
+            onImported={handleImported}
+          />
+        </>
       )}
     </Box>
   );

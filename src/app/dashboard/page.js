@@ -49,13 +49,17 @@ export default function Dashboard() {
     categories: [],
   });
   const [period, setPeriod] = useState("month");
-  const [periodDate, setPeriodDate] = useState(new Date());
+  const [periodDate, setPeriodDate] = useState(null);
   const [rates, setRates] = useState({});
   const prevArsRef = useRef(null);
   const [fabOpen, setFabOpen] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [pullY, setPullY] = useState(0);
   const [displayCurrency] = useCurrency();
+
+  useEffect(() => {
+    setPeriodDate(new Date());
+  }, []);
 
   useEffect(() => {
     axios
@@ -71,6 +75,7 @@ export default function Dashboard() {
   }, []);
 
   const buildApiUrl = useCallback(() => {
+    if (!periodDate) return null;
     const p = new URLSearchParams({ period });
     if (period === "month") {
       p.set("year", periodDate.getFullYear());
@@ -82,9 +87,11 @@ export default function Dashboard() {
   }, [period, periodDate]);
 
   const loadData = useCallback(() => {
+    const url = buildApiUrl();
+    if (!url) return;
     setRefreshing(true);
     axios
-      .get(buildApiUrl())
+      .get(url)
       .then((res) => setData(res.data))
       .finally(() => setRefreshing(false));
   }, [buildApiUrl]);
@@ -166,6 +173,7 @@ export default function Dashboard() {
   const balance = income - expenses;
 
   const chartData = (() => {
+    if (!periodDate) return [];
     const MONTHS = [
       "Jan",
       "Feb",
@@ -297,7 +305,7 @@ export default function Dashboard() {
   };
 
   const today = new Date();
-  const isCurrentMonth = isSameMonth(periodDate, today);
+  const isCurrentMonth = periodDate ? isSameMonth(periodDate, today) : false;
 
   return (
     <LocalizationProvider dateAdapter={AdapterDateFns}>
@@ -384,7 +392,7 @@ export default function Dashboard() {
             ))}
           </ToggleButtonGroup>
 
-          {period === "month" && (
+          {period === "month" && periodDate && (
             <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
               <IconButton
                 size="small"

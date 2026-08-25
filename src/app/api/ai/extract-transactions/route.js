@@ -1,0 +1,76 @@
+import { NextResponse } from "next/server";
+import { auth } from "@/auth";
+
+const PROMPT = `Extract all financial transactions visible in this image.
+Rules:
+- Numbers may use dots as thousands separators and commas as decimals (e.g. "46.460" = 46460, "34,19" = 34.19). Normalize to standard decimal numbers.
+- Dates may appear as "23 Aug 2026" or similar — convert to YYYY-MM-DD.
+- Amounts are always positive numbers (strip any minus/negative sign).
+- Currency may appear as "USDc", "USDC", "USD Coin" — normalize all to "USD".
+- When a "USDc → ARS" conversion row appears on the same date as a merchant/debit row whose ARS amount matches the ARS credit side of the conversion, they are ONE transaction. Output it once using the USDc amount and "USD" currency with the merchant row's description. Discard the duplicate ARS merchant row.
+- Ignore section headers, search bars, and UI chrome.
+Return ONLY a valid JSON array (no markdown, no explanation) where each element has:
+  date (string, YYYY-MM-DD),
+  description (string),
+  amount (positive number),
+  currency (ISO 4217 code).
+If no transactions are found, return [].`;
+
+function parseAIResponse(text) {
+  const stripped = text.replace(/```json\s*/gi, "").replace(/```\s*/g, "").trim();
+  return JSON.parse(stripped);
+}
+
+export async function POST(request) {
+  const session = await auth();
+  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) {
+    return NextResponse.json(
+      { error: "GEMINI_API_KEY is not set in environment variables." },
+      { status: 500 }
+    );
+  }
+
+  const { imageBase64, mimeType = "image/jpeg", accountCurrency } = await request.json();
+  if (!imageBase64) return NextResponse.json({ error: "imageBase64 required" }, { status: 400 });
+
+  let rawText;
+  try {
+    const res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${apiKey}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: [{
+            parts: [
+              { text: PROMPT },
+              { inline_data: { mime_type: mimeType, data: imageBase64 } },
+            ],
+          }],
+        }),
+      }
+    );
+    const json = await res.json();
+    if (!res.ok) throw new Error(json.error?.message ?? "Gemini error");
+    rawText = json.candidates?.[0]?.content?.parts?.[0]?.text ?? "[]";
+  } catch (err) {
+    return NextResponse.json({ error: err.message }, { status: 502 });
+  }
+
+  let transactions;
+  try {
+    transactions = parseAIResponse(rawText);
+  } catch {
+    return NextResponse.json({ error: "AI returned invalid JSON", raw: rawText }, { status: 502 });
+  }
+
+  const normCurrency = (c) => c?.toUpperCase().replace(/C$/, "") || "";
+  const filtered = accountCurrency
+    ? transactions.filter((t) => !t.currency || normCurrency(t.currency) === normCurrency(accountCurrency))
+    : transactions;
+
+  return NextResponse.json({ transactions: filtered });
+}

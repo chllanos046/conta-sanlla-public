@@ -53,6 +53,7 @@ export default function Sidebar({
   const { data: session } = useSession();
 
   const [displayCurrency] = useCurrency();
+  const [mounted, setMounted] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [openGroups, setOpenGroups] = useState(
     ACCOUNT_TYPE_ORDER.reduce((acc, type) => ({ ...acc, [type]: true }), {})
@@ -66,6 +67,7 @@ export default function Sidebar({
   };
 
   useEffect(() => {
+    setMounted(true);
     loadAccounts();
     axios.get("/api/exchange-rates").then(({ data }) => setRates(data)).catch(() => {});
 
@@ -93,7 +95,7 @@ export default function Sidebar({
             <ListItemButton
               component={Link}
               href="/dashboard"
-              selected={pathname === "/dashboard"}
+              selected={mounted && pathname === "/dashboard"}
               onClick={isMobile ? onMobileClose : undefined}
               sx={navItemSx}
             >
@@ -109,7 +111,7 @@ export default function Sidebar({
             <ListItemButton
               component={Link}
               href="/transactions"
-              selected={pathname === "/transactions"}
+              selected={mounted && pathname === "/transactions"}
               onClick={isMobile ? onMobileClose : undefined}
               sx={navItemSx}
             >
@@ -272,7 +274,7 @@ export default function Sidebar({
                 <ListItemButton
                   component={Link}
                   href="/accounts"
-                  selected={pathname.startsWith("/accounts")}
+                  selected={mounted && pathname.startsWith("/accounts")}
                   onClick={isMobile ? onMobileClose : undefined}
                   sx={{ ...navItemSx, pl: 4 }}
                 >
@@ -284,7 +286,7 @@ export default function Sidebar({
                 <ListItemButton
                   component={Link}
                   href="/categories"
-                  selected={pathname.startsWith("/categories")}
+                  selected={mounted && pathname.startsWith("/categories")}
                   onClick={isMobile ? onMobileClose : undefined}
                   sx={{ ...navItemSx, pl: 4 }}
                 >
@@ -296,7 +298,7 @@ export default function Sidebar({
                 <ListItemButton
                   component={Link}
                   href="/settings/about"
-                  selected={pathname.startsWith("/settings/about")}
+                  selected={mounted && pathname.startsWith("/settings/about")}
                   onClick={isMobile ? onMobileClose : undefined}
                   sx={{ ...navItemSx, pl: 4 }}
                 >

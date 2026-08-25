@@ -26,7 +26,7 @@ export default function Footer({ drawerWidth }) {
         zIndex: (theme) => theme.zIndex.drawer - 1,
       }}
     >
-      <Typography variant="body2" color="text.secondary">
+      <Typography variant="body2" color="text.secondary" suppressHydrationWarning>
         © {new Date().getFullYear()} Conta Sanlla
       </Typography>
     </Box>
