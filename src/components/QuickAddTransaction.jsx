@@ -24,6 +24,7 @@ import { DatePicker } from "@mui/x-date-pickers/DatePicker";
 import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import axios from "axios";
+import { useTranslation } from "@/hooks/useTranslation";
 
 const makeSchema = (accounts) =>
   z
@@ -81,6 +82,7 @@ export default function QuickAddTransaction({ accounts = [], categories = [], op
   const [mounted, setMounted] = useState(false);
   const isMobile = mounted && isMobileQuery;
   const router = useRouter();
+  const { t } = useTranslation();
 
   useEffect(() => { setMounted(true); }, []);
   const [arsRate, setArsRate] = useState(null);
@@ -163,14 +165,14 @@ export default function QuickAddTransaction({ accounts = [], categories = [], op
       window.dispatchEvent(new CustomEvent("accounts-updated"));
       if (navigateOnSuccess) router.push("/transactions");
     } catch (err) {
-      setError("root", { message: err.response?.data?.error || "Failed to save transaction" });
+      setError("root", { message: err.response?.data?.error || t("errors.saveFailed") });
     }
   };
 
   return (
     <LocalizationProvider dateAdapter={AdapterDateFns}>
       <Dialog open={open} onClose={onClose} maxWidth="xs" fullWidth fullScreen={isMobile}>
-        <DialogTitle>New Transaction</DialogTitle>
+        <DialogTitle>{t("transactions.newTransaction")}</DialogTitle>
         <DialogContent>
           <Box sx={{ display: "flex", flexDirection: "column", gap: 2, pt: 1 }}>
             {errors.root && (
@@ -193,9 +195,9 @@ export default function QuickAddTransaction({ accounts = [], categories = [], op
                   fullWidth
                   size="small"
                 >
-                  <ToggleButton value="expense">Expense</ToggleButton>
-                  <ToggleButton value="income">Income</ToggleButton>
-                  <ToggleButton value="transfer">Transfer</ToggleButton>
+                  <ToggleButton value="expense">{t("common.expense")}</ToggleButton>
+                  <ToggleButton value="income">{t("common.income")}</ToggleButton>
+                  <ToggleButton value="transfer">{t("common.transfer")}</ToggleButton>
                 </ToggleButtonGroup>
               )}
             />
@@ -206,7 +208,7 @@ export default function QuickAddTransaction({ accounts = [], categories = [], op
               render={({ field }) => (
                 <TextField
                   {...field}
-                  label="Amount"
+                  label={t("transactions.amount")}
                   type="number"
                   inputProps={{ min: 0, step: 0.01 }}
                   error={!!errors.amount}
@@ -224,13 +226,13 @@ export default function QuickAddTransaction({ accounts = [], categories = [], op
                 render={({ field }) => (
                   <TextField
                     {...field}
-                    label={`How many ${foreignCurrency} = 1 USD?`}
+                    label={t("transactions.exchangeRate")(foreignCurrency)}
                     type="number"
                     inputProps={{ min: 0, step: 0.01 }}
                     error={!!errors.exchange_rate}
                     helperText={
                       errors.exchange_rate?.message ??
-                      `e.g. 1450 means 1 USD = 1450 ${foreignCurrency}`
+                      t("transactions.exchangeRateHint")(foreignCurrency)
                     }
                     size="small"
                     fullWidth
@@ -247,7 +249,7 @@ export default function QuickAddTransaction({ accounts = [], categories = [], op
                   <TextField
                     {...field}
                     select
-                    label="From Account"
+                    label={t("transactions.sourceAccount")}
                     error={!!errors.source_account_id}
                     helperText={errors.source_account_id?.message}
                     size="small"
@@ -275,7 +277,7 @@ export default function QuickAddTransaction({ accounts = [], categories = [], op
                   <TextField
                     {...field}
                     select
-                    label="To Account"
+                    label={t("transactions.targetAccount")}
                     error={!!errors.target_account_id}
                     helperText={errors.target_account_id?.message}
                     size="small"
@@ -303,11 +305,11 @@ export default function QuickAddTransaction({ accounts = [], categories = [], op
                   <TextField
                     {...field}
                     select
-                    label="Category"
+                    label={t("transactions.category")}
                     size="small"
                     fullWidth
                   >
-                    <MenuItem value="">None</MenuItem>
+                    <MenuItem value="">{t("common.none")}</MenuItem>
                     {filteredCategories.map((c) => (
                       <MenuItem key={c.id} value={String(c.id)}>
                         {c.name}
@@ -323,7 +325,7 @@ export default function QuickAddTransaction({ accounts = [], categories = [], op
               control={control}
               render={({ field }) => (
                 <DatePicker
-                  label="Date"
+                  label={t("transactions.date")}
                   format="yyyy-MM-dd"
                   value={field.value ? new Date(field.value + "T12:00:00") : null}
                   onChange={(v) => field.onChange(v ? format(v, "yyyy-MM-dd") : "")}
@@ -345,7 +347,7 @@ export default function QuickAddTransaction({ accounts = [], categories = [], op
               render={({ field }) => (
                 <TextField
                   {...field}
-                  label="Description"
+                  label={t("transactions.description")}
                   size="small"
                   fullWidth
                   multiline
@@ -356,13 +358,13 @@ export default function QuickAddTransaction({ accounts = [], categories = [], op
           </Box>
         </DialogContent>
         <DialogActions sx={{ mb: isMobile ? "30px" : 0 }}>
-          <Button onClick={onClose}>Cancel</Button>
+          <Button onClick={onClose}>{t("common.cancel")}</Button>
           <Button
             variant="contained"
             onClick={handleSubmit(onSubmit)}
             disabled={isSubmitting}
           >
-            Save
+            {t("common.save")}
           </Button>
         </DialogActions>
       </Dialog>

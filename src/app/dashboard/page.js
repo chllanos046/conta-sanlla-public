@@ -34,15 +34,12 @@ import QuickAddTransaction, {
 import { useCurrency } from "@/hooks/useCurrency";
 import { convertAmount } from "@/lib/currency";
 import { formatCurrency } from "@/lib/utils";
-
-const PERIODS = [
-  { value: "month", label: "Month" },
-  { value: "year", label: "Year" },
-];
+import { useTranslation } from "@/hooks/useTranslation";
 
 const PULL_THRESHOLD = 80;
 
 export default function Dashboard() {
+  const { t } = useTranslation();
   const [data, setData] = useState({
     accounts: [],
     transactions: [],
@@ -154,21 +151,21 @@ export default function Dashboard() {
   const accountMap = Object.fromEntries(data.accounts.map((a) => [String(a.id), a]));
   const arsRate = rates.ARS || 1;
 
-  const toDisplay = (t) => {
-    const isIncome = t.type === "income";
-    const accountId = isIncome ? t.target_account_id : t.source_account_id;
+  const toDisplay = (tx) => {
+    const isIncome = tx.type === "income";
+    const accountId = isIncome ? tx.target_account_id : tx.source_account_id;
     const txCurrency = accountMap[String(accountId)]?.currency || "USD";
-    const txRate = parseFloat(t.exchange_rate) || arsRate;
-    return convertAmount(Math.abs(parseFloat(t.amount || 0)), txCurrency, displayCurrency, txRate);
+    const txRate = parseFloat(tx.exchange_rate) || arsRate;
+    return convertAmount(Math.abs(parseFloat(tx.amount || 0)), txCurrency, displayCurrency, txRate);
   };
 
   const income = data.transactions
-    .filter((t) => t.type === "income")
-    .reduce((sum, t) => sum + toDisplay(t), 0);
+    .filter((tx) => tx.type === "income")
+    .reduce((sum, tx) => sum + toDisplay(tx), 0);
 
   const expenses = data.transactions
-    .filter((t) => t.type === "expense")
-    .reduce((sum, t) => sum + toDisplay(t), 0);
+    .filter((tx) => tx.type === "expense")
+    .reduce((sum, tx) => sum + toDisplay(tx), 0);
 
   const balance = income - expenses;
 
@@ -254,10 +251,7 @@ export default function Dashboard() {
     return ((current - previous) / Math.abs(previous)) * 100;
   };
 
-  const periodLabel = (() => {
-    if (period === "year") return "From previous year";
-    return "From previous month";
-  })();
+  const periodLabel = period === "year" ? t("dashboard.fromPreviousYear") : t("dashboard.fromPreviousMonth");
 
   const prevIncome = convertAmount(data.prevMonthSummary?.income ?? 0, "USD", displayCurrency, arsRate);
   const prevExpense = convertAmount(data.prevMonthSummary?.expense ?? 0, "USD", displayCurrency, arsRate);
@@ -270,7 +264,7 @@ export default function Dashboard() {
 
   const summaryCards = [
     {
-      title: "Income",
+      title: t("dashboard.income"),
       value: formatCurrency(income, displayCurrency),
       trend: "up",
       data: chartData.map((d) => d.income),
@@ -279,7 +273,7 @@ export default function Dashboard() {
       interval: periodLabel,
     },
     {
-      title: "Expenses",
+      title: t("dashboard.expenses"),
       value: formatCurrency(expenses, displayCurrency),
       trend: "down",
       data: chartData.map((d) => d.expense),
@@ -288,7 +282,7 @@ export default function Dashboard() {
       interval: periodLabel,
     },
     {
-      title: "Balance",
+      title: t("dashboard.balance"),
       value: formatCurrency(balance, displayCurrency),
       trend: "neutral",
       data: chartData.map((d) => d.balance),
@@ -385,7 +379,10 @@ export default function Dashboard() {
               },
             }}
           >
-            {PERIODS.map((p) => (
+            {[
+              { value: "month", label: t("dashboard.month") },
+              { value: "year", label: t("dashboard.year") },
+            ].map((p) => (
               <ToggleButton key={p.value} value={p.value}>
                 {p.label}
               </ToggleButton>
@@ -421,7 +418,7 @@ export default function Dashboard() {
           )}
           {period === "year" && (
             <DatePicker
-              label="Year"
+              label={t("dashboard.year")}
               views={["year"]}
               format="yyyy"
               value={periodDate}
@@ -504,7 +501,7 @@ export default function Dashboard() {
           <Card sx={{ height: "100%" }}>
             <CardContent>
               <Typography variant="h6" gutterBottom>
-                Recent Transactions
+                {t("dashboard.recentTransactions")}
               </Typography>
               {refreshing ? (
                 <Box sx={{ display: "flex", justifyContent: "center", py: 4 }}>
@@ -516,17 +513,17 @@ export default function Dashboard() {
                   color="text.secondary"
                   sx={{ py: 2 }}
                 >
-                  No transactions for this period
+                  {t("dashboard.noTransactionsInPeriod")}
                 </Typography>
               ) : (
                 <Table size="small">
                   <TableHead>
                     <TableRow>
-                      <TableCell>Date</TableCell>
-                      <TableCell>Description</TableCell>
-                      <TableCell>Category</TableCell>
-                      <TableCell>Account</TableCell>
-                      <TableCell align="right">Amount</TableCell>
+                      <TableCell>{t("transactions.date")}</TableCell>
+                      <TableCell>{t("transactions.description")}</TableCell>
+                      <TableCell>{t("transactions.category")}</TableCell>
+                      <TableCell>{t("transactions.account")}</TableCell>
+                      <TableCell align="right">{t("transactions.amount")}</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
@@ -586,7 +583,7 @@ export default function Dashboard() {
       {data.accounts.length > 0 && (
         <>
           <Typography variant="h6" gutterBottom>
-            Account Balances
+            {t("dashboard.accountBalances")}
           </Typography>
           <Box sx={{ mb: 3 }}>
             <AccountCarousel

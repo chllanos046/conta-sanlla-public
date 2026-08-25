@@ -10,12 +10,18 @@ import Avatar from "@mui/material/Avatar";
 import Divider from "@mui/material/Divider";
 import FormControlLabel from "@mui/material/FormControlLabel";
 import Switch from "@mui/material/Switch";
+import ToggleButton from "@mui/material/ToggleButton";
+import ToggleButtonGroup from "@mui/material/ToggleButtonGroup";
 import { useThemeMode } from "@/hooks/useThemeMode";
+import { useTranslation } from "@/hooks/useTranslation";
+import { useLocale } from "@/hooks/useLocale";
 
 export default function ProfilePage() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const [mode, setMode] = useThemeMode();
+  const { t } = useTranslation();
+  const [locale, setLocale] = useLocale();
 
   useEffect(() => {
     if (status === "unauthenticated") router.replace("/login");
@@ -28,7 +34,7 @@ export default function ProfilePage() {
   return (
     <Box>
       <Typography variant="h4" gutterBottom>
-        Profile
+        {t("profile.title")}
       </Typography>
       <Card sx={{ maxWidth: 480 }}>
         <CardContent>
@@ -45,13 +51,13 @@ export default function ProfilePage() {
           <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5 }}>
             <Box>
               <Typography variant="caption" color="text.secondary" sx={{ textTransform: "uppercase", letterSpacing: 0.5 }}>
-                Name
+                {t("profile.name")}
               </Typography>
               <Typography variant="body1">{session.user.name}</Typography>
             </Box>
             <Box>
               <Typography variant="caption" color="text.secondary" sx={{ textTransform: "uppercase", letterSpacing: 0.5 }}>
-                Email
+                {t("profile.email")}
               </Typography>
               <Typography variant="body1">{session.user.email}</Typography>
             </Box>
@@ -59,7 +65,7 @@ export default function ProfilePage() {
           <Divider sx={{ my: 2 }} />
           <Box>
             <Typography variant="caption" color="text.secondary" sx={{ textTransform: "uppercase", letterSpacing: 0.5 }}>
-              Appearance
+              {t("profile.appearance")}
             </Typography>
             <FormControlLabel
               sx={{ display: "flex", mt: 0.5 }}
@@ -69,8 +75,24 @@ export default function ProfilePage() {
                   onChange={(e) => setMode(e.target.checked ? "dark" : "light")}
                 />
               }
-              label="Dark mode"
+              label={t("profile.darkMode")}
             />
+          </Box>
+          <Divider sx={{ my: 2 }} />
+          <Box>
+            <Typography variant="caption" color="text.secondary" sx={{ textTransform: "uppercase", letterSpacing: 0.5 }}>
+              {t("profile.language")}
+            </Typography>
+            <ToggleButtonGroup
+              value={locale}
+              exclusive
+              onChange={(_, val) => val && setLocale(val)}
+              size="small"
+              sx={{ display: "flex", mt: 0.5 }}
+            >
+              <ToggleButton value="en">EN</ToggleButton>
+              <ToggleButton value="es">ES</ToggleButton>
+            </ToggleButtonGroup>
           </Box>
         </CardContent>
       </Card>

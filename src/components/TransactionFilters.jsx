@@ -12,9 +12,11 @@ import Typography from "@mui/material/Typography";
 import FilterListIcon from "@mui/icons-material/FilterList";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import ExpandLessIcon from "@mui/icons-material/ExpandLess";
+import { useTranslation } from "@/hooks/useTranslation";
 
 export function TransactionFilters({ filters, onChange, onApply, onClear, accounts, categories = [] }) {
   const [open, setOpen] = useState(false);
+  const { t } = useTranslation();
   // Guard Select values: if accounts haven't loaded yet, the URL-seeded value won't match any option.
   const safeAccId = (val) => (accounts.some((a) => String(a.id) === val) ? val : "");
   const safeCatId = (val) => (categories.some((c) => String(c.id) === val) ? val : "");
@@ -34,7 +36,7 @@ export function TransactionFilters({ filters, onChange, onApply, onClear, accoun
       >
         <FilterListIcon fontSize="small" color="action" />
         <Typography variant="body2" color="text.secondary">
-          Filters
+          {t("filters.title")}
         </Typography>
         <IconButton size="small">
           {open ? <ExpandLessIcon fontSize="small" /> : <ExpandMoreIcon fontSize="small" />}
@@ -54,10 +56,10 @@ export function TransactionFilters({ filters, onChange, onApply, onClear, accoun
         >
           <Box sx={{ display: "flex", gap: 2, flexWrap: "wrap", alignItems: "center" }}>
             <FormControl sx={{ minWidth: 150 }}>
-              <InputLabel>Account</InputLabel>
+              <InputLabel>{t("filters.account")}</InputLabel>
               <Select
                 value={safeAccId(filters.account)}
-                label="Account"
+                label={t("filters.account")}
                 onChange={(e) =>
                   onChange({
                     ...filters,
@@ -67,7 +69,7 @@ export function TransactionFilters({ filters, onChange, onApply, onClear, accoun
                   })
                 }
               >
-                <MenuItem value="">All Accounts</MenuItem>
+                <MenuItem value="">{t("filters.allAccounts")}</MenuItem>
                 {accounts.map((acc) => (
                   <MenuItem key={acc.id} value={String(acc.id)}>
                     {acc.name}
@@ -77,27 +79,27 @@ export function TransactionFilters({ filters, onChange, onApply, onClear, accoun
             </FormControl>
 
             <FormControl sx={{ minWidth: 120 }}>
-              <InputLabel>Type</InputLabel>
+              <InputLabel>{t("filters.type")}</InputLabel>
               <Select
                 value={filters.type}
-                label="Type"
+                label={t("filters.type")}
                 onChange={(e) => onChange({ ...filters, type: e.target.value })}
               >
-                <MenuItem value="">All Types</MenuItem>
-                <MenuItem value="income">Income</MenuItem>
-                <MenuItem value="expense">Expense</MenuItem>
-                <MenuItem value="transfer">Transfer</MenuItem>
+                <MenuItem value="">{t("filters.allTypes")}</MenuItem>
+                <MenuItem value="income">{t("common.income")}</MenuItem>
+                <MenuItem value="expense">{t("common.expense")}</MenuItem>
+                <MenuItem value="transfer">{t("common.transfer")}</MenuItem>
               </Select>
             </FormControl>
 
             <FormControl sx={{ minWidth: 150 }}>
-              <InputLabel>Category</InputLabel>
+              <InputLabel>{t("filters.category")}</InputLabel>
               <Select
                 value={safeCatId(filters.category)}
-                label="Category"
+                label={t("filters.category")}
                 onChange={(e) => onChange({ ...filters, category: e.target.value })}
               >
-                <MenuItem value="">All Categories</MenuItem>
+                <MenuItem value="">{t("filters.allCategories")}</MenuItem>
                 {categories.map((cat) => (
                   <MenuItem key={cat.id} value={String(cat.id)}>
                     {cat.name}
@@ -107,15 +109,15 @@ export function TransactionFilters({ filters, onChange, onApply, onClear, accoun
             </FormControl>
 
             <FormControl sx={{ minWidth: 150 }}>
-              <InputLabel>Source Account</InputLabel>
+              <InputLabel>{t("filters.sourceAccount")}</InputLabel>
               <Select
                 value={safeAccId(filters.sourceAccount)}
-                label="Source Account"
+                label={t("filters.sourceAccount")}
                 onChange={(e) =>
                   onChange({ ...filters, sourceAccount: e.target.value, account: "" })
                 }
               >
-                <MenuItem value="">All</MenuItem>
+                <MenuItem value="">{t("common.all")}</MenuItem>
                 {accounts.map((acc) => (
                   <MenuItem key={acc.id} value={String(acc.id)}>
                     {acc.name}
@@ -125,15 +127,15 @@ export function TransactionFilters({ filters, onChange, onApply, onClear, accoun
             </FormControl>
 
             <FormControl sx={{ minWidth: 150 }}>
-              <InputLabel>Target Account</InputLabel>
+              <InputLabel>{t("filters.targetAccount")}</InputLabel>
               <Select
                 value={safeAccId(filters.targetAccount)}
-                label="Target Account"
+                label={t("filters.targetAccount")}
                 onChange={(e) =>
                   onChange({ ...filters, targetAccount: e.target.value, account: "" })
                 }
               >
-                <MenuItem value="">All</MenuItem>
+                <MenuItem value="">{t("common.all")}</MenuItem>
                 {accounts.map((acc) => (
                   <MenuItem key={acc.id} value={String(acc.id)}>
                     {acc.name}
@@ -143,10 +145,10 @@ export function TransactionFilters({ filters, onChange, onApply, onClear, accoun
             </FormControl>
 
             <Button variant="contained" onClick={onApply}>
-              Apply
+              {t("common.apply")}
             </Button>
             <Button variant="outlined" onClick={onClear}>
-              Clear
+              {t("common.clear")}
             </Button>
           </Box>
         </Box>

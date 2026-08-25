@@ -19,6 +19,7 @@ import { DatePicker } from "@mui/x-date-pickers/DatePicker";
 import { format, parseISO } from "date-fns";
 import { useState, useMemo, useEffect } from "react";
 import axios from "axios";
+import { useTranslation } from "@/hooks/useTranslation";
 
 const makeSchema = (accounts) =>
   z
@@ -83,6 +84,7 @@ const EMPTY_TX = {
 };
 
 export function TransactionFormDialog({ open, onClose, editingTx, accounts, categories, defaultSourceAccountId, onSaved }) {
+  const { t } = useTranslation();
   const [submitError, setSubmitError] = useState(null);
   const [arsRate, setArsRate] = useState(null);
 
@@ -183,13 +185,13 @@ export function TransactionFormDialog({ open, onClose, editingTx, accounts, cate
       onSaved();
       window.dispatchEvent(new CustomEvent("accounts-updated"));
     } catch (err) {
-      setSubmitError(err.response?.data?.error || "Failed to save transaction");
+      setSubmitError(err.response?.data?.error || t("errors.saveFailed"));
     }
   };
 
   return (
     <Dialog open={open} onClose={onClose} onTransitionEnter={handleOpen} fullWidth maxWidth="sm">
-      <DialogTitle>{editingTx ? "Edit Transaction" : "New Transaction"}</DialogTitle>
+      <DialogTitle>{editingTx ? t("transactions.editTransaction") : t("transactions.newTransaction")}</DialogTitle>
       <DialogContent>
         <Box sx={{ display: "flex", flexDirection: "column", gap: 2, pt: 1 }}>
           {submitError && <Alert severity="error">{submitError}</Alert>}
@@ -199,10 +201,10 @@ export function TransactionFormDialog({ open, onClose, editingTx, accounts, cate
             control={control}
             render={({ field }) => (
               <FormControl fullWidth error={!!errors.type}>
-                <InputLabel>Type</InputLabel>
+                <InputLabel>{t("transactions.type")}</InputLabel>
                 <Select
                   {...field}
-                  label="Type"
+                  label={t("transactions.type")}
                   onChange={(e) => {
                     const newType = e.target.value;
                     field.onChange(newType);
@@ -210,13 +212,13 @@ export function TransactionFormDialog({ open, onClose, editingTx, accounts, cate
                     setValue("category_id", "");
                     setValue("exchange_rate", "");
                     if (newType === "transfer") {
-                      setValue("description", "Transfer between accounts");
+                      setValue("description", t("transactions.transferDefault"));
                     }
                   }}
                 >
-                  <MenuItem value="expense">Expense</MenuItem>
-                  <MenuItem value="income">Income</MenuItem>
-                  <MenuItem value="transfer">Transfer</MenuItem>
+                  <MenuItem value="expense">{t("common.expense")}</MenuItem>
+                  <MenuItem value="income">{t("common.income")}</MenuItem>
+                  <MenuItem value="transfer">{t("common.transfer")}</MenuItem>
                 </Select>
                 {errors.type && <FormHelperText>{errors.type.message}</FormHelperText>}
               </FormControl>
@@ -230,7 +232,7 @@ export function TransactionFormDialog({ open, onClose, editingTx, accounts, cate
               <TextField
                 {...field}
                 fullWidth
-                label="Amount"
+                label={t("transactions.amount")}
                 type="number"
                 slotProps={{ htmlInput: { min: 0, step: "0.01" } }}
                 error={!!errors.amount}
@@ -247,13 +249,13 @@ export function TransactionFormDialog({ open, onClose, editingTx, accounts, cate
                 <TextField
                   {...field}
                   fullWidth
-                  label={`How many ${foreignCurrency} = 1 USD?`}
+                  label={t("transactions.exchangeRate")(foreignCurrency)}
                   type="number"
                   slotProps={{ htmlInput: { min: 0, step: "0.01" } }}
                   error={!!errors.exchange_rate}
                   helperText={
                     errors.exchange_rate?.message ??
-                    `e.g. 1450 means 1 USD = 1450 ${foreignCurrency}`
+                    t("transactions.exchangeRateHint")(foreignCurrency)
                   }
                 />
               )}
@@ -265,7 +267,7 @@ export function TransactionFormDialog({ open, onClose, editingTx, accounts, cate
             control={control}
             render={({ field }) => (
               <DatePicker
-                label="Date"
+                label={t("transactions.date")}
                 format="yyyy-MM-dd"
                 value={field.value ? parseISO(field.value) : null}
                 onChange={(v) => field.onChange(v ? format(v, "yyyy-MM-dd") : "")}
@@ -286,16 +288,16 @@ export function TransactionFormDialog({ open, onClose, editingTx, accounts, cate
               control={control}
               render={({ field }) => (
                 <FormControl fullWidth error={!!errors.source_account_id}>
-                  <InputLabel>Source Account</InputLabel>
+                  <InputLabel>{t("transactions.sourceAccount")}</InputLabel>
                   <Select
                     {...field}
-                    label="Source Account"
+                    label={t("transactions.sourceAccount")}
                     onChange={(e) => {
                       field.onChange(e);
                       setValue("exchange_rate", "");
                     }}
                   >
-                    <MenuItem value="">None</MenuItem>
+                    <MenuItem value="">{t("common.none")}</MenuItem>
                     {accounts.map((acc) => (
                       <MenuItem key={acc.id} value={String(acc.id)}>
                         {acc.name}
@@ -316,16 +318,16 @@ export function TransactionFormDialog({ open, onClose, editingTx, accounts, cate
               control={control}
               render={({ field }) => (
                 <FormControl fullWidth error={!!errors.target_account_id}>
-                  <InputLabel>Target Account</InputLabel>
+                  <InputLabel>{t("transactions.targetAccount")}</InputLabel>
                   <Select
                     {...field}
-                    label="Target Account"
+                    label={t("transactions.targetAccount")}
                     onChange={(e) => {
                       field.onChange(e);
                       setValue("exchange_rate", "");
                     }}
                   >
-                    <MenuItem value="">None</MenuItem>
+                    <MenuItem value="">{t("common.none")}</MenuItem>
                     {accounts.map((acc) => (
                       <MenuItem key={acc.id} value={String(acc.id)}>
                         {acc.name}
@@ -346,9 +348,9 @@ export function TransactionFormDialog({ open, onClose, editingTx, accounts, cate
               control={control}
               render={({ field }) => (
                 <FormControl fullWidth>
-                  <InputLabel>Category</InputLabel>
-                  <Select {...field} label="Category">
-                    <MenuItem value="">None</MenuItem>
+                  <InputLabel>{t("transactions.category")}</InputLabel>
+                  <Select {...field} label={t("transactions.category")}>
+                    <MenuItem value="">{t("common.none")}</MenuItem>
                     {filteredCategories.map((cat) => (
                       <MenuItem key={cat.id} value={String(cat.id)}>
                         {cat.name}
@@ -364,15 +366,15 @@ export function TransactionFormDialog({ open, onClose, editingTx, accounts, cate
             name="description"
             control={control}
             render={({ field }) => (
-              <TextField {...field} fullWidth label="Description" />
+              <TextField {...field} fullWidth label={t("transactions.description")} />
             )}
           />
         </Box>
       </DialogContent>
       <DialogActions sx={{ px: 3, pb: 2 }}>
-        <Button onClick={onClose}>Cancel</Button>
+        <Button onClick={onClose}>{t("common.cancel")}</Button>
         <Button variant="contained" onClick={handleSubmit(onSubmit)} disabled={isSubmitting}>
-          Save
+          {t("common.save")}
         </Button>
       </DialogActions>
     </Dialog>

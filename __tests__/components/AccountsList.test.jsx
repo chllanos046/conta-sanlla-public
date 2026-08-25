@@ -89,7 +89,7 @@ describe("AccountsList", () => {
 
   it("opens the Add Account dialog when the button is clicked", async () => {
     renderComponent();
-    const addButton = screen.getByRole("button", { name: /add account/i });
+    const addButton = screen.getByRole("button", { name: /new account/i });
     fireEvent.click(addButton);
     await waitFor(() => {
       expect(screen.getByRole("dialog")).toBeInTheDocument();
@@ -99,10 +99,10 @@ describe("AccountsList", () => {
 
   it("can type in the Name field inside the dialog without errors", async () => {
     renderComponent();
-    fireEvent.click(screen.getByRole("button", { name: /add account/i }));
+    fireEvent.click(screen.getByRole("button", { name: /new account/i }));
     await waitFor(() => screen.getByRole("dialog"));
 
-    const nameInput = screen.getByLabelText(/^name/i);
+    const nameInput = screen.getByLabelText(/name/i);
     fireEvent.change(nameInput, { target: { value: "My New Account" } });
     expect(nameInput.value).toBe("My New Account");
   });
@@ -112,8 +112,8 @@ describe("AccountsList", () => {
     // If setValue is missing, clicking the image option triggers a ReferenceError.
     renderComponent();
     // Wait for images to load
-    await waitFor(() => screen.getByRole("button", { name: /add account/i }));
-    fireEvent.click(screen.getByRole("button", { name: /add account/i }));
+    await waitFor(() => screen.getByRole("button", { name: /new account/i }));
+    fireEvent.click(screen.getByRole("button", { name: /new account/i }));
     await waitFor(() => screen.getByRole("dialog"));
 
     // "None" icon option calls setValue("image_path", null)

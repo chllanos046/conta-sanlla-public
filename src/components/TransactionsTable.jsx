@@ -7,6 +7,7 @@ import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
 import { convertAmount } from "@/lib/currency";
 import { formatCurrency } from "@/lib/utils";
+import { useTranslation } from "@/hooks/useTranslation";
 
 export function TransactionsTable({
   rows,
@@ -18,6 +19,7 @@ export function TransactionsTable({
   arsRate = 1,
   loading = false,
 }) {
+  const { t } = useTranslation();
   const accountMap = Object.fromEntries((accounts || []).map((a) => [String(a.id), a]));
 
   const fmtAmount = (value, row) => {
@@ -32,17 +34,17 @@ export function TransactionsTable({
   const columns = [
     {
       field: "date",
-      headerName: "Date",
+      headerName: t("transactions.date"),
       width: 120,
       valueFormatter: (value) => (value ? String(value).slice(0, 10) : ""),
     },
     {
       field: "type",
-      headerName: "Type",
+      headerName: t("transactions.type"),
       width: 100,
       renderCell: (params) => (
         <Chip
-          label={params.value}
+          label={t(`common.${params.value}`)}
           color={
             params.value === "income"
               ? "success"
@@ -56,34 +58,34 @@ export function TransactionsTable({
     },
     {
       field: "category_name",
-      headerName: "Category",
+      headerName: t("transactions.category"),
       width: 140,
       valueFormatter: (value) => value || "",
     },
     {
       field: "source_account",
-      headerName: "Source Account",
+      headerName: t("transactions.sourceAccount"),
       width: 150,
       valueGetter: (_value, row) =>
         accounts.find((a) => a.id === row.source_account_id)?.name || "",
     },
     {
       field: "target_account",
-      headerName: "Target Account",
+      headerName: t("transactions.targetAccount"),
       width: 150,
       valueGetter: (_value, row) =>
         accounts.find((a) => a.id === row.target_account_id)?.name || "",
     },
-    { field: "description", headerName: "Description", width: 200 },
+    { field: "description", headerName: t("transactions.description"), width: 200 },
     {
       field: "amount",
-      headerName: "Amount",
+      headerName: t("transactions.amount"),
       width: displayCurrency === "ARS" ? 180 : 120,
       valueFormatter: (value, row) => fmtAmount(value, row),
     },
     {
       field: "balance",
-      headerName: "Balance",
+      headerName: t("dashboard.balance"),
       width: displayCurrency === "ARS" ? 190 : 130,
       valueFormatter: (value) =>
         value != null ? formatCurrency(parseFloat(value), displayCurrency) : "",
@@ -96,13 +98,13 @@ export function TransactionsTable({
         <GridActionsCellItem
           key="edit"
           icon={<EditIcon />}
-          label="Edit"
+          label={t("common.edit")}
           onClick={() => onEditRow(params.row)}
         />,
         <GridActionsCellItem
           key="delete"
           icon={<DeleteIcon />}
-          label="Delete"
+          label={t("common.delete")}
           onClick={() => onDeleteRow(params.row.id)}
         />,
       ],
@@ -129,7 +131,7 @@ export function TransactionsTable({
         >
           <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
             <Typography variant="caption" color="text.secondary">
-              Opening balance:
+              {t("transactions.openingBalance")}:
             </Typography>
             <Typography
               variant="body2"
@@ -141,7 +143,7 @@ export function TransactionsTable({
           </Box>
           <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
             <Typography variant="caption" color="text.secondary">
-              Closing balance:
+              {t("transactions.closingBalance")}:
             </Typography>
             <Typography
               variant="body2"

@@ -11,6 +11,7 @@ import LinearProgress, { linearProgressClasses } from "@mui/material/LinearProgr
 import Skeleton from "@mui/material/Skeleton";
 import { convertAmount } from "@/lib/currency";
 import { formatCurrency } from "@/lib/utils";
+import { useTranslation } from "@/hooks/useTranslation";
 
 const COLORS = [
   "#0ea5e9", // sky blue
@@ -57,13 +58,14 @@ function PieCenterLabel({ primaryText, secondaryText }) {
 }
 
 export function ExpensesByCategoryChart({ transactions, accountMap = {}, displayCurrency = "USD", arsRate = 1, loading = false }) {
+  const { t } = useTranslation();
   const expensesByCategory = {};
-  for (const t of transactions) {
-    if (t.type !== "expense") continue;
-    const cat = t.category_name || "Uncategorized";
-    const txCurrency = accountMap[String(t.source_account_id)]?.currency || "USD";
-    const txRate = parseFloat(t.exchange_rate) || arsRate;
-    const converted = convertAmount(Math.abs(parseFloat(t.amount || 0)), txCurrency, displayCurrency, txRate);
+  for (const tx of transactions) {
+    if (tx.type !== "expense") continue;
+    const cat = tx.category_name || "Uncategorized";
+    const txCurrency = accountMap[String(tx.source_account_id)]?.currency || "USD";
+    const txRate = parseFloat(tx.exchange_rate) || arsRate;
+    const converted = convertAmount(Math.abs(parseFloat(tx.amount || 0)), txCurrency, displayCurrency, txRate);
     expensesByCategory[cat] = (expensesByCategory[cat] || 0) + converted;
   }
 
@@ -84,7 +86,7 @@ export function ExpensesByCategoryChart({ transactions, accountMap = {}, display
     >
       <CardContent>
         <Typography component="h2" variant="subtitle2" gutterBottom>
-          Expenses by Category
+          {t("dashboard.expensesByCategory")}
         </Typography>
 
         {loading ? (

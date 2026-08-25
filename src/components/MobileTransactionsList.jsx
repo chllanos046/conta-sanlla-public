@@ -21,6 +21,7 @@ import AddIcon from "@mui/icons-material/Add";
 import CameraAltIcon from "@mui/icons-material/CameraAlt";
 import { useTransactionDialog } from "@/contexts/TransactionDialogContext";
 import PhotoImportDialog from "@/components/PhotoImportDialog";
+import { useTranslation } from "@/hooks/useTranslation";
 
 function formatAmount(tx) {
   const currency =
@@ -47,6 +48,7 @@ export function MobileTransactionsList() {
   const [monthOffset, setMonthOffset] = useState(0);
   const [photoOpen, setPhotoOpen] = useState(false);
   const { openTransactionDialog } = useTransactionDialog();
+  const { t } = useTranslation();
 
   const { dateFrom, dateTo, monthLabel } = useMemo(() => {
     const d = new Date();
@@ -122,7 +124,7 @@ export function MobileTransactionsList() {
       >
         <Box>
           <Typography variant="h6" fontWeight={700}>
-            {currentAccount ? currentAccount.name : "Transactions"}
+            {currentAccount ? currentAccount.name : t("nav.transactions")}
           </Typography>
           <Typography variant="body2" color="text.secondary" suppressHydrationWarning>
             {monthLabel}
@@ -145,7 +147,7 @@ export function MobileTransactionsList() {
       ) : transactions.length === 0 ? (
         <Box sx={{ textAlign: "center", pt: 6 }}>
           <Typography color="text.secondary">
-            No transactions in {monthLabel}.
+            {t("dashboard.noTransactionsInMonth")(monthLabel)}
           </Typography>
         </Box>
       ) : (
@@ -208,7 +210,7 @@ export function MobileTransactionsList() {
           >
             <SpeedDialAction
               icon={<AddIcon />}
-              tooltipTitle="New transaction"
+              tooltipTitle={t("common.newTransaction")}
               tooltipOpen
               onClick={handleAddTx}
               FabProps={{ sx: { flexShrink: 0 } }}
@@ -216,7 +218,7 @@ export function MobileTransactionsList() {
             />
             <SpeedDialAction
               icon={<CameraAltIcon />}
-              tooltipTitle="Import from photo"
+              tooltipTitle={t("common.importFromPhoto")}
               tooltipOpen
               onClick={() => setPhotoOpen(true)}
               FabProps={{ sx: { flexShrink: 0 } }}

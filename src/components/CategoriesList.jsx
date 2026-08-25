@@ -22,6 +22,7 @@ import AddIcon from "@mui/icons-material/Add";
 import axios from "axios";
 import { useConfirm } from "@/components/ConfirmDialogProvider";
 import { useNotify } from "@/components/NotificationProvider";
+import { useTranslation } from "@/hooks/useTranslation";
 
 const schema = z.object({
   name: z.string().min(1, "Name is required"),
@@ -33,6 +34,7 @@ const EMPTY_FORM = { name: "", type: "income" };
 export default function CategoriesList() {
   const confirm = useConfirm();
   const { notifySuccess, notifyError } = useNotify();
+  const { t } = useTranslation();
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -64,10 +66,10 @@ export default function CategoriesList() {
   }, []);
 
   const columns = [
-    { field: "name", headerName: "Name", width: 250 },
+    { field: "name", headerName: t("categories.name"), width: 250 },
     {
       field: "type",
-      headerName: "Type",
+      headerName: t("categories.type"),
       width: 120,
       renderCell: (params) => (
         <Chip
@@ -106,13 +108,13 @@ export default function CategoriesList() {
   };
 
   const handleDelete = async (id) => {
-    if (!(await confirm("Delete this category?"))) return;
+    if (!(await confirm(t("categories.deleteConfirm")))) return;
     try {
       await axios.delete(`/api/categories/${id}`);
       loadCategories();
-      notifySuccess("Category deleted");
+      notifySuccess(t("categories.deleteCategory"));
     } catch (err) {
-      notifyError(err.response?.data?.error || "Failed to delete category");
+      notifyError(err.response?.data?.error || t("errors.deleteFailed"));
     }
   };
 
@@ -140,20 +142,20 @@ export default function CategoriesList() {
       handleClose();
       loadCategories();
     } catch (err) {
-      setSubmitError(err.response?.data?.error || "Failed to save category");
+      setSubmitError(err.response?.data?.error || t("errors.saveFailed"));
     }
   };
 
   return (
     <>
       <Typography variant="h4" gutterBottom>
-        Categories
+        {t("categories.title")}
       </Typography>
 
       <Box sx={{ display: "flex", justifyContent: "space-between", mb: 2 }}>
-        <Typography variant="h6">{categories.length} Categories</Typography>
+        <Typography variant="h6">{categories.length} {t("categories.title")}</Typography>
         <Button variant="contained" startIcon={<AddIcon />} onClick={handleOpen}>
-          Add Category
+          {t("categories.newCategory")}
         </Button>
       </Box>
 
@@ -170,7 +172,7 @@ export default function CategoriesList() {
       </Card>
 
       <Dialog open={dialogOpen} onClose={handleClose} maxWidth="xs" fullWidth>
-        <DialogTitle>{editCategory ? "Edit Category" : "New Category"}</DialogTitle>
+        <DialogTitle>{editCategory ? t("categories.editCategory") : t("categories.newCategory")}</DialogTitle>
         <DialogContent>
           <Box sx={{ display: "flex", flexDirection: "column", gap: 2, pt: 1 }}>
             {submitError && <Alert severity="error">{submitError}</Alert>}
@@ -181,7 +183,7 @@ export default function CategoriesList() {
                 <TextField
                   {...field}
                   fullWidth
-                  label="Name"
+                  label={t("categories.name")}
                   error={!!errors.name}
                   helperText={errors.name?.message}
                 />
@@ -195,21 +197,21 @@ export default function CategoriesList() {
                   {...field}
                   fullWidth
                   select
-                  label="Type"
+                  label={t("categories.type")}
                   error={!!errors.type}
                   helperText={errors.type?.message}
                 >
-                  <MenuItem value="income">Income</MenuItem>
-                  <MenuItem value="expense">Expense</MenuItem>
+                  <MenuItem value="income">{t("common.income")}</MenuItem>
+                  <MenuItem value="expense">{t("common.expense")}</MenuItem>
                 </TextField>
               )}
             />
           </Box>
         </DialogContent>
         <DialogActions>
-          <Button onClick={handleClose}>Cancel</Button>
+          <Button onClick={handleClose}>{t("common.cancel")}</Button>
           <Button variant="contained" onClick={handleSubmit(onSubmit)} disabled={isSubmitting}>
-            Save
+            {t("common.save")}
           </Button>
         </DialogActions>
       </Dialog>

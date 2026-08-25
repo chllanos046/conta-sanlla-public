@@ -18,11 +18,13 @@ import { ImportTransactionsDialog } from "@/components/ImportTransactionsDialog"
 import { useCurrency } from "@/hooks/useCurrency";
 import { useConfirm } from "@/components/ConfirmDialogProvider";
 import { useNotify } from "@/components/NotificationProvider";
+import { useTranslation } from "@/hooks/useTranslation";
 
 export default function TransactionsPage() {
   const searchParams = useSearchParams();
   const confirm = useConfirm();
   const { notifySuccess, notifyError } = useNotify();
+  const { t } = useTranslation();
 
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -112,14 +114,14 @@ export default function TransactionsPage() {
   };
 
   const handleDelete = async (id) => {
-    if (!(await confirm("Delete this transaction?"))) return;
+    if (!(await confirm(t("transactions.deleteConfirm")))) return;
     try {
       await axios.delete(`/api/transactions/${id}`);
       refresh();
       window.dispatchEvent(new CustomEvent("accounts-updated"));
-      notifySuccess("Transaction deleted");
+      notifySuccess(t("transactions.deleted"));
     } catch (err) {
-      notifyError(err.response?.data?.error || "Failed to delete transaction");
+      notifyError(err.response?.data?.error || t("errors.deleteFailed"));
     }
   };
 
@@ -141,10 +143,10 @@ export default function TransactionsPage() {
         }}
       >
         <Typography variant="h4">
-          Transactions{accountName ? ` — ${accountName}` : ""}
+          {t("transactions.title")}{accountName ? ` — ${accountName}` : ""}
         </Typography>
         <Box sx={{ display: "flex", gap: 1 }}>
-          <Tooltip title="Import CSV">
+          <Tooltip title={t("transactions.importCsv")}>
             <IconButton
               color="primary"
               onClick={() => setImportOpen(true)}
@@ -158,7 +160,7 @@ export default function TransactionsPage() {
               <UploadFileIcon />
             </IconButton>
           </Tooltip>
-          <Tooltip title="New Transaction">
+          <Tooltip title={t("transactions.newTransaction")}>
             <IconButton
               color="primary"
               onClick={openNewTx}

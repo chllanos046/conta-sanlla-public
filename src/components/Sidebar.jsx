@@ -34,10 +34,10 @@ import axios from "axios";
 import { convertAmount, getCurrencySymbol } from "@/lib/currency";
 import { formatCurrency } from "@/lib/utils";
 import { useCurrency } from "@/hooks/useCurrency";
+import { useTranslation } from "@/hooks/useTranslation";
 
 
 const ACCOUNT_TYPE_ORDER = ["bank", "cash", "investment", "credit"];
-const ACCOUNT_TYPE_LABELS = { bank: "Bank", cash: "Cash", investment: "Investment", credit: "Credit" };
 
 export default function Sidebar({
   open,
@@ -53,6 +53,7 @@ export default function Sidebar({
   const { data: session } = useSession();
 
   const [displayCurrency] = useCurrency();
+  const { t } = useTranslation();
   const [mounted, setMounted] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [openGroups, setOpenGroups] = useState(
@@ -90,7 +91,7 @@ export default function Sidebar({
     <Box sx={{ display: "flex", flexDirection: "column", height: "100%" }}>
       <List sx={{ pt: 1, flex: 1 }} disablePadding>
         {/* Dashboard */}
-        <Tooltip title={!expanded ? "Dashboard" : ""} placement="right">
+        <Tooltip title={!expanded ? t("nav.dashboard") : ""} placement="right">
           <ListItem disablePadding>
             <ListItemButton
               component={Link}
@@ -100,13 +101,13 @@ export default function Sidebar({
               sx={navItemSx}
             >
               <ListItemIcon sx={iconSx}><DashboardIcon /></ListItemIcon>
-              {expanded && <ListItemText primary="Dashboard" />}
+              {expanded && <ListItemText primary={t("nav.dashboard")} />}
             </ListItemButton>
           </ListItem>
         </Tooltip>
 
         {/* Transactions */}
-        <Tooltip title={!expanded ? "Transactions" : ""} placement="right">
+        <Tooltip title={!expanded ? t("nav.transactions") : ""} placement="right">
           <ListItem disablePadding>
             <ListItemButton
               component={Link}
@@ -116,7 +117,7 @@ export default function Sidebar({
               sx={navItemSx}
             >
               <ListItemIcon sx={iconSx}><ReceiptLongIcon /></ListItemIcon>
-              {expanded && <ListItemText primary="Transactions" />}
+              {expanded && <ListItemText primary={t("nav.transactions")} />}
             </ListItemButton>
           </ListItem>
         </Tooltip>
@@ -155,7 +156,7 @@ export default function Sidebar({
                       variant="caption"
                       sx={{ flex: 1, fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5, color: "text.secondary" }}
                     >
-                      {ACCOUNT_TYPE_LABELS[type]}
+                      {t(`common.${type}`)}
                     </Typography>
                     <Typography
                       variant="caption"
@@ -250,7 +251,7 @@ export default function Sidebar({
         })}
 
         {/* Settings collapsible */}
-        <Tooltip title={!expanded ? "Settings" : ""} placement="right">
+        <Tooltip title={!expanded ? t("nav.settings") : ""} placement="right">
           <ListItem disablePadding>
             <ListItemButton
               onClick={() => expanded && setSettingsOpen((prev) => !prev)}
@@ -259,7 +260,7 @@ export default function Sidebar({
               <ListItemIcon sx={iconSx}><SettingsIcon /></ListItemIcon>
               {expanded && (
                 <>
-                  <ListItemText primary="Settings" />
+                  <ListItemText primary={t("nav.settings")} />
                   {settingsOpen ? <ExpandLessIcon /> : <ExpandMoreIcon />}
                 </>
               )}
@@ -279,7 +280,7 @@ export default function Sidebar({
                   sx={{ ...navItemSx, pl: 4 }}
                 >
                   <ListItemIcon sx={iconSx}><AccountBalanceIcon /></ListItemIcon>
-                  <ListItemText primary="Accounts" />
+                  <ListItemText primary={t("nav.accounts")} />
                 </ListItemButton>
               </ListItem>
               <ListItem disablePadding>
@@ -291,7 +292,7 @@ export default function Sidebar({
                   sx={{ ...navItemSx, pl: 4 }}
                 >
                   <ListItemIcon sx={iconSx}><CategoryIcon /></ListItemIcon>
-                  <ListItemText primary="Categories" />
+                  <ListItemText primary={t("nav.categories")} />
                 </ListItemButton>
               </ListItem>
               <ListItem disablePadding>
@@ -303,7 +304,7 @@ export default function Sidebar({
                   sx={{ ...navItemSx, pl: 4 }}
                 >
                   <ListItemIcon sx={iconSx}><InfoIcon /></ListItemIcon>
-                  <ListItemText primary="About" />
+                  <ListItemText primary={t("nav.about")} />
                 </ListItemButton>
               </ListItem>
             </List>
@@ -314,7 +315,7 @@ export default function Sidebar({
       {/* Profile section */}
       <Divider />
       <Box sx={{ p: expanded ? 1.5 : 1, display: "flex", alignItems: "center", gap: 1 }}>
-        <Tooltip title={!expanded ? (session?.user?.name ?? "Profile") : ""} placement="right">
+        <Tooltip title={!expanded ? (session?.user?.name ?? t("nav.profile")) : ""} placement="right">
           <Avatar
             sx={{ width: 36, height: 36, bgcolor: "primary.main", fontSize: 14, flexShrink: 0, cursor: "pointer" }}
             onClick={(e) => setProfileMenuAnchor(e.currentTarget)}
@@ -336,7 +337,7 @@ export default function Sidebar({
             <IconButton
               size="small"
               onClick={(e) => setProfileMenuAnchor(e.currentTarget)}
-              aria-label="Profile menu"
+              aria-label={t("nav.profile")}
             >
               <MoreVertIcon fontSize="small" />
             </IconButton>
@@ -358,11 +359,11 @@ export default function Sidebar({
           onClick={() => { setProfileMenuAnchor(null); if (isMobile) onMobileClose(); }}
         >
           <ListItemIcon><PersonIcon fontSize="small" /></ListItemIcon>
-          <ListItemText>Profile</ListItemText>
+          <ListItemText>{t("nav.profile")}</ListItemText>
         </MenuItem>
         <MenuItem onClick={() => { setProfileMenuAnchor(null); signOut({ callbackUrl: "/login" }); }}>
           <ListItemIcon><LogoutIcon fontSize="small" /></ListItemIcon>
-          <ListItemText>Logout</ListItemText>
+          <ListItemText>{t("nav.logout")}</ListItemText>
         </MenuItem>
       </Menu>
     </Box>

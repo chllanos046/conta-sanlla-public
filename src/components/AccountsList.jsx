@@ -25,6 +25,7 @@ import { useTheme } from "@mui/material/styles";
 import axios from "axios";
 import { useConfirm } from "@/components/ConfirmDialogProvider";
 import { useNotify } from "@/components/NotificationProvider";
+import { useTranslation } from "@/hooks/useTranslation";
 
 const schema = z.object({
   name: z.string().min(1, "Name is required"),
@@ -40,6 +41,7 @@ export default function AccountsList() {
   const theme = useTheme();
   const confirm = useConfirm();
   const { notifySuccess, notifyError } = useNotify();
+  const { t } = useTranslation();
   const [accounts, setAccounts] = useState([]);
   const [availableImages, setAvailableImages] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -97,26 +99,26 @@ export default function AccountsList() {
         </Box>
       ),
     },
-    { field: "name", headerName: "Name", width: 180 },
+    { field: "name", headerName: t("accounts.name"), width: 180 },
     {
       field: "initial_balance",
-      headerName: "Initial Balance",
+      headerName: t("accounts.initialBalance"),
       width: 140,
       valueFormatter: (value) => `$${parseFloat(value || 0).toFixed(2)}`,
     },
     {
       field: "current_balance",
-      headerName: "Current Balance",
+      headerName: t("accounts.currentBalance"),
       width: 150,
       valueFormatter: (value) => `$${parseFloat(value || 0).toFixed(2)}`,
     },
     {
       field: "currency",
-      headerName: "Currency",
+      headerName: t("accounts.currency"),
       width: 100,
       renderCell: (params) => <Chip label={params.value} size="small" />,
     },
-    { field: "type", headerName: "Type", width: 120 },
+    { field: "type", headerName: t("accounts.type"), width: 120 },
     {
       field: "actions",
       type: "actions",
@@ -151,13 +153,13 @@ export default function AccountsList() {
   };
 
   const handleDelete = async (id) => {
-    if (!(await confirm("Delete this account?"))) return;
+    if (!(await confirm(t("accounts.deleteConfirm")))) return;
     try {
       await axios.delete(`/api/accounts/${id}`);
       loadAccounts();
-      notifySuccess("Account deleted");
+      notifySuccess(t("accounts.deleteAccount"));
     } catch (err) {
-      notifyError(err.response?.data?.error || "Failed to delete account");
+      notifyError(err.response?.data?.error || t("errors.deleteFailed"));
     }
   };
 
@@ -172,7 +174,7 @@ export default function AccountsList() {
       loadAccounts();
       window.dispatchEvent(new CustomEvent("accounts-updated"));
     } catch (err) {
-      setSubmitError(err.response?.data?.error || "Failed to save account");
+      setSubmitError(err.response?.data?.error || t("errors.saveFailed"));
     }
   };
 
@@ -186,17 +188,17 @@ export default function AccountsList() {
   return (
     <>
       <Typography variant="h4" gutterBottom>
-        Accounts
+        {t("accounts.title")}
       </Typography>
 
       <Box sx={{ display: "flex", justifyContent: "space-between", mb: 2 }}>
-        <Typography variant="h6">{accounts.length} Accounts</Typography>
+        <Typography variant="h6">{accounts.length} {t("accounts.title")}</Typography>
         <Button
           variant="contained"
           startIcon={<AddIcon />}
           onClick={() => { reset(EMPTY_FORM); setDialogOpen(true); }}
         >
-          Add Account
+          {t("accounts.newAccount")}
         </Button>
       </Box>
 
@@ -214,7 +216,7 @@ export default function AccountsList() {
 
       <Dialog open={dialogOpen} onClose={handleClose} fullWidth maxWidth="xs">
         <DialogTitle>
-          {editAccount ? "Edit Account" : "New Account"}
+          {editAccount ? t("accounts.editAccount") : t("accounts.newAccount")}
         </DialogTitle>
         <DialogContent>
           <Box sx={{ display: "flex", flexDirection: "column", gap: 2, pt: 1 }}>
@@ -227,7 +229,7 @@ export default function AccountsList() {
                 <TextField
                   {...field}
                   fullWidth
-                  label="Name"
+                  label={t("accounts.name")}
                   error={!!errors.name}
                   helperText={errors.name?.message}
                 />
@@ -241,7 +243,7 @@ export default function AccountsList() {
                   {...field}
                   fullWidth
                   select
-                  label="Currency"
+                  label={t("accounts.currency")}
                   error={!!errors.currency}
                   helperText={errors.currency?.message}
                 >
@@ -258,14 +260,14 @@ export default function AccountsList() {
                   {...field}
                   fullWidth
                   select
-                  label="Type"
+                  label={t("accounts.type")}
                   error={!!errors.type}
                   helperText={errors.type?.message}
                 >
-                  <MenuItem value="bank">Bank</MenuItem>
-                  <MenuItem value="cash">Cash</MenuItem>
-                  <MenuItem value="investment">Investment</MenuItem>
-                  <MenuItem value="credit">Credit</MenuItem>
+                  <MenuItem value="bank">{t("common.bank")}</MenuItem>
+                  <MenuItem value="cash">{t("common.cash")}</MenuItem>
+                  <MenuItem value="investment">{t("common.investment")}</MenuItem>
+                  <MenuItem value="credit">{t("common.credit")}</MenuItem>
                 </TextField>
               )}
             />
@@ -276,7 +278,7 @@ export default function AccountsList() {
                 <TextField
                   {...field}
                   fullWidth
-                  label="Initial Balance"
+                  label={t("accounts.initialBalance")}
                   type="number"
                   error={!!errors.initial_balance}
                   helperText={errors.initial_balance?.message}
@@ -310,7 +312,7 @@ export default function AccountsList() {
                         "&:hover": { borderColor: "primary.main" },
                       }}
                     >
-                      None
+                      {t("common.none")}
                     </Box>
                   </Tooltip>
 
@@ -349,10 +351,10 @@ export default function AccountsList() {
 
             <Box sx={{ display: "flex", gap: 2, justifyContent: "flex-end" }}>
               <Button variant="outlined" onClick={handleClose}>
-                Cancel
+                {t("common.cancel")}
               </Button>
               <Button variant="contained" onClick={handleSubmit(onSubmit)} disabled={isSubmitting}>
-                Save
+                {t("common.save")}
               </Button>
             </Box>
           </Box>
