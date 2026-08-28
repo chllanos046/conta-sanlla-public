@@ -44,6 +44,7 @@ const acc2 = { id: 2, name: "Wallet Cash",   type: "cash",       initial_balance
 const acc3 = { id: 3, name: "Visa Credit",   type: "credit",     initial_balance:    0 };
 const acc4 = { id: 4, name: "Investments",   type: "investment", initial_balance: 5000 };
 const acc5 = { id: 5, name: "Euro Savings",  type: "bank",       initial_balance:  500 };
+const acc6 = { id: 6, name: "ARS Account",   type: "bank",       initial_balance:    0 };
 
 const tx1 = { id: 1, type: "income",   amount:  500,  source_account_id: null, target_account_id: 1, date: "2024-01-01" };
 const tx2 = { id: 2, type: "expense",  amount: -100,  source_account_id: 1,    target_account_id: null, date: "2024-01-05" };
@@ -55,6 +56,22 @@ const tx7 = { id: 7, type: "transfer", amount:  100,  source_account_id: 4,    t
 const tx8 = { id: 8, type: "expense",  amount:  -75,  source_account_id: 1,    target_account_id: null, date: "2024-02-15" };
 
 const allTx = [tx1, tx2, tx3, tx4, tx5, tx6, tx7, tx8];
+
+// Cross-currency transfer fixtures (source_currency/target_currency mirror SQL JOIN results)
+// USD→ARS: 100 USD at rate 1000 → ARS account should receive 100,000 ARS
+const txXferUsdToArs = {
+  id: 9, type: "transfer", amount: 100,
+  source_account_id: 1, target_account_id: 6,
+  source_currency: "USD", target_currency: "ARS",
+  exchange_rate: 1000, date: "2024-03-01",
+};
+// ARS→USD: 50,000 ARS at rate 1000 → USD account should receive 50 USD
+const txXferArsToUsd = {
+  id: 10, type: "transfer", amount: 50000,
+  source_account_id: 6, target_account_id: 1,
+  source_currency: "ARS", target_currency: "USD",
+  exchange_rate: 1000, date: "2024-03-05",
+};
 
 // ---------------------------------------------------------------------------
 // txContribution
@@ -99,6 +116,37 @@ describe("txContribution", () => {
 
   test("investment transfer: credits bank account", () => {
     expect(txContribution(tx7, 1)).toBe(100);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// txContribution — cross-currency transfers
+// ---------------------------------------------------------------------------
+
+describe("txContribution — cross-currency transfers", () => {
+  test("USD→ARS: ARS target receives amount * exchange_rate", () => {
+    expect(txContribution(txXferUsdToArs, 6)).toBe(100000); // 100 USD * 1000
+  });
+
+  test("USD→ARS: USD source is debited source amount", () => {
+    expect(txContribution(txXferUsdToArs, 1)).toBe(-100);
+  });
+
+  test("ARS→USD: USD target receives amount / exchange_rate", () => {
+    expect(txContribution(txXferArsToUsd, 1)).toBe(50); // 50000 ARS / 1000
+  });
+
+  test("ARS→USD: ARS source is debited source amount", () => {
+    expect(txContribution(txXferArsToUsd, 6)).toBe(-50000);
+  });
+
+  test("calculateAccountBalance: ARS account after USD→ARS transfer", () => {
+    expect(calculateAccountBalance(acc6.initial_balance, [txXferUsdToArs], 6)).toBe(100000);
+  });
+
+  test("calculateAccountBalance: ARS account after round-trip transfers nets correctly", () => {
+    // +100,000 ARS from USD→ARS, then −50,000 ARS from ARS→USD, net = 50,000 ARS
+    expect(calculateAccountBalance(acc6.initial_balance, [txXferUsdToArs, txXferArsToUsd], 6)).toBe(50000);
   });
 });
 

@@ -151,6 +151,20 @@ export async function POST(request) {
     if (type === "transfer" && numericAmount <= 0) {
       return NextResponse.json({ error: "Transfer amount must be positive" }, { status: 400 });
     }
+    if (type === "transfer" && source_account_id && target_account_id && !exchange_rate) {
+      const [srcRows, tgtRows] = await Promise.all([
+        query("SELECT currency FROM accounts WHERE id = ?", [source_account_id]),
+        query("SELECT currency FROM accounts WHERE id = ?", [target_account_id]),
+      ]);
+      const srcCurrency = srcRows[0]?.currency;
+      const tgtCurrency = tgtRows[0]?.currency;
+      if (srcCurrency && tgtCurrency && srcCurrency !== tgtCurrency) {
+        return NextResponse.json(
+          { error: `exchange_rate is required for cross-currency transfers (${srcCurrency}→${tgtCurrency})` },
+          { status: 400 },
+        );
+      }
+    }
 
     await query(
       "INSERT INTO transactions (type, amount, source_account_id, target_account_id, category_id, date, description, exchange_rate) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",

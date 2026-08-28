@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
-import { withTransaction, queryConn } from "@/lib/db";
+import { query, withTransaction, queryConn } from "@/lib/db";
 
 const VALID_TYPES = ["income", "expense", "transfer"];
 
@@ -28,6 +28,10 @@ export async function POST(request) {
       );
     }
 
+    // Pre-fetch account currencies for cross-currency transfer validation
+    const accountRows = await query("SELECT id, currency FROM accounts", []);
+    const currencyMap = Object.fromEntries(accountRows.map((a) => [String(a.id), a.currency]));
+
     // Validate each row before inserting
     for (let i = 0; i < transactions.length; i++) {
       const tx = transactions[i];
@@ -48,6 +52,16 @@ export async function POST(request) {
           { error: `Row ${i + 1}: missing date` },
           { status: 400 },
         );
+      }
+      if (tx.type === "transfer" && tx.source_account_id && tx.target_account_id) {
+        const srcCurrency = currencyMap[String(tx.source_account_id)];
+        const tgtCurrency = currencyMap[String(tx.target_account_id)];
+        if (srcCurrency && tgtCurrency && srcCurrency !== tgtCurrency && !tx.exchange_rate) {
+          return NextResponse.json(
+            { error: `Row ${i + 1}: exchange_rate required for cross-currency transfer (${srcCurrency}→${tgtCurrency})` },
+            { status: 400 },
+          );
+        }
       }
     }
 
