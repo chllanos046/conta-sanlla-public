@@ -83,11 +83,8 @@ export async function GET(request) {
     if (account && transactions.length > 0) {
       const acc = accounts.find((a) => String(a.id) === String(account));
       if (acc) {
-        // Find the earliest date in the filtered set
-        const earliest = transactions.reduce(
-          (min, tx) => (String(tx.date).slice(0, 10) < String(min).slice(0, 10) ? tx.date : min),
-          transactions[0].date,
-        );
+        // Query is ORDER BY t.date DESC, so the last element is the earliest date
+        const earliest = transactions[transactions.length - 1].date;
         // Sum all transactions for this account strictly before the earliest date
         const priorRows = await query(
           `SELECT t.type, t.amount, t.source_account_id, t.target_account_id,
