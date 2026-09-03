@@ -205,7 +205,7 @@ describe('POST /api/transactions', () => {
       }),
     )
 
-    const [type, amount, source, target] = query.mock.calls[0][1]
+    const [type, amount, source, target] = query.mock.calls.at(-1)[1]
     expect(type).toBe('transfer')
     expect(amount).toBe(500)
     expect(source).toBe(1) // source_account_id

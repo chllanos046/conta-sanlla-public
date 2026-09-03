@@ -148,7 +148,7 @@ describe('PUT /api/transactions/[id]', () => {
     )
 
     expect(res.status).toBe(200)
-    const queryParams = query.mock.calls[0][1]
+    const queryParams = query.mock.calls.at(-1)[1]
     expect(queryParams[0]).toBe('transfer')
     expect(queryParams[1]).toBe(200)
     expect(queryParams[2]).toBe(3) // source_account_id

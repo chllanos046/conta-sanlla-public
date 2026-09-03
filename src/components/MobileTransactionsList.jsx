@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import axios from "axios";
 import { format, parseISO } from "date-fns";
@@ -44,7 +44,7 @@ export function MobileTransactionsList() {
   const accountId = searchParams.get("account");
   const [transactions, setTransactions] = useState([]);
   const [accounts, setAccounts] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [resolvedKey, setResolvedKey] = useState(null);
   const [monthOffset, setMonthOffset] = useState(0);
   const [photoOpen, setPhotoOpen] = useState(false);
   const { openTransactionDialog } = useTransactionDialog();
@@ -64,11 +64,13 @@ export function MobileTransactionsList() {
     };
   }, [monthOffset]);
 
-  useEffect(() => {
-    setLoading(true);
+  const requestKey = `${dateFrom}|${dateTo}|${accountId ?? ""}`;
+  const loading = resolvedKey !== requestKey;
+
+  const fetchTransactions = useCallback(() => {
     const params = { dateFrom, dateTo };
     if (accountId) params.account = accountId;
-    axios
+    return axios
       .get("/api/transactions", { params })
       .then(({ data }) => {
         setTransactions(data.transactions ?? []);
@@ -78,8 +80,12 @@ export function MobileTransactionsList() {
         setTransactions([]);
         setAccounts([]);
       })
-      .finally(() => setLoading(false));
-  }, [dateFrom, dateTo, accountId]);
+      .finally(() => setResolvedKey(requestKey));
+  }, [dateFrom, dateTo, accountId, requestKey]);
+
+  useEffect(() => {
+    fetchTransactions();
+  }, [fetchTransactions]);
 
   const currentAccount = useMemo(
     () => (accountId ? accounts.find((a) => String(a.id) === accountId) : null),
@@ -92,19 +98,8 @@ export function MobileTransactionsList() {
   };
 
   const handleImported = () => {
-    setMonthOffset((o) => o); // triggers re-fetch via dependency
-    // force re-fetch by resetting
-    setLoading(true);
-    const params = { dateFrom, dateTo };
-    if (accountId) params.account = accountId;
-    axios
-      .get("/api/transactions", { params })
-      .then(({ data }) => {
-        setTransactions(data.transactions ?? []);
-        setAccounts(data.accounts ?? []);
-      })
-      .catch(() => setTransactions([]))
-      .finally(() => setLoading(false));
+    setResolvedKey(null);
+    fetchTransactions();
   };
 
   return (

@@ -28,15 +28,10 @@ This is a **full-stack personal finance app** (Conta Sanlla) where the Next.js a
 - Styling: MUI v7 + custom theme in `src/theme/`
 - State: React Context
 - Auth: NextAuth.js with JWT strategy
-- DB: MySQL2
+- DB: Supabase
 - /src/lib/db/      → repositories (DB layer)
 - /src/app/api/     → route handlers
 - /src/components/  → React components
-
-## Branch Strategy
-- Feature branches: `feature/<short-description>` (e.g., `feature/user-auth`)
-- Bug fixes: `fix/<short-description>`
-- Never commit directly to `main`
 
 
 ## Review Criteria
@@ -132,10 +127,6 @@ This is a **full-stack personal finance app** (Conta Sanlla) where the Next.js a
 
 All pages are **Client Components** (`"use client"`) that call the app's own API routes via `axios`.
 
-### Database
-
-`src/lib/db.js` exports a MySQL2 connection pool. API routes import it directly and run parameterized SQL queries. Multi-step operations (e.g., creating a transaction + updating account balance) use manual transactions with `BEGIN`/`COMMIT`/`ROLLBACK`.
-
 ### Key Patterns
 
 - Server Components fetch data directly; pass to Client Components as props
@@ -150,19 +141,6 @@ All pages are **Client Components** (`"use client"`) that call the app's own API
 ## MUI Import Style
 
 Always import MUI components individually by path — never from the barrel `@mui/material`:
-
-```js
-// ✅ correct
-import Button from "@mui/material/Button";
-import Typography from "@mui/material/Typography";
-import { useTheme } from "@mui/material/styles";
-import useMediaQuery from "@mui/material/useMediaQuery";
-
-// ❌ wrong
-import { Button, Typography } from "@mui/material";
-```
-
-This applies to all `@mui/material` components. Sub-packages (`@mui/x-data-grid`, `@mui/x-date-pickers/*`, `@mui/icons-material/*`) already use individual paths and are fine as-is.
 
 ## Hard Rules
 - Never generate TypeScript. All files must use `.js` or `.jsx`
@@ -183,6 +161,9 @@ This applies to all `@mui/material` components. Sub-packages (`@mui/x-data-grid`
 /transactions/[id] PUT, DELETE
 /categories        GET, POST
 /categories/[id]   PUT, DELETE
+/assistant/accounts     GET  - token-protected (Bearer ASSISTANT_API_TOKEN), see resources/assistant-api.md
+/assistant/categories   GET  - token-protected
+/assistant/transactions POST - token-protected
 ```
 
 ### Environment Variables
@@ -191,4 +172,5 @@ Required in `.env.local`:
 ```
 DB_HOST, DB_PORT, DB_USER, DB_PASSWORD, DB_NAME
 JWT_SECRET
+ASSISTANT_API_TOKEN  # long-lived token for /api/assistant/* routes, generate with `openssl rand -hex 32`
 ```

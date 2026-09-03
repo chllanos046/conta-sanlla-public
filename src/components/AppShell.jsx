@@ -3,6 +3,8 @@ import { useState, Suspense } from "react";
 import Box from "@mui/material/Box";
 import { useTheme } from "@mui/material/styles";
 import { usePathname } from "next/navigation";
+import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
+import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 import TopBar from "@/components/TopBar";
 import Sidebar from "@/components/Sidebar";
 import Loading from "@/components/Loading";
@@ -29,6 +31,7 @@ export default function AppShell({ children }) {
   const toggleDesktop = () => setOpen((prev) => !prev);
 
   return (
+    <LocalizationProvider dateAdapter={AdapterDateFns}>
     <TransactionDialogProvider>
       <Box sx={{ display: "flex", minHeight: "100vh" }}>
         <TopBar onMenuClick={toggleDesktop} />
@@ -65,5 +68,6 @@ export default function AppShell({ children }) {
         </Box>
       </Box>
     </TransactionDialogProvider>
+    </LocalizationProvider>
   );
 }

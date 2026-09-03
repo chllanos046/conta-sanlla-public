@@ -5,12 +5,13 @@ import { POST } from "@/app/api/transactions/import/route";
 import { NextRequest } from "next/server";
 
 vi.mock("@/lib/db", () => ({
+  query: vi.fn(),
   withTransaction: vi.fn(),
   queryConn: vi.fn(),
 }));
 vi.mock("@/auth", () => ({ auth: vi.fn() }));
 
-import { withTransaction, queryConn } from "@/lib/db";
+import { query, withTransaction, queryConn } from "@/lib/db";
 import { auth } from "@/auth";
 
 const makeRequest = (body) =>
@@ -23,6 +24,7 @@ const makeRequest = (body) =>
 beforeEach(() => {
   vi.clearAllMocks();
   auth.mockResolvedValue({ user: { id: 1 } });
+  query.mockResolvedValue([]);
   withTransaction.mockImplementation(async (cb) => cb({}));
   queryConn.mockResolvedValue({ insertId: 1 });
 });

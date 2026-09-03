@@ -74,8 +74,8 @@ export function MobileTransactionDetail({ id }) {
     ])
       .then(([txRes, accRes, catRes]) => {
         setTx(txRes.data.transaction);
-        setAccounts(accRes.data.accounts ?? []);
-        setCategories(catRes.data.categories ?? []);
+        setAccounts(accRes.data ?? []);
+        setCategories(catRes.data ?? []);
       })
       .catch(() => setError(true))
       .finally(() => setLoading(false));

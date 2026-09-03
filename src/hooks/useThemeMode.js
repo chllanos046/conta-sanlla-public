@@ -1,28 +1,26 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useSyncExternalStore } from "react";
 
 const EVENT = "thememodechange";
 const KEY = "preferredThemeMode";
 
+function subscribe(callback) {
+  window.addEventListener(EVENT, callback);
+  window.addEventListener("storage", callback);
+  return () => {
+    window.removeEventListener(EVENT, callback);
+    window.removeEventListener("storage", callback);
+  };
+}
+
+const getSnapshot = () => localStorage.getItem(KEY) || "light";
+const getServerSnapshot = () => "light";
+
 export function useThemeMode() {
-  const [mode, setModeState] = useState("light");
-
-  useEffect(() => {
-    const stored = localStorage.getItem(KEY);
-    if (stored) setModeState(stored);
-
-    const sync = () => setModeState(localStorage.getItem(KEY) || "light");
-    window.addEventListener(EVENT, sync);
-    window.addEventListener("storage", sync);
-    return () => {
-      window.removeEventListener(EVENT, sync);
-      window.removeEventListener("storage", sync);
-    };
-  }, []);
+  const mode = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
 
   const setMode = (val) => {
     localStorage.setItem(KEY, val);
-    setModeState(val);
     window.dispatchEvent(new Event(EVENT));
   };
 

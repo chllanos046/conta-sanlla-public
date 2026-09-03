@@ -7,6 +7,7 @@ import ListItemButton from "@mui/material/ListItemButton";
 import ListItemIcon from "@mui/material/ListItemIcon";
 import ListItemText from "@mui/material/ListItemText";
 import AccountBalanceIcon from "@mui/icons-material/AccountBalance";
+import CalendarMonthIcon from "@mui/icons-material/CalendarMonth";
 import CategoryIcon from "@mui/icons-material/Category";
 import { useTranslation } from "@/hooks/useTranslation";
 
@@ -15,6 +16,7 @@ export default function MobileSettingsPage() {
   const { t } = useTranslation();
 
   const SETTINGS_ITEMS = [
+    { label: t("nav.expenses"), icon: <CalendarMonthIcon />, path: "/expenses" },
     { label: t("nav.accounts"), icon: <AccountBalanceIcon />, path: "/accounts" },
     { label: t("nav.categories"), icon: <CategoryIcon />, path: "/categories" },
   ];

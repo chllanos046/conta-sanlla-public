@@ -19,6 +19,7 @@ import DashboardIcon from "@mui/icons-material/Dashboard";
 import AccountBalanceIcon from "@mui/icons-material/AccountBalance";
 import AccountTypeIcon from "@/components/AccountTypeIcon";
 import ReceiptLongIcon from "@mui/icons-material/ReceiptLong";
+import CalendarMonthIcon from "@mui/icons-material/CalendarMonth";
 import CategoryIcon from "@mui/icons-material/Category";
 import SettingsIcon from "@mui/icons-material/Settings";
 import InfoIcon from "@mui/icons-material/Info";
@@ -34,6 +35,7 @@ import axios from "axios";
 import { convertAmount, getCurrencySymbol } from "@/lib/currency";
 import { formatCurrency } from "@/lib/utils";
 import { useCurrency } from "@/hooks/useCurrency";
+import { useMounted } from "@/hooks/useMounted";
 import { useTranslation } from "@/hooks/useTranslation";
 
 
@@ -54,8 +56,9 @@ export default function Sidebar({
 
   const [displayCurrency] = useCurrency();
   const { t } = useTranslation();
-  const [mounted, setMounted] = useState(false);
+  const mounted = useMounted();
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [accountsOpen, setAccountsOpen] = useState(true);
   const [openGroups, setOpenGroups] = useState(
     ACCOUNT_TYPE_ORDER.reduce((acc, type) => ({ ...acc, [type]: true }), {})
   );
@@ -68,7 +71,6 @@ export default function Sidebar({
   };
 
   useEffect(() => {
-    setMounted(true);
     loadAccounts();
     axios.get("/api/exchange-rates").then(({ data }) => setRates(data)).catch(() => {});
 
@@ -122,7 +124,42 @@ export default function Sidebar({
           </ListItem>
         </Tooltip>
 
+        {/* Expenses */}
+        <Tooltip title={!expanded ? t("nav.expenses") : ""} placement="right">
+          <ListItem disablePadding>
+            <ListItemButton
+              component={Link}
+              href="/expenses"
+              selected={mounted && pathname.startsWith("/expenses")}
+              onClick={isMobile ? onMobileClose : undefined}
+              sx={navItemSx}
+            >
+              <ListItemIcon sx={iconSx}><CalendarMonthIcon /></ListItemIcon>
+              {expanded && <ListItemText primary={t("nav.expenses")} />}
+            </ListItemButton>
+          </ListItem>
+        </Tooltip>
+
+        {/* Accounts collapsible header */}
+        <Tooltip title={!expanded ? t("nav.accounts") : ""} placement="right">
+          <ListItem disablePadding>
+            <ListItemButton
+              onClick={() => expanded && setAccountsOpen((prev) => !prev)}
+              sx={navItemSx}
+            >
+              <ListItemIcon sx={iconSx}><AccountBalanceIcon /></ListItemIcon>
+              {expanded && (
+                <>
+                  <ListItemText primary={t("nav.accounts")} />
+                  {accountsOpen ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+                </>
+              )}
+            </ListItemButton>
+          </ListItem>
+        </Tooltip>
+
         {/* Accounts grouped by type */}
+        <Collapse in={!expanded || accountsOpen} timeout="auto" unmountOnExit={false}>
         {Object.entries(groupedAccounts).map(([type, items]) => {
           const arsRate = rates.ARS || 1;
           const groupBalance = items.reduce(
@@ -249,6 +286,7 @@ export default function Sidebar({
             </Box>
           );
         })}
+        </Collapse>
 
         {/* Settings collapsible */}
         <Tooltip title={!expanded ? t("nav.settings") : ""} placement="right">

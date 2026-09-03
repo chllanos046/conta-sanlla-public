@@ -16,6 +16,7 @@
  */
 import React from "react";
 import { render, screen, fireEvent, waitFor, act, cleanup } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom";
 
 // ── Stubs ────────────────────────────────────────────────────────────────────
@@ -69,11 +70,12 @@ const baseProps = {
  * Source Account, combobox[1] is Target Account, etc.
  */
 async function selectMuiOption(comboboxIndex, optionText) {
+  const user = userEvent.setup();
   const comboboxes = screen.getAllByRole("combobox");
   const select = comboboxes[comboboxIndex];
-  fireEvent.mouseDown(select);
+  await user.click(select);
   const option = await screen.findByRole("option", { name: new RegExp(optionText, "i") });
-  fireEvent.click(option);
+  await user.click(option);
 }
 
 /** Click a ToggleButton by its visible label text. */
@@ -81,9 +83,24 @@ function clickTypeToggle(label) {
   fireEvent.click(screen.getByRole("button", { name: new RegExp(`^${label}$`, "i") }));
 }
 
+// MUI's Popper logs this via console.warn (BasePopper.js) during its exit transition
+// in jsdom (no real layout, so the anchor briefly reads as detached) — benign noise,
+// not a real assertion failure. Filtered here only; every other console.warn still surfaces.
+const originalConsoleWarn = console.warn;
+let consoleWarnSpy;
+beforeEach(() => {
+  consoleWarnSpy = vi.spyOn(console, "warn").mockImplementation((msg, ...args) => {
+    if (typeof msg === "string" && msg.includes("The `anchorEl` prop provided to the component is invalid")) {
+      return;
+    }
+    originalConsoleWarn(msg, ...args);
+  });
+});
+
 afterEach(() => {
   cleanup();
   vi.clearAllMocks();
+  consoleWarnSpy.mockRestore();
 });
 
 // ── Tests ─────────────────────────────────────────────────────────────────────

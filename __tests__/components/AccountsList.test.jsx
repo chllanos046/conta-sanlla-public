@@ -4,7 +4,7 @@
  * missing hook return values (e.g. setValue not destructured from useForm).
  */
 import React from "react";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor, act } from "@testing-library/react";
 import "@testing-library/jest-dom";
 
 // ── Next.js / auth stubs ────────────────────────────────────────────────────
@@ -78,6 +78,9 @@ describe("AccountsList", () => {
   it("renders without crashing and shows the accounts heading", async () => {
     renderComponent();
     expect(screen.getByText("Accounts")).toBeInTheDocument();
+    // Flush the mocked accounts/account-images fetches (resolved in AccountsList's
+    // mount effect) inside act() so their state updates aren't attributed to the next test.
+    await act(async () => {});
   });
 
   it("loads and displays accounts from the API", async () => {

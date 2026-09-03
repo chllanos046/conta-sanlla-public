@@ -6,8 +6,6 @@ import IconButton from "@mui/material/IconButton";
 import Tooltip from "@mui/material/Tooltip";
 import AddIcon from "@mui/icons-material/Add";
 import CameraAltIcon from "@mui/icons-material/CameraAlt";
-import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
-import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 import { useSearchParams } from "next/navigation";
 import axios from "axios";
 import { addRunningBalance } from "@/lib/balanceUtils";
@@ -27,7 +25,7 @@ export default function TransactionsPage() {
   const { t } = useTranslation();
 
   const [rows, setRows] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [resolvedKey, setResolvedKey] = useState(null);
   const [accounts, setAccounts] = useState([]);
   const [categories, setCategories] = useState([]);
   const [openingBalance, setOpeningBalance] = useState(null);
@@ -72,8 +70,12 @@ export default function TransactionsPage() {
     setAppliedFilters(updated);
   }
 
-  // Reactive data loading — all setState calls are inside .then(), never synchronous.
+  // Reactive data loading — loading is derived by comparing requestKey to resolvedKey,
+  // so no setState is called synchronously in the effect body.
   const { type: af_type, account: af_account, sourceAccount: af_source, targetAccount: af_target, category: af_category } = appliedFilters;
+  const requestKey = `${af_type}|${af_account}|${af_source}|${af_target}|${af_category}|${refreshKey}`;
+  const loading = resolvedKey !== requestKey;
+
   useEffect(() => {
     const params = {};
     if (af_type) params.type = af_type;
@@ -83,7 +85,6 @@ export default function TransactionsPage() {
     if (af_category) params.category = af_category;
 
     let cancelled = false;
-    setLoading(true);
     axios.get("/api/transactions", { params }).then(({ data }) => {
       if (cancelled) return;
       setRows(data.transactions || []);
@@ -91,10 +92,10 @@ export default function TransactionsPage() {
       setCategories(data.categories || []);
       setOpeningBalance(data.opening_balance ?? null);
     }).finally(() => {
-      if (!cancelled) setLoading(false);
+      if (!cancelled) setResolvedKey(requestKey);
     });
     return () => { cancelled = true; };
-  }, [af_type, af_account, af_source, af_target, af_category, refreshKey]);
+  }, [af_type, af_account, af_source, af_target, af_category, refreshKey, requestKey]);
 
   const refresh = () => setRefreshKey((k) => k + 1);
 
@@ -133,7 +134,7 @@ export default function TransactionsPage() {
   }, [rows, openingBalance, appliedFilters.account]);
 
   return (
-    <LocalizationProvider dateAdapter={AdapterDateFns}>
+    <>
       <Box
         sx={{
           display: "flex",
@@ -226,6 +227,6 @@ export default function TransactionsPage() {
         }
         onSaved={refresh}
       />
-    </LocalizationProvider>
+    </>
   );
 }

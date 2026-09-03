@@ -1,5 +1,5 @@
 import React from "react";
-import { render } from "@testing-library/react";
+import { render, act } from "@testing-library/react";
 import "@testing-library/jest-dom";
 
 vi.mock("next-auth/react", () => ({
@@ -32,16 +32,24 @@ const props = {
   miniWidth: 64,
 };
 
-it("renders without crashing", () => {
-  render(<Sidebar {...props} />);
+// Sidebar fetches accounts/rates on mount; flush those resolved mock promises
+// inside act() so the resulting state updates aren't attributed to the test body.
+async function renderSidebar() {
+  const result = render(<Sidebar {...props} />);
+  await act(async () => {});
+  return result;
+}
+
+it("renders without crashing", async () => {
+  await renderSidebar();
 });
 
-it("renders Dashboard nav link", () => {
-  const { getByText } = render(<Sidebar {...props} />);
+it("renders Dashboard nav link", async () => {
+  const { getByText } = await renderSidebar();
   expect(getByText("Dashboard")).toBeInTheDocument();
 });
 
-it("renders Transactions nav link", () => {
-  const { getByText } = render(<Sidebar {...props} />);
+it("renders Transactions nav link", async () => {
+  const { getByText } = await renderSidebar();
   expect(getByText("Transactions")).toBeInTheDocument();
 });

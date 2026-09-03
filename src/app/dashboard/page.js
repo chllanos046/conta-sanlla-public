@@ -21,9 +21,8 @@ import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
 import ChevronRightIcon from "@mui/icons-material/ChevronRight";
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 import { DatePicker } from "@mui/x-date-pickers/DatePicker";
-import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
-import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { ExpensesByCategoryChart } from "@/components/ExpensesByCategoryChart";
+import { ExpensesWidget } from "@/components/ExpensesWidget";
 import { format, subMonths, addMonths, isSameMonth } from "date-fns";
 import axios from "axios";
 import { SummaryStatCard } from "@/components/SummaryStatCard";
@@ -31,6 +30,7 @@ import AccountCarousel from "@/components/AccountCarousel";
 import { QuickAddFab } from "@/components/QuickAddTransaction";
 import { TransactionFormDialog } from "@/components/TransactionFormDialog";
 import { useCurrency } from "@/hooks/useCurrency";
+import { useMounted } from "@/hooks/useMounted";
 import { convertAmount } from "@/lib/currency";
 import { formatCurrency } from "@/lib/utils";
 import { useTranslation } from "@/hooks/useTranslation";
@@ -47,28 +47,33 @@ export default function Dashboard() {
   const [period, setPeriod] = useState("month");
   const [periodDate, setPeriodDate] = useState(null);
   const [rates, setRates] = useState({});
+  const [arsUp, setArsUp] = useState(null);
   const prevArsRef = useRef(null);
   const [fabOpen, setFabOpen] = useState(false);
-  const [refreshing, setRefreshing] = useState(false);
+  const [resolvedKey, setResolvedKey] = useState(null);
+  const [reloadToken, setReloadToken] = useState(0);
   const [pullY, setPullY] = useState(0);
   const [displayCurrency] = useCurrency();
 
-  useEffect(() => {
+  // Client-only init to avoid an SSR/client hydration mismatch on "today".
+  const mounted = useMounted();
+  if (mounted && periodDate === null) {
     setPeriodDate(new Date());
-  }, []);
+  }
 
   useEffect(() => {
     axios
       .get("/api/exchange-rates")
-      .then((res) => {
-        const newRates = res.data;
-        setRates((prev) => {
-          prevArsRef.current = prev.ARS ?? newRates.ARS;
-          return newRates;
-        });
-      })
+      .then((res) => setRates(res.data))
       .catch(() => {});
   }, []);
+
+  useEffect(() => {
+    if (rates.ARS != null && prevArsRef.current != null && rates.ARS !== prevArsRef.current) {
+      setArsUp(rates.ARS > prevArsRef.current);
+    }
+    prevArsRef.current = rates.ARS ?? prevArsRef.current;
+  }, [rates.ARS]);
 
   const buildApiUrl = useCallback(() => {
     if (!periodDate) return null;
@@ -82,19 +87,22 @@ export default function Dashboard() {
     return `/api/dashboard?${p}`;
   }, [period, periodDate]);
 
-  const loadData = useCallback(() => {
-    const url = buildApiUrl();
-    if (!url) return;
-    setRefreshing(true);
-    axios
-      .get(url)
-      .then((res) => setData(res.data))
-      .finally(() => setRefreshing(false));
-  }, [buildApiUrl]);
+  // Bumps reloadToken so the effect below refetches even when period/periodDate are unchanged.
+  const loadData = useCallback(() => setReloadToken((t) => t + 1), []);
+
+  const requestUrl = buildApiUrl();
+  const requestKey = requestUrl ? `${requestUrl}|${reloadToken}` : null;
+  const refreshing = requestKey !== null && resolvedKey !== requestKey;
 
   useEffect(() => {
-    loadData();
-  }, [loadData]);
+    if (!requestUrl) return;
+    let cancelled = false;
+    axios
+      .get(requestUrl)
+      .then((res) => { if (!cancelled) setData(res.data); })
+      .finally(() => { if (!cancelled) setResolvedKey(requestKey); });
+    return () => { cancelled = true; };
+  }, [requestUrl, requestKey]);
 
   // Pull-to-refresh
   useEffect(() => {
@@ -139,13 +147,6 @@ export default function Dashboard() {
     setPeriod(val);
     setPeriodDate(new Date());
   };
-
-  const arsUp =
-    rates.ARS != null &&
-    prevArsRef.current != null &&
-    rates.ARS !== prevArsRef.current
-      ? rates.ARS > prevArsRef.current
-      : null;
 
   const accountMap = Object.fromEntries(data.accounts.map((a) => [String(a.id), a]));
   const arsRate = rates.ARS || 1;
@@ -301,7 +302,6 @@ export default function Dashboard() {
   const isCurrentMonth = periodDate ? isSameMonth(periodDate, today) : false;
 
   return (
-    <LocalizationProvider dateAdapter={AdapterDateFns}>
       <Box sx={{ px: { xs: 2, sm: 0 }, pt: { xs: 1, sm: 0 } }}>
       {/* Pull-to-refresh indicator */}
       {pullY > 0 && (
@@ -578,6 +578,11 @@ export default function Dashboard() {
 
       </Grid>
 
+      {/* Expenses Widget */}
+      <Box sx={{ mb: 3 }}>
+        <ExpensesWidget />
+      </Box>
+
       {/* Account Balances Carousel */}
       {data.accounts.length > 0 && (
         <>
@@ -603,6 +608,5 @@ export default function Dashboard() {
         editingTx={null}
       />
       </Box>
-    </LocalizationProvider>
   );
 }

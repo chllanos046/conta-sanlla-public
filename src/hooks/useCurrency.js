@@ -1,28 +1,26 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useSyncExternalStore } from "react";
 
 const EVENT = "currencychange";
+const KEY = "preferredCurrency";
+
+function subscribe(callback) {
+  window.addEventListener(EVENT, callback);
+  window.addEventListener("storage", callback);
+  return () => {
+    window.removeEventListener(EVENT, callback);
+    window.removeEventListener("storage", callback);
+  };
+}
+
+const getSnapshot = () => localStorage.getItem(KEY) || "USD";
+const getServerSnapshot = () => "USD";
 
 export function useCurrency() {
-  const [currency, setCurrencyState] = useState("USD");
-
-  useEffect(() => {
-    const stored = localStorage.getItem("preferredCurrency");
-    if (stored) setCurrencyState(stored);
-
-    const sync = () =>
-      setCurrencyState(localStorage.getItem("preferredCurrency") || "USD");
-    window.addEventListener(EVENT, sync);
-    window.addEventListener("storage", sync);
-    return () => {
-      window.removeEventListener(EVENT, sync);
-      window.removeEventListener("storage", sync);
-    };
-  }, []);
+  const currency = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
 
   const setCurrency = (val) => {
-    localStorage.setItem("preferredCurrency", val);
-    setCurrencyState(val);
+    localStorage.setItem(KEY, val);
     window.dispatchEvent(new Event(EVENT));
   };
 
