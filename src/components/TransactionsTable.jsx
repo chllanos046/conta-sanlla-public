@@ -18,6 +18,9 @@ export function TransactionsTable({
   displayCurrency = "USD",
   arsRate = 1,
   loading = false,
+  rowCount = 0,
+  paginationModel,
+  onPaginationModelChange,
 }) {
   const { t } = useTranslation();
   const accountMap = Object.fromEntries((accounts || []).map((a) => [String(a.id), a]));
@@ -161,9 +164,12 @@ export function TransactionsTable({
           columns={columns}
           loading={loading}
           initialState={{
-            pagination: { paginationModel: { pageSize: 25 } },
             sorting: { sortModel: [{ field: "date", sort: "desc" }] },
           }}
+          paginationMode="server"
+          rowCount={rowCount}
+          paginationModel={paginationModel}
+          onPaginationModelChange={onPaginationModelChange}
           pageSizeOptions={[25, 50, 100]}
           getRowId={(row) => row.id}
         />

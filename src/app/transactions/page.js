@@ -29,6 +29,8 @@ export default function TransactionsPage() {
   const [accounts, setAccounts] = useState([]);
   const [categories, setCategories] = useState([]);
   const [openingBalance, setOpeningBalance] = useState(null);
+  const [total, setTotal] = useState(0);
+  const [paginationModel, setPaginationModel] = useState({ page: 0, pageSize: 25 });
 
   const [filters, setFilters] = useState(() => ({
     type: "",
@@ -73,11 +75,12 @@ export default function TransactionsPage() {
   // Reactive data loading — loading is derived by comparing requestKey to resolvedKey,
   // so no setState is called synchronously in the effect body.
   const { type: af_type, account: af_account, sourceAccount: af_source, targetAccount: af_target, category: af_category } = appliedFilters;
-  const requestKey = `${af_type}|${af_account}|${af_source}|${af_target}|${af_category}|${refreshKey}`;
+  const { page, pageSize } = paginationModel;
+  const requestKey = `${af_type}|${af_account}|${af_source}|${af_target}|${af_category}|${refreshKey}|${page}|${pageSize}`;
   const loading = resolvedKey !== requestKey;
 
   useEffect(() => {
-    const params = {};
+    const params = { limit: pageSize, offset: page * pageSize };
     if (af_type) params.type = af_type;
     if (af_account) params.account = af_account;
     if (af_source) params.sourceAccount = af_source;
@@ -91,11 +94,12 @@ export default function TransactionsPage() {
       setAccounts(data.accounts || []);
       setCategories(data.categories || []);
       setOpeningBalance(data.opening_balance ?? null);
+      setTotal(data.total ?? 0);
     }).finally(() => {
       if (!cancelled) setResolvedKey(requestKey);
     });
     return () => { cancelled = true; };
-  }, [af_type, af_account, af_source, af_target, af_category, refreshKey, requestKey]);
+  }, [af_type, af_account, af_source, af_target, af_category, refreshKey, page, pageSize, requestKey]);
 
   const refresh = () => setRefreshKey((k) => k + 1);
 
@@ -183,7 +187,10 @@ export default function TransactionsPage() {
         accounts={accounts}
         categories={categories}
         onChange={setFilters}
-        onApply={() => setAppliedFilters({ ...filters })}
+        onApply={() => {
+          setAppliedFilters({ ...filters });
+          setPaginationModel((m) => ({ ...m, page: 0 }));
+        }}
         onClear={() => {
           const cleared = {
             type: "",
@@ -194,6 +201,7 @@ export default function TransactionsPage() {
           };
           setFilters(cleared);
           setAppliedFilters(cleared);
+          setPaginationModel((m) => ({ ...m, page: 0 }));
         }}
       />
 
@@ -206,6 +214,9 @@ export default function TransactionsPage() {
         displayCurrency={displayCurrency}
         arsRate={arsRate}
         loading={loading}
+        rowCount={total}
+        paginationModel={paginationModel}
+        onPaginationModelChange={setPaginationModel}
       />
 
       <PhotoImportDialog

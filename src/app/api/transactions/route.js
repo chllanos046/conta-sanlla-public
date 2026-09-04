@@ -17,6 +17,8 @@ export async function GET(request) {
     const category = searchParams.get("category");
     const dateFrom = searchParams.get("dateFrom");
     const dateTo = searchParams.get("dateTo");
+    const limit = parseInt(searchParams.get("limit"), 10) || 25;
+    const offset = parseInt(searchParams.get("offset"), 10) || 0;
 
     let sql = `
       SELECT t.*,
@@ -61,9 +63,15 @@ export async function GET(request) {
     }
 
     const transactions = await query(
-      sql + " ORDER BY t.date DESC LIMIT 1000",
+      sql + " ORDER BY t.date DESC LIMIT ? OFFSET ?",
+      [...params, limit, offset],
+    );
+
+    const countRows = await query(
+      sql.replace(/^\s*SELECT[\s\S]*?FROM transactions t/, "SELECT COUNT(*) as count FROM transactions t"),
       params,
     );
+    const total = parseInt(countRows[0]?.count, 10) || 0;
 
     // Get accounts (with currency for exchange rate field visibility in form)
     const accounts = await query(
@@ -103,7 +111,7 @@ export async function GET(request) {
       }
     }
 
-    return NextResponse.json({ transactions, accounts, categories, opening_balance });
+    return NextResponse.json({ transactions, accounts, categories, opening_balance, total });
   } catch (error) {
     return NextResponse.json(
       { error: "Failed to fetch transactions" },
