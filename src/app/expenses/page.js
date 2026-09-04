@@ -15,20 +15,25 @@ import ListItemSecondaryAction from "@mui/material/ListItemSecondaryAction";
 import Divider from "@mui/material/Divider";
 import CircularProgress from "@mui/material/CircularProgress";
 import Button from "@mui/material/Button";
+import TextField from "@mui/material/TextField";
+import DialogActions from "@mui/material/DialogActions";
 import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
 import ChevronRightIcon from "@mui/icons-material/ChevronRight";
 import AddIcon from "@mui/icons-material/Add";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
 import SettingsIcon from "@mui/icons-material/Settings";
+import RefreshIcon from "@mui/icons-material/Refresh";
 import axios from "axios";
 import { format, addMonths, subMonths } from "date-fns";
 import { useTranslation } from "@/hooks/useTranslation";
+import { useNotify } from "@/components/NotificationProvider";
 import { ExpensesGroupTable } from "@/components/ExpensesGroupTable";
 import { ExpenseTemplateDialog } from "@/components/ExpenseTemplateDialog";
 
 export default function ExpensesPage() {
   const { t } = useTranslation();
+  const { notifySuccess, notifyError } = useNotify();
   const [periodDate, setPeriodDate] = useState(new Date());
   const [groups, setGroups] = useState([]);
   const [resolvedKey, setResolvedKey] = useState(null);
@@ -37,6 +42,9 @@ export default function ExpensesPage() {
   const [editingTemplate, setEditingTemplate] = useState(null);
   const [manageOpen, setManageOpen] = useState(false);
   const [templates, setTemplates] = useState([]);
+  const [generateOpen, setGenerateOpen] = useState(false);
+  const [generateYear, setGenerateYear] = useState(String(new Date().getFullYear()));
+  const [generating, setGenerating] = useState(false);
 
   const year = periodDate.getFullYear();
   const month = periodDate.getMonth() + 1;
@@ -91,16 +99,38 @@ export default function ExpensesPage() {
     loadInstances();
   };
 
+  const handleGenerateYear = async () => {
+    const year = parseInt(generateYear);
+    setGenerating(true);
+    try {
+      const { data } = await axios.post("/api/expenses/instances/generate", { year });
+      notifySuccess(t("expenses.generateSuccess")(data.created ?? 0, data.updated ?? 0));
+      setGenerateOpen(false);
+      loadInstances();
+    } catch {
+      notifyError(t("expenses.generateFailed"));
+    } finally {
+      setGenerating(false);
+    }
+  };
+
   return (
     <Box sx={{ p: { xs: 2, md: 3 } }}>
       {/* Header */}
       <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mb: 2 }}>
         <Typography variant="h5" fontWeight={700}>{t("expenses.title")}</Typography>
-        <Tooltip title={t("expenses.manageTemplates")}>
-          <IconButton onClick={() => setManageOpen(true)}>
-            <SettingsIcon />
-          </IconButton>
-        </Tooltip>
+        <Box>
+          <Tooltip title={t("expenses.generateYear")}>
+            <IconButton onClick={() => { setGenerateYear(String(year)); setGenerateOpen(true); }}>
+              <RefreshIcon />
+            </IconButton>
+          </Tooltip>
+          <Tooltip title={t("expenses.manageTemplates")}>
+            <IconButton onClick={() => setManageOpen(true)}>
+              <SettingsIcon />
+            </IconButton>
+          </Tooltip>
+        </Box>
       </Box>
 
       {/* Month navigator */}
@@ -132,6 +162,28 @@ export default function ExpensesPage() {
           onRowUpdate={handleRowUpdate}
         />
       ))}
+
+      {/* Generate/refresh instances for a year */}
+      <Dialog open={generateOpen} onClose={() => setGenerateOpen(false)} maxWidth="xs" fullWidth>
+        <DialogTitle>{t("expenses.generateYear")}</DialogTitle>
+        <DialogContent>
+          <TextField
+            autoFocus
+            fullWidth
+            type="number"
+            label={t("dashboard.year")}
+            value={generateYear}
+            onChange={(e) => setGenerateYear(e.target.value)}
+            sx={{ mt: 1 }}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setGenerateOpen(false)}>{t("common.cancel")}</Button>
+          <Button variant="contained" disabled={generating} onClick={handleGenerateYear}>
+            {t("expenses.generateYear")}
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       {/* Manage Templates dialog */}
       <Dialog open={manageOpen} onClose={() => setManageOpen(false)} maxWidth="sm" fullWidth>

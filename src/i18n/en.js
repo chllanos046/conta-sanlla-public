@@ -146,6 +146,9 @@ const en = {
     noWidgetData: "No upcoming or overdue expenses",
     editInstance: "Edit Expense",
     paidDate: "Paid Date",
+    generateYear: "Generate/refresh year",
+    generateSuccess: (created, updated) => `Created ${created} and updated ${updated} expenses.`,
+    generateFailed: "Failed to generate expenses for the year",
   },
   settings: {
     title: "Settings",

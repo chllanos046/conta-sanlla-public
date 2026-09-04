@@ -146,6 +146,9 @@ const es = {
     noWidgetData: "Sin gastos próximos ni vencidos",
     editInstance: "Editar gasto",
     paidDate: "Fecha de pago",
+    generateYear: "Generar/actualizar año",
+    generateSuccess: (created, updated) => `Se crearon ${created} y se actualizaron ${updated} gastos.`,
+    generateFailed: "Error al generar los gastos del año",
   },
   settings: {
     title: "Ajustes",

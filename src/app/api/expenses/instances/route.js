@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { query } from "@/lib/db";
-import { calcDueDate } from "@/lib/dueDate";
 
 export async function GET(request) {
   try {
@@ -15,33 +14,6 @@ export async function GET(request) {
 
     if (!year || !month || month < 1 || month > 12)
       return NextResponse.json({ error: "year and month (1-12) are required" }, { status: 400 });
-
-    // Find all templates active in this month, created on or before it
-    const templates = await query(
-      `SELECT DISTINCT t.* FROM expense_templates t, jsonb_array_elements(t.active_months::jsonb) m
-       WHERE m::int = ? AND t.created_at <= (make_date(?, ?, 1) + INTERVAL '1 month' - INTERVAL '1 day')`,
-      [month, year, month]
-    );
-
-    // Lazy-generate missing instances
-    if (templates.length > 0) {
-      const existingRows = await query(
-        "SELECT template_id FROM expense_instances WHERE year = ? AND month = ?",
-        [year, month]
-      );
-      const existingIds = new Set(existingRows.map((r) => String(r.template_id)));
-
-      for (const tpl of templates) {
-        if (!existingIds.has(String(tpl.id))) {
-          const dueDate = await calcDueDate(year, month, tpl.due_day);
-          console.log("[expenses/instances] inserting template=%d dueDate=%s", tpl.id, dueDate);
-          await query(
-            "INSERT INTO expense_instances (template_id, year, month, due_date, amount) VALUES (?, ?, ?, ?, ?) ON CONFLICT (template_id, year, month) DO NOTHING",
-            [tpl.id, year, month, dueDate, tpl.default_amount]
-          );
-        }
-      }
-    }
 
     // Return all instances for this month, enriched with template + group data
     const instances = await query(
