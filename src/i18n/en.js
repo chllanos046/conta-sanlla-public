@@ -149,6 +149,7 @@ const en = {
     generateYear: "Generate/refresh year",
     generateSuccess: (created, updated) => `Created ${created} and updated ${updated} expenses.`,
     generateFailed: "Failed to generate expenses for the year",
+    updateFailed: "Failed to update expense",
   },
   settings: {
     title: "Settings",

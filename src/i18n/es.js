@@ -149,6 +149,7 @@ const es = {
     generateYear: "Generar/actualizar año",
     generateSuccess: (created, updated) => `Se crearon ${created} y se actualizaron ${updated} gastos.`,
     generateFailed: "Error al generar los gastos del año",
+    updateFailed: "Error al actualizar el gasto",
   },
   settings: {
     title: "Ajustes",

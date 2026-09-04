@@ -7,10 +7,12 @@ import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import RadioButtonUncheckedIcon from "@mui/icons-material/RadioButtonUnchecked";
 import axios from "axios";
 import { useTranslation } from "@/hooks/useTranslation";
+import { useNotify } from "@/components/NotificationProvider";
 import { formatCurrency } from "@/lib/utils";
 
 export function ExpensesGroupTable({ groupName, instances, onMarkPaid, onRowUpdate }) {
   const { t } = useTranslation();
+  const { notifyError } = useNotify();
 
   const processRowUpdate = async (newRow, oldRow) => {
     const changed = {};
@@ -21,6 +23,10 @@ export function ExpensesGroupTable({ groupName, instances, onMarkPaid, onRowUpda
     await axios.patch(`/api/expenses/instances/${newRow.id}`, changed);
     onRowUpdate?.(newRow);
     return newRow;
+  };
+
+  const handleProcessRowUpdateError = () => {
+    notifyError(t("expenses.updateFailed"));
   };
 
   const columns = [
@@ -96,6 +102,7 @@ export function ExpensesGroupTable({ groupName, instances, onMarkPaid, onRowUpda
         columns={columns}
         getRowId={(row) => row.id}
         processRowUpdate={processRowUpdate}
+        onProcessRowUpdateError={handleProcessRowUpdateError}
         autoHeight
         hideFooter
         disableColumnMenu

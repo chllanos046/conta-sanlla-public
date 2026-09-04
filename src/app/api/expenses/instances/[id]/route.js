@@ -9,7 +9,7 @@ export async function PATCH(request, { params }) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const { id } = await params;
-    const { paid, paid_date, amount, transaction_id } = await request.json();
+    const { paid, paid_date, amount, due_date, transaction_id } = await request.json();
 
     const fields = [];
     const values = [];
@@ -17,6 +17,7 @@ export async function PATCH(request, { params }) {
     if (paid !== undefined) { fields.push("paid = ?"); values.push(Boolean(paid)); }
     if (paid_date !== undefined) { fields.push("paid_date = ?"); values.push(paid_date || null); }
     if (amount !== undefined) { fields.push("amount = ?"); values.push(parseFloat(amount)); }
+    if (due_date !== undefined) { fields.push("due_date = ?"); values.push(due_date || null); }
     if (transaction_id !== undefined) { fields.push("transaction_id = ?"); values.push(transaction_id || null); }
 
     if (!fields.length)
