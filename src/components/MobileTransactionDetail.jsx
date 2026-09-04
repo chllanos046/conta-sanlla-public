@@ -14,7 +14,11 @@ import Divider from "@mui/material/Divider";
 import CircularProgress from "@mui/material/CircularProgress";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import EditIcon from "@mui/icons-material/Edit";
+import DeleteIcon from "@mui/icons-material/Delete";
 import { TransactionFormDialog } from "@/components/TransactionFormDialog";
+import { useConfirm } from "@/components/ConfirmDialogProvider";
+import { useNotify } from "@/components/NotificationProvider";
+import { useTranslation } from "@/hooks/useTranslation";
 
 function formatAmount(tx) {
   const currency =
@@ -59,6 +63,9 @@ function DetailRow({ label, value, valueColor }) {
 
 export function MobileTransactionDetail({ id }) {
   const router = useRouter();
+  const confirm = useConfirm();
+  const { notifySuccess, notifyError } = useNotify();
+  const { t } = useTranslation();
   const [tx, setTx] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -85,6 +92,18 @@ export function MobileTransactionDetail({ id }) {
     axios.get(`/api/transactions/${id}`).then(({ data }) => setTx(data.transaction));
   };
 
+  const handleDelete = async () => {
+    if (!(await confirm(t("transactions.deleteConfirm")))) return;
+    try {
+      await axios.delete(`/api/transactions/${id}`);
+      window.dispatchEvent(new CustomEvent("accounts-updated"));
+      notifySuccess(t("transactions.deleted"));
+      router.back();
+    } catch (err) {
+      notifyError(err.response?.data?.error || t("errors.deleteFailed"));
+    }
+  };
+
   return (
     <Box>
       <Box
@@ -109,9 +128,14 @@ export function MobileTransactionDetail({ id }) {
           </Typography>
         </Box>
         {tx && (
-          <IconButton onClick={() => setEditOpen(true)} size="small" sx={{ mr: 1 }}>
-            <EditIcon />
-          </IconButton>
+          <Box sx={{ display: "flex", gap: 0.5, mr: 1 }}>
+            <IconButton onClick={() => setEditOpen(true)} size="small">
+              <EditIcon />
+            </IconButton>
+            <IconButton onClick={handleDelete} size="small" color="error">
+              <DeleteIcon />
+            </IconButton>
+          </Box>
         )}
       </Box>
 

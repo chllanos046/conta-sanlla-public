@@ -11,6 +11,14 @@ if (!globalForDb._sql) {
     connect_timeout: 10,
     prepare: false, // required for PgBouncer transaction mode
     onnotice: () => {},
+    // A transaction interrupted mid-request (e.g. a killed serverless
+    // invocation inside withTransaction) otherwise stays idle-in-transaction
+    // holding row locks forever, hanging every later query on the same pooled
+    // connection. Cap both so the session self-terminates instead.
+    connection: {
+      statement_timeout: 15000,
+      idle_in_transaction_session_timeout: 15000,
+    },
   });
 
   // Clean up on process exit (dev HMR and production shutdown)
