@@ -16,10 +16,11 @@ export async function GET(request) {
     if (!year || !month || month < 1 || month > 12)
       return NextResponse.json({ error: "year and month (1-12) are required" }, { status: 400 });
 
-    // Find all templates active in this month
+    // Find all templates active in this month, created on or before it
     const templates = await query(
-      "SELECT DISTINCT t.* FROM expense_templates t, jsonb_array_elements(t.active_months::jsonb) m WHERE m::int = ?",
-      [month]
+      `SELECT DISTINCT t.* FROM expense_templates t, jsonb_array_elements(t.active_months::jsonb) m
+       WHERE m::int = ? AND t.created_at <= (make_date(?, ?, 1) + INTERVAL '1 month' - INTERVAL '1 day')`,
+      [month, year, month]
     );
 
     // Lazy-generate missing instances
