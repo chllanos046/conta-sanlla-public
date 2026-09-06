@@ -156,18 +156,35 @@ export async function POST(request) {
     if (type === "transfer" && numericAmount <= 0) {
       return NextResponse.json({ error: "Transfer amount must be positive" }, { status: 400 });
     }
-    if (type === "transfer" && source_account_id && target_account_id && !exchange_rate) {
-      const [srcRows, tgtRows] = await Promise.all([
-        query("SELECT currency FROM accounts WHERE id = ?", [source_account_id]),
-        query("SELECT currency FROM accounts WHERE id = ?", [target_account_id]),
-      ]);
-      const srcCurrency = srcRows[0]?.currency;
-      const tgtCurrency = tgtRows[0]?.currency;
-      if (srcCurrency && tgtCurrency && srcCurrency !== tgtCurrency) {
+    if (type === "income" && target_account_id) {
+      const tgt = await query("SELECT type FROM accounts WHERE id = ?", [target_account_id]);
+      if (tgt[0]?.type === "credit") {
         return NextResponse.json(
-          { error: `exchange_rate is required for cross-currency transfers (${srcCurrency}→${tgtCurrency})` },
+          { error: "Income transactions cannot target a credit card account" },
           { status: 400 },
         );
+      }
+    }
+    if (type === "transfer" && source_account_id && target_account_id) {
+      const [srcRows, tgtRows] = await Promise.all([
+        query("SELECT type, currency FROM accounts WHERE id = ?", [source_account_id]),
+        query("SELECT currency FROM accounts WHERE id = ?", [target_account_id]),
+      ]);
+      if (srcRows[0]?.type === "credit") {
+        return NextResponse.json(
+          { error: "Credit card accounts cannot be the source of a transfer" },
+          { status: 400 },
+        );
+      }
+      if (!exchange_rate) {
+        const srcCurrency = srcRows[0]?.currency;
+        const tgtCurrency = tgtRows[0]?.currency;
+        if (srcCurrency && tgtCurrency && srcCurrency !== tgtCurrency) {
+          return NextResponse.json(
+            { error: `exchange_rate is required for cross-currency transfers (${srcCurrency}→${tgtCurrency})` },
+            { status: 400 },
+          );
+        }
       }
     }
 

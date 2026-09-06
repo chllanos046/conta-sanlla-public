@@ -85,7 +85,11 @@ const EMPTY_TX = {
   exchange_rate: "",
 };
 
-export function TransactionFormDialog({ open, onClose, editingTx, accounts, categories, defaultSourceAccountId, onSaved }) {
+export function TransactionFormDialog({
+  open, onClose, editingTx, accounts, categories, defaultSourceAccountId,
+  lockedType, lockedSourceAccountId, lockedTargetAccountId, defaultAmount,
+  onSaved,
+}) {
   const { t } = useTranslation();
   const [submitError, setSubmitError] = useState(null);
   const [arsRate, setArsRate] = useState(null);
@@ -118,6 +122,14 @@ export function TransactionFormDialog({ open, onClose, editingTx, accounts, cate
 
   const srcAcc = accounts.find((a) => String(a.id) === sourceAccountId);
   const tgtAcc = accounts.find((a) => String(a.id) === targetAccountId);
+
+  // income: credit cards cannot receive income; transfer: credit cards cannot be source
+  const sourceAccounts = txType === "transfer"
+    ? accounts.filter((a) => a.type !== "credit")
+    : accounts;
+  const targetAccounts = txType === "income"
+    ? accounts.filter((a) => a.type !== "credit")
+    : accounts;
 
   const showExchangeRate =
     txType === "transfer" &&
@@ -154,7 +166,10 @@ export function TransactionFormDialog({ open, onClose, editingTx, accounts, cate
       reset({
         ...EMPTY_TX,
         date: today(),
-        source_account_id: defaultSourceAccountId || "",
+        type: lockedType || EMPTY_TX.type,
+        source_account_id: lockedSourceAccountId ? String(lockedSourceAccountId) : (defaultSourceAccountId || ""),
+        target_account_id: lockedTargetAccountId ? String(lockedTargetAccountId) : "",
+        amount: defaultAmount != null ? String(defaultAmount) : "",
       });
     }
   };
@@ -193,7 +208,15 @@ export function TransactionFormDialog({ open, onClose, editingTx, accounts, cate
 
   return (
     <Dialog open={open} onClose={onClose} onTransitionEnter={handleOpen} fullWidth maxWidth="sm">
-      <DialogTitle>{editingTx ? t("transactions.editTransaction") : t("transactions.newTransaction")}</DialogTitle>
+      <DialogTitle>
+        {editingTx
+          ? t("transactions.editTransaction")
+          : lockedTargetAccountId
+            ? t("transactions.payCard")
+            : lockedType === "expense" && lockedSourceAccountId
+              ? t("transactions.addExpense")
+              : t("transactions.newTransaction")}
+      </DialogTitle>
       <DialogContent>
         <Box sx={{ display: "flex", flexDirection: "column", gap: 2, pt: 1 }}>
           {submitError && <Alert severity="error">{submitError}</Alert>}
@@ -207,6 +230,7 @@ export function TransactionFormDialog({ open, onClose, editingTx, accounts, cate
                 fullWidth
                 size="small"
                 value={field.value}
+                disabled={!!lockedType}
                 onChange={(_, val) => {
                   if (!val) return;
                   field.onChange(val);
@@ -290,13 +314,14 @@ export function TransactionFormDialog({ open, onClose, editingTx, accounts, cate
                   <Select
                     {...field}
                     label={t("transactions.sourceAccount")}
+                    disabled={!!lockedSourceAccountId}
                     onChange={(e) => {
                       field.onChange(e);
                       setValue("exchange_rate", "");
                     }}
                   >
                     <MenuItem value="">{t("common.none")}</MenuItem>
-                    {accounts.map((acc) => (
+                    {sourceAccounts.map((acc) => (
                       <MenuItem key={acc.id} value={String(acc.id)}>
                         {acc.name}
                       </MenuItem>
@@ -320,13 +345,14 @@ export function TransactionFormDialog({ open, onClose, editingTx, accounts, cate
                   <Select
                     {...field}
                     label={t("transactions.targetAccount")}
+                    disabled={!!lockedTargetAccountId}
                     onChange={(e) => {
                       field.onChange(e);
                       setValue("exchange_rate", "");
                     }}
                   >
                     <MenuItem value="">{t("common.none")}</MenuItem>
-                    {accounts.map((acc) => (
+                    {targetAccounts.map((acc) => (
                       <MenuItem key={acc.id} value={String(acc.id)}>
                         {acc.name}
                       </MenuItem>

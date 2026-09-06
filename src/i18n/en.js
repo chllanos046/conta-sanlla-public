@@ -68,6 +68,8 @@ const en = {
     title: "Transactions",
     newTransaction: "New Transaction",
     editTransaction: "Edit Transaction",
+    payCard: "Pay Credit Card",
+    addExpense: "Add Expense",
     type: "Type",
     amount: "Amount",
     date: "Date",

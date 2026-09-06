@@ -17,6 +17,7 @@ import CircularProgress from "@mui/material/CircularProgress";
 import Chip from "@mui/material/Chip";
 import TrendingUpIcon from "@mui/icons-material/TrendingUp";
 import TrendingDownIcon from "@mui/icons-material/TrendingDown";
+import CreditCardIcon from "@mui/icons-material/CreditCard";
 import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
 import ChevronRightIcon from "@mui/icons-material/ChevronRight";
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
@@ -26,6 +27,7 @@ import { ExpensesWidget } from "@/components/ExpensesWidget";
 import { format, subMonths, addMonths, isSameMonth } from "date-fns";
 import axios from "axios";
 import { SummaryStatCard } from "@/components/SummaryStatCard";
+import StatCard from "@/components/StatCard";
 import AccountCarousel from "@/components/AccountCarousel";
 import { QuickAddFab } from "@/components/QuickAddTransaction";
 import { TransactionFormDialog } from "@/components/TransactionFormDialog";
@@ -33,6 +35,7 @@ import { useCurrency } from "@/hooks/useCurrency";
 import { useMounted } from "@/hooks/useMounted";
 import { convertAmount } from "@/lib/currency";
 import { formatCurrency } from "@/lib/utils";
+import { getCurrencySymbol } from "@/lib/currency";
 import { useTranslation } from "@/hooks/useTranslation";
 
 const PULL_THRESHOLD = 80;
@@ -493,6 +496,38 @@ export default function Dashboard() {
           ),
         )}
       </Grid>
+
+      {/* Credit card debt summary */}
+      {(() => {
+        const creditDebts = data.accounts
+          .filter((a) => a.type === "credit" && parseFloat(a.current_balance) < 0)
+          .reduce((acc, a) => {
+            acc[a.currency] = (acc[a.currency] || 0) + Math.abs(parseFloat(a.current_balance));
+            return acc;
+          }, {});
+        const currencies = Object.keys(creditDebts);
+        if (!currencies.length) return null;
+        return (
+          <Box sx={{ mb: 3 }}>
+            <Typography variant="h6" gutterBottom>
+              Deuda en Tarjetas
+            </Typography>
+            <Grid container spacing={2}>
+              {currencies.map((cur) => (
+                <Grid key={cur} size={{ xs: 12, sm: 4 }}>
+                  <StatCard
+                    label={`Deuda (${cur})`}
+                    value={`${getCurrencySymbol(cur)}${creditDebts[cur].toFixed(2)}`}
+                    valueColor="expense.main"
+                    icon={<CreditCardIcon sx={{ fontSize: 22, color: "error.main" }} />}
+                    iconBg="error.light"
+                  />
+                </Grid>
+              ))}
+            </Grid>
+          </Box>
+        );
+      })()}
 
       {/* Recent Transactions + Expenses by Category */}
       <Grid container spacing={3} sx={{ mb: 3, alignItems: "stretch" }}>

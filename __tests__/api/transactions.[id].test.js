@@ -195,7 +195,7 @@ describe('PUT /api/transactions/[id]', () => {
       { params },
     )
 
-    const queryParams = query.mock.calls[0][1]
+    const queryParams = query.mock.calls.at(-1)[1]
     expect(queryParams[0]).toBe('income')
     expect(queryParams[1]).toBe(300)    // positive
     expect(queryParams[2]).toBeNull()   // source_account_id

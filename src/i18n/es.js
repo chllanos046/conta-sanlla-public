@@ -68,6 +68,8 @@ const es = {
     title: "Movimientos",
     newTransaction: "Nuevo movimiento",
     editTransaction: "Editar movimiento",
+    payCard: "Pagar Tarjeta",
+    addExpense: "Agregar Gasto",
     type: "Tipo",
     amount: "Monto",
     date: "Fecha",

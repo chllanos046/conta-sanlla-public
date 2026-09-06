@@ -26,9 +26,10 @@ beforeEach(() => {
 describe('GET /api/transactions', () => {
   it('returns 200 with transactions, accounts, categories, and opening_balance', async () => {
     query
-      .mockResolvedValueOnce([{ id: 1, type: 'expense', amount: -50 }]) // transactions
+      .mockResolvedValueOnce([{ id: 1, type: 'expense', amount: -50 }])        // transactions
+      .mockResolvedValueOnce([{ count: 1 }])                                    // count
       .mockResolvedValueOnce([{ id: 1, name: 'Bank', initial_balance: 1000 }]) // accounts
-      .mockResolvedValueOnce([{ id: 1, name: 'Food', type: 'expense' }]) // categories
+      .mockResolvedValueOnce([{ id: 1, name: 'Food', type: 'expense' }])        // categories
 
     const res = await GET(makeRequest())
 
@@ -51,13 +52,14 @@ describe('GET /api/transactions', () => {
   it('applies query parameter filters', async () => {
     query
       .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([{ count: 0 }])
       .mockResolvedValueOnce([])
       .mockResolvedValueOnce([])
 
     const res = await GET(makeRequest('GET', null, '?type=expense&dateFrom=2024-01-01'))
 
     expect(res.status).toBe(200)
-    expect(query).toHaveBeenCalledTimes(3)
+    expect(query).toHaveBeenCalledTimes(4)
   })
 })
 
@@ -185,7 +187,7 @@ describe('POST /api/transactions', () => {
       }),
     )
 
-    const [type, amount, source, target] = query.mock.calls[0][1]
+    const [type, amount, source, target] = query.mock.calls.at(-1)[1]
     expect(type).toBe('income')
     expect(amount).toBe(1200)    // positive
     expect(source).toBeNull()    // source_account_id

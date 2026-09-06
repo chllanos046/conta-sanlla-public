@@ -36,7 +36,7 @@ export default function AccountCarousel({ accounts, balanceColor }) {
             : <AccountTypeIcon type={acc.type} sx={{ fontSize: 22, color: "grey.600" }} />
         }
         iconBg="grey.200"
-        href={`/transactions?account=${acc.id}`}
+        href={`/accounts/${acc.id}`}
       />
     );
   };
@@ -67,7 +67,7 @@ export default function AccountCarousel({ accounts, balanceColor }) {
             return (
               <Box key={acc.id}>
                 <ListItem
-                  onClick={() => router.push(`/transactions/mobile?account=${acc.id}`)}
+                  onClick={() => router.push(`/accounts/${acc.id}`)}
                   sx={{ cursor: "pointer", px: 2, py: 1.5 }}
                 >
                   <Box
