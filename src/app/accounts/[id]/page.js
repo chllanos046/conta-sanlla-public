@@ -11,7 +11,9 @@ import Typography from "@mui/material/Typography";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import AddIcon from "@mui/icons-material/Add";
 import PaymentIcon from "@mui/icons-material/Payment";
+import UploadFileIcon from "@mui/icons-material/UploadFile";
 import { TransactionFormDialog } from "@/components/TransactionFormDialog";
+import PdfImportDialog from "@/components/PdfImportDialog";
 import { TransactionsTable } from "@/components/TransactionsTable";
 import AccountTypeIcon from "@/components/AccountTypeIcon";
 import { getCurrencySymbol } from "@/lib/currency";
@@ -43,6 +45,7 @@ export default function AccountDetailPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dialogProps, setDialogProps] = useState({});
   const [editingTx, setEditingTx] = useState(null);
+  const [pdfImportOpen, setPdfImportOpen] = useState(false);
   const [arsRate, setArsRate] = useState(1);
 
   useEffect(() => {
@@ -211,6 +214,9 @@ export default function AccountDetailPage() {
             <Button variant="contained" startIcon={<PaymentIcon />} onClick={openPayCard}>
               {t("transactions.payCard")}
             </Button>
+            <Button variant="outlined" startIcon={<UploadFileIcon />} onClick={() => setPdfImportOpen(true)}>
+              Import PDF
+            </Button>
           </>
         ) : (
           <Button variant="contained" startIcon={<AddIcon />} onClick={openNewTransaction}>
@@ -242,6 +248,14 @@ export default function AccountDetailPage() {
         categories={categories}
         onSaved={handleSaved}
         {...dialogProps}
+      />
+
+      <PdfImportDialog
+        open={pdfImportOpen}
+        onClose={() => setPdfImportOpen(false)}
+        accountId={id}
+        accountCurrency={account?.currency ?? "ARS"}
+        onImported={handleSaved}
       />
     </Box>
   );

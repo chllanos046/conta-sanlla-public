@@ -6,6 +6,7 @@ import IconButton from "@mui/material/IconButton";
 import Tooltip from "@mui/material/Tooltip";
 import AddIcon from "@mui/icons-material/Add";
 import CameraAltIcon from "@mui/icons-material/CameraAlt";
+import UploadFileIcon from "@mui/icons-material/UploadFile";
 import { useSearchParams } from "next/navigation";
 import axios from "axios";
 import { addRunningBalance } from "@/lib/balanceUtils";
@@ -13,6 +14,7 @@ import { TransactionFilters } from "@/components/TransactionFilters";
 import { TransactionsTable } from "@/components/TransactionsTable";
 import { TransactionFormDialog } from "@/components/TransactionFormDialog";
 import PhotoImportDialog from "@/components/PhotoImportDialog";
+import PdfImportDialog from "@/components/PdfImportDialog";
 import { useCurrency } from "@/hooks/useCurrency";
 import { useConfirm } from "@/components/ConfirmDialogProvider";
 import { useNotify } from "@/components/NotificationProvider";
@@ -51,6 +53,7 @@ export default function TransactionsPage() {
   const [txDialogOpen, setTxDialogOpen] = useState(false);
   const [editingTx, setEditingTx] = useState(null);
   const [photoOpen, setPhotoOpen] = useState(false);
+  const [pdfOpen, setPdfOpen] = useState(false);
   const [globalCurrency] = useCurrency();
   const [arsRate, setArsRate] = useState(1);
 
@@ -165,6 +168,22 @@ export default function TransactionsPage() {
               <CameraAltIcon />
             </IconButton>
           </Tooltip>
+          {filteredAccount?.type === "credit" && (
+            <Tooltip title="Import PDF Statement">
+              <IconButton
+                color="primary"
+                onClick={() => setPdfOpen(true)}
+                sx={{
+                  bgcolor: "primary.main",
+                  color: "primary.contrastText",
+                  "&:hover": { bgcolor: "primary.dark" },
+                  display: { xs: "none", sm: "flex" },
+                }}
+              >
+                <UploadFileIcon />
+              </IconButton>
+            </Tooltip>
+          )}
           <Tooltip title={t("transactions.newTransaction")}>
             <IconButton
               color="primary"
@@ -224,6 +243,14 @@ export default function TransactionsPage() {
         onClose={() => setPhotoOpen(false)}
         accountId={appliedFilters.account || null}
         accountCurrency={filteredAccount?.currency ?? "USD"}
+        onImported={refresh}
+      />
+
+      <PdfImportDialog
+        open={pdfOpen}
+        onClose={() => setPdfOpen(false)}
+        accountId={appliedFilters.account || null}
+        accountCurrency={filteredAccount?.currency ?? "ARS"}
         onImported={refresh}
       />
 
