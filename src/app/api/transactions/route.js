@@ -62,26 +62,15 @@ export async function GET(request) {
       params.push(dateTo);
     }
 
-    const transactions = await query(
-      sql + " ORDER BY t.date DESC LIMIT ? OFFSET ?",
-      [...params, limit, offset],
-    );
+    const countSql = sql.replace(/^\s*SELECT[\s\S]*?FROM transactions t/, "SELECT COUNT(*) as count FROM transactions t");
 
-    const countRows = await query(
-      sql.replace(/^\s*SELECT[\s\S]*?FROM transactions t/, "SELECT COUNT(*) as count FROM transactions t"),
-      params,
-    );
+    const [transactions, countRows, accounts, categories] = await Promise.all([
+      query(sql + " ORDER BY t.date DESC LIMIT ? OFFSET ?", [...params, limit, offset]),
+      query(countSql, params),
+      query("SELECT id, name, currency, type, initial_balance FROM accounts ORDER BY name", []),
+      query("SELECT id, name, type FROM categories", []),
+    ]);
     const total = parseInt(countRows[0]?.count, 10) || 0;
-
-    // Get accounts (with currency for exchange rate field visibility in form)
-    const accounts = await query(
-      "SELECT id, name, currency, type, initial_balance FROM accounts ORDER BY name",
-      [],
-    );
-    const categories = await query(
-      "SELECT id, name, type FROM categories",
-      [],
-    );
 
     // opening_balance and closing_balance: only when a single account is filtered.
     // opening = initial_balance + all transactions strictly before dateFrom (or earliest tx date).
@@ -94,37 +83,29 @@ export async function GET(request) {
         const initial = parseFloat(acc.initial_balance) || 0;
         const openCutoff = dateFrom || (transactions.length > 0 ? String(transactions[transactions.length - 1].date).slice(0, 10) : null);
 
-        if (openCutoff) {
-          const priorRows = await query(
-            `SELECT t.type, t.amount, t.source_account_id, t.target_account_id,
-                    t.exchange_rate, a1.currency as source_currency, a2.currency as target_currency
-             FROM transactions t
-             LEFT JOIN accounts a1 ON a1.id = t.source_account_id
-             LEFT JOIN accounts a2 ON a2.id = t.target_account_id
-             WHERE (t.source_account_id = ? OR t.target_account_id = ?) AND t.date < ?`,
-            [account, account, openCutoff],
-          );
-          opening_balance = priorRows.reduce((bal, tx) => bal + txContribution(tx, account), initial);
-        } else {
-          opening_balance = initial;
-        }
-
-        // Closing balance: sum all transactions up to dateTo
         const closeParams = [account, account];
         let closeWhere = "";
         if (dateTo) {
           closeWhere = " AND t.date <= ?";
           closeParams.push(dateTo);
         }
-        const closingRows = await query(
-          `SELECT t.type, t.amount, t.source_account_id, t.target_account_id,
-                  t.exchange_rate, a1.currency as source_currency, a2.currency as target_currency
-           FROM transactions t
-           LEFT JOIN accounts a1 ON a1.id = t.source_account_id
-           LEFT JOIN accounts a2 ON a2.id = t.target_account_id
-           WHERE (t.source_account_id = ? OR t.target_account_id = ?)${closeWhere}`,
-          closeParams,
-        );
+
+        const balanceSel = `SELECT t.type, t.amount, t.source_account_id, t.target_account_id,
+                    t.exchange_rate, a1.currency as source_currency, a2.currency as target_currency
+             FROM transactions t
+             LEFT JOIN accounts a1 ON a1.id = t.source_account_id
+             LEFT JOIN accounts a2 ON a2.id = t.target_account_id`;
+
+        const [priorRows, closingRows] = await Promise.all([
+          openCutoff
+            ? query(`${balanceSel} WHERE (t.source_account_id = ? OR t.target_account_id = ?) AND t.date < ?`, [account, account, openCutoff])
+            : Promise.resolve(null),
+          query(`${balanceSel} WHERE (t.source_account_id = ? OR t.target_account_id = ?)${closeWhere}`, closeParams),
+        ]);
+
+        opening_balance = priorRows
+          ? priorRows.reduce((bal, tx) => bal + txContribution(tx, account), initial)
+          : initial;
         closing_balance = closingRows.reduce((bal, tx) => bal + txContribution(tx, account), initial);
       }
     }
