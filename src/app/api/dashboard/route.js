@@ -16,27 +16,10 @@ export async function GET(request) {
     const monthParam = searchParams.get("month");
     const dateFrom   = searchParams.get("dateFrom");
     const dateTo     = searchParams.get("dateTo");
+    const limit      = parseInt(searchParams.get("limit"), 10) || 10;
+    const offset     = parseInt(searchParams.get("offset"), 10) || 0;
 
-    // Accounts with computed current_balance (all-time), via the shared txContribution model
-    const accountRows = await query(
-      `SELECT id, name, currency, type, initial_balance, image_path, created_at
-       FROM accounts ORDER BY name`,
-      [],
-    );
-    const txForBalance = await query(
-      `SELECT t.type, t.amount, t.date, t.source_account_id, t.target_account_id, t.exchange_rate,
-              a1.currency as source_currency, a2.currency as target_currency
-       FROM transactions t
-       LEFT JOIN accounts a1 ON t.source_account_id = a1.id
-       LEFT JOIN accounts a2 ON t.target_account_id = a2.id`,
-      [],
-    );
-    const accounts = accountRows.map((acc) => ({
-      ...acc,
-      current_balance: calculateAccountBalance(acc.initial_balance, txForBalance, acc.id),
-    }));
-
-    // Build date filter for period transactions
+    // Build date filter using range comparisons so idx_transactions_date is used
     const now = new Date();
     let dateFilter = "";
     const txParams = [];
@@ -46,40 +29,70 @@ export async function GET(request) {
       dateFilter = "AND t.date >= ? AND t.date < ?::date + 1";
       txParams.push(d, d);
     } else if (period === "month") {
-      const y = yearParam  || now.getFullYear();
-      const m = monthParam || now.getMonth() + 1;
-      dateFilter = "AND EXTRACT(YEAR FROM t.date) = ? AND EXTRACT(MONTH FROM t.date) = ?";
-      txParams.push(y, m);
+      const y = parseInt(yearParam) || now.getFullYear();
+      const m = parseInt(monthParam) || (now.getMonth() + 1);
+      const start = new Date(y, m - 1, 1).toISOString().split("T")[0];
+      const end   = new Date(y, m,     1).toISOString().split("T")[0];
+      dateFilter = "AND t.date >= ? AND t.date < ?";
+      txParams.push(start, end);
     } else if (period === "year") {
-      const y = yearParam || now.getFullYear();
-      dateFilter = "AND EXTRACT(YEAR FROM t.date) = ?";
-      txParams.push(y);
+      const y = parseInt(yearParam) || now.getFullYear();
+      dateFilter = "AND t.date >= ? AND t.date < ?";
+      txParams.push(`${y}-01-01`, `${y + 1}-01-01`);
     } else if (period === "custom") {
-      if (dateFrom) { dateFilter += " AND t.date >= ?";                           txParams.push(dateFrom); }
-      if (dateTo)   { dateFilter += " AND t.date < ?::date + 1"; txParams.push(dateTo); }
+      if (dateFrom) { dateFilter += " AND t.date >= ?";              txParams.push(dateFrom); }
+      if (dateTo)   { dateFilter += " AND t.date < ?::date + 1";    txParams.push(dateTo);   }
     }
 
-    const transactions = await query(
-      `SELECT t.*,
-             a1.name as source_name,
-             a2.name as target_name,
-             c.name as category_name
+    const prevMonthEnd   = new Date(now.getFullYear(), now.getMonth(), 1);
+    const prevMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const prevMonthStartStr = prevMonthStart.toISOString().split("T")[0];
+    const prevMonthEndStr   = prevMonthEnd.toISOString().split("T")[0];
+
+    const fullTxSel = `
+      SELECT t.*, a1.name as source_name, a2.name as target_name, c.name as category_name
       FROM transactions t
       LEFT JOIN accounts a1 ON t.source_account_id = a1.id
       LEFT JOIN accounts a2 ON t.target_account_id = a2.id
-      LEFT JOIN categories c ON t.category_id = c.id
-      WHERE 1=1 ${dateFilter}
-      ORDER BY t.date DESC
-      LIMIT 1000`,
-      txParams,
-    );
+      LEFT JOIN categories c ON t.category_id = c.id`;
 
-    const categories = await query(
-      "SELECT * FROM categories ORDER BY type, name",
-      [],
-    );
+    const [
+      accountRows,
+      txForBalance,
+      transactions,
+      countRows,
+      chartTransactions,
+      categories,
+      prevMonthRows,
+    ] = await Promise.all([
+      query(`SELECT id, name, currency, type, initial_balance, image_path, created_at FROM accounts ORDER BY name`, []),
+      query(`SELECT t.type, t.amount, t.date, t.source_account_id, t.target_account_id, t.exchange_rate,
+                    a1.currency as source_currency, a2.currency as target_currency
+             FROM transactions t
+             LEFT JOIN accounts a1 ON t.source_account_id = a1.id
+             LEFT JOIN accounts a2 ON t.target_account_id = a2.id`, []),
+      query(`${fullTxSel} WHERE 1=1 ${dateFilter} ORDER BY t.date DESC LIMIT ? OFFSET ?`, [...txParams, limit, offset]),
+      query(`SELECT COUNT(*) AS total FROM transactions t WHERE 1=1 ${dateFilter}`, txParams),
+      query(`SELECT t.date, t.type, t.amount, t.exchange_rate,
+                    t.source_account_id, t.target_account_id, t.category_id,
+                    c.name as category_name
+             FROM transactions t
+             LEFT JOIN categories c ON t.category_id = c.id
+             WHERE 1=1 ${dateFilter} AND t.type IN ('income', 'expense')
+             ORDER BY t.date`, txParams),
+      query(`SELECT * FROM categories ORDER BY type, name`, []),
+      query(`SELECT COALESCE(SUM(CASE WHEN type = 'income'  THEN amount      ELSE 0 END), 0) AS income,
+                    COALESCE(SUM(CASE WHEN type = 'expense' THEN ABS(amount) ELSE 0 END), 0) AS expense
+             FROM transactions WHERE date >= ? AND date < ?`, [prevMonthStartStr, prevMonthEndStr]),
+    ]);
 
-    // For custom range, compute per-account balance as of dateFrom (opening balance of the range)
+    const total = parseInt(countRows[0]?.total, 10) || 0;
+
+    const accounts = accountRows.map((acc) => ({
+      ...acc,
+      current_balance: calculateAccountBalance(acc.initial_balance, txForBalance, acc.id),
+    }));
+
     let accountsWithPeriodBalance = accounts;
     if (period === "custom" && dateFrom) {
       accountsWithPeriodBalance = accounts.map((acc) => ({
@@ -93,28 +106,16 @@ export async function GET(request) {
       0,
     );
 
-    // Previous calendar month totals for % change badges
-    const prevMonthEnd = new Date(now.getFullYear(), now.getMonth(), 1); // first of current month = exclusive end
-    const prevMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-    const prevMonthStartStr = prevMonthStart.toISOString().split("T")[0];
-    const prevMonthEndStr   = prevMonthEnd.toISOString().split("T")[0];
-
-    const [prevMonthRow] = await query(
-      `SELECT
-        COALESCE(SUM(CASE WHEN type = 'income'  THEN amount       ELSE 0 END), 0) AS income,
-        COALESCE(SUM(CASE WHEN type = 'expense' THEN ABS(amount)  ELSE 0 END), 0) AS expense
-       FROM transactions
-       WHERE date >= ? AND date < ?`,
-      [prevMonthStartStr, prevMonthEndStr],
-    );
+    const prevMonthRow = prevMonthRows[0];
 
     return NextResponse.json({
       accounts: accountsWithPeriodBalance,
       transactions,
+      chartTransactions,
       categories,
       summary: {
         totalBalance,
-        transactionCount: transactions.length,
+        total,
       },
       prevMonthSummary: {
         income:  parseFloat(prevMonthRow.income),

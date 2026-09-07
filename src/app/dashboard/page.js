@@ -45,10 +45,14 @@ export default function Dashboard() {
   const [data, setData] = useState({
     accounts: [],
     transactions: [],
+    chartTransactions: [],
     categories: [],
+    summary: { total: 0 },
   });
   const [period, setPeriod] = useState("month");
   const [periodDate, setPeriodDate] = useState(null);
+  const [txPage, setTxPage] = useState(0);
+  const TX_LIMIT = 10;
   const [rates, setRates] = useState({});
   const [arsUp, setArsUp] = useState(null);
   const prevArsRef = useRef(null);
@@ -80,7 +84,7 @@ export default function Dashboard() {
 
   const buildApiUrl = useCallback(() => {
     if (!periodDate) return null;
-    const p = new URLSearchParams({ period });
+    const p = new URLSearchParams({ period, limit: TX_LIMIT, offset: txPage * TX_LIMIT });
     if (period === "month") {
       p.set("year", periodDate.getFullYear());
       p.set("month", periodDate.getMonth() + 1);
@@ -88,7 +92,10 @@ export default function Dashboard() {
       p.set("year", periodDate.getFullYear());
     }
     return `/api/dashboard?${p}`;
-  }, [period, periodDate]);
+  }, [period, periodDate, txPage]);
+
+  // Reset page when period/date changes
+  useEffect(() => { setTxPage(0); }, [period, periodDate]);
 
   // Bumps reloadToken so the effect below refetches even when period/periodDate are unchanged.
   const loadData = useCallback(() => setReloadToken((t) => t + 1), []);
@@ -162,11 +169,11 @@ export default function Dashboard() {
     return convertAmount(Math.abs(parseFloat(tx.amount || 0)), txCurrency, displayCurrency, txRate);
   };
 
-  const income = data.transactions
+  const income = data.chartTransactions
     .filter((tx) => tx.type === "income")
     .reduce((sum, tx) => sum + toDisplay(tx), 0);
 
-  const expenses = data.transactions
+  const expenses = data.chartTransactions
     .filter((tx) => tx.type === "expense")
     .reduce((sum, tx) => sum + toDisplay(tx), 0);
 
@@ -219,7 +226,7 @@ export default function Dashboard() {
       }
     }
 
-    for (const t of data.transactions) {
+    for (const t of data.chartTransactions) {
       if (t.type !== "income" && t.type !== "expense") continue;
       if (!t.date) continue;
       const key = getKey(t.date);
@@ -245,9 +252,7 @@ export default function Dashboard() {
       });
   })();
 
-  const recentTransactions = [...data.transactions]
-    .sort((a, b) => b.date.localeCompare(a.date))
-    .slice(0, 10);
+  const recentTransactions = data.transactions; // already sorted DESC, paginated
 
   const pctChange = (current, previous) => {
     if (previous === 0) return current > 0 ? 100 : 0;
@@ -598,12 +603,25 @@ export default function Dashboard() {
                   </TableBody>
                 </Table>
               )}
+              {(data.summary?.total ?? 0) > TX_LIMIT && (
+                <Box sx={{ display: "flex", alignItems: "center", justifyContent: "flex-end", pt: 1, gap: 1 }}>
+                  <Typography variant="caption" color="text.secondary">
+                    {txPage * TX_LIMIT + 1}–{Math.min((txPage + 1) * TX_LIMIT, data.summary.total)} / {data.summary.total}
+                  </Typography>
+                  <IconButton size="small" onClick={() => setTxPage((p) => p - 1)} disabled={txPage === 0}>
+                    <ChevronLeftIcon fontSize="small" />
+                  </IconButton>
+                  <IconButton size="small" onClick={() => setTxPage((p) => p + 1)} disabled={(txPage + 1) * TX_LIMIT >= data.summary.total}>
+                    <ChevronRightIcon fontSize="small" />
+                  </IconButton>
+                </Box>
+              )}
             </CardContent>
           </Card>
         </Grid>
         <Grid size={{ xs: 12, md: 4 }}>
           <ExpensesByCategoryChart
-            transactions={data.transactions}
+            transactions={data.chartTransactions}
             accountMap={accountMap}
             displayCurrency={displayCurrency}
             arsRate={arsRate}

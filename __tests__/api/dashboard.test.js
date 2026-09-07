@@ -13,13 +13,25 @@ import { auth } from '@/auth'
 const makeRequest = (search = '') =>
   new NextRequest(`http://localhost/api/dashboard${search}`)
 
+// Query order (Promise.all): accountRows, txForBalance, transactions, countRows, chartTransactions, categories, prevMonthRows
+const mockQueryDefault = ({ accounts = [], txForBalance = [], transactions = [], total = 0, chartTransactions = [], categories = [], prevMonth = { income: 0, expense: 0 } } = {}) => {
+  query
+    .mockResolvedValueOnce(accounts)
+    .mockResolvedValueOnce(txForBalance)
+    .mockResolvedValueOnce(transactions)
+    .mockResolvedValueOnce([{ total }])
+    .mockResolvedValueOnce(chartTransactions)
+    .mockResolvedValueOnce(categories)
+    .mockResolvedValueOnce([prevMonth])
+}
+
 beforeEach(() => {
   vi.clearAllMocks()
   auth.mockResolvedValue({ user: { id: 1 } })
 })
 
 describe('GET /api/dashboard', () => {
-  it('returns 200 with accounts (including current_balance), transactions, categories, and summary', async () => {
+  it('returns 200 with accounts, transactions, chartTransactions, categories, summary, prevMonthSummary', async () => {
     const mockAccounts = [
       { id: 1, name: 'Bank', currency: 'USD', type: 'bank', initial_balance: 1000 },
     ]
@@ -27,12 +39,14 @@ describe('GET /api/dashboard', () => {
     const mockTransactions = [{ id: 1, type: 'income', amount: 500 }]
     const mockCategories = [{ id: 1, name: 'Salary', type: 'income' }]
 
-    query
-      .mockResolvedValueOnce(mockAccounts)                         // accounts
-      .mockResolvedValueOnce(mockTxForBalance)                     // transactions for current_balance calc
-      .mockResolvedValueOnce(mockTransactions)                     // period transactions
-      .mockResolvedValueOnce(mockCategories)                       // categories
-      .mockResolvedValueOnce([{ income: 400, expense: 100 }])     // prevMonthSummary
+    mockQueryDefault({
+      accounts: mockAccounts,
+      txForBalance: mockTxForBalance,
+      transactions: mockTransactions,
+      total: 1,
+      categories: mockCategories,
+      prevMonth: { income: 400, expense: 100 },
+    })
 
     const res = await GET(makeRequest())
 
@@ -40,14 +54,14 @@ describe('GET /api/dashboard', () => {
     const body = await res.json()
     expect(body).toHaveProperty('accounts')
     expect(body).toHaveProperty('transactions')
+    expect(body).toHaveProperty('chartTransactions')
     expect(body).toHaveProperty('categories')
     expect(body).toHaveProperty('summary')
     expect(body).toHaveProperty('prevMonthSummary')
     expect(body.summary).toHaveProperty('totalBalance')
-    expect(body.summary).toHaveProperty('transactionCount')
-    // totalBalance sums current_balance from accounts
+    expect(body.summary).toHaveProperty('total')
     expect(body.summary.totalBalance).toBe(1500)
-    expect(body.summary.transactionCount).toBe(1)
+    expect(body.summary.total).toBe(1)
     expect(body.accounts[0]).toMatchObject({ initial_balance: 1000, current_balance: 1500 })
     expect(body.prevMonthSummary).toMatchObject({ income: 400, expense: 100 })
   })
@@ -60,26 +74,16 @@ describe('GET /api/dashboard', () => {
   })
 
   it('accepts period query parameter', async () => {
-    query
-      .mockResolvedValueOnce([])
-      .mockResolvedValueOnce([])
-      .mockResolvedValueOnce([])
-      .mockResolvedValueOnce([])
-      .mockResolvedValueOnce([{ income: 0, expense: 0 }])
+    mockQueryDefault()
 
     const res = await GET(makeRequest('?period=year'))
 
     expect(res.status).toBe(200)
-    expect(query).toHaveBeenCalledTimes(5)
+    expect(query).toHaveBeenCalledTimes(7)
   })
 
   it('returns totalBalance = 0 when no accounts', async () => {
-    query
-      .mockResolvedValueOnce([])
-      .mockResolvedValueOnce([])
-      .mockResolvedValueOnce([])
-      .mockResolvedValueOnce([])
-      .mockResolvedValueOnce([{ income: 0, expense: 0 }])
+    mockQueryDefault()
 
     const res = await GET(makeRequest())
     const body = await res.json()
