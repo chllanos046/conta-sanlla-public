@@ -143,7 +143,7 @@ const en = {
     linkTransaction: "Link Transaction (optional)",
     noExpenses: "No expenses for this month",
     noTemplates: "No expense templates yet",
-    thisWeek: "Due This Week",
+    thisWeek: "This Month",
     overdue: "Overdue",
     noWidgetData: "No upcoming or overdue expenses",
     editInstance: "Edit Expense",

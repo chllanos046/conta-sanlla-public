@@ -75,7 +75,7 @@ export async function GET(request) {
 
     // Get accounts (with currency for exchange rate field visibility in form)
     const accounts = await query(
-      "SELECT id, name, currency, initial_balance FROM accounts ORDER BY name",
+      "SELECT id, name, currency, type, initial_balance FROM accounts ORDER BY name",
       [],
     );
     const categories = await query(

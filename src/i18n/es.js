@@ -143,7 +143,7 @@ const es = {
     linkTransaction: "Vincular movimiento (opcional)",
     noExpenses: "Sin gastos para este mes",
     noTemplates: "Sin plantillas de gastos",
-    thisWeek: "Vence esta semana",
+    thisWeek: "Este mes",
     overdue: "Vencidos",
     noWidgetData: "Sin gastos próximos ni vencidos",
     editInstance: "Editar gasto",

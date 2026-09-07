@@ -64,7 +64,8 @@ export default function AccountDetailPage() {
     axios
       .get(`/api/transactions?account=${id}&limit=${pageSize}&offset=${page * pageSize}`)
       .then(({ data }) => {
-        setRows(addRunningBalance(data.transactions, data.opening_balance, id));
+        const ascending = [...data.transactions].sort((a, b) => String(a.date).localeCompare(String(b.date)));
+        setRows(addRunningBalance(ascending, data.opening_balance, id).reverse());
         setOpeningBalance(data.opening_balance);
         setAccounts(data.accounts);
         setCategories(data.categories);
