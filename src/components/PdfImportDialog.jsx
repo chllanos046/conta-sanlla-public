@@ -39,6 +39,7 @@ export default function PdfImportDialog({ open, onClose, accountId, accountCurre
 
   const [step, setStep] = useState(0);
   const [file, setFile] = useState(null);
+  const [vencimiento, setVencimiento] = useState("");
   const [error, setError] = useState(null);
   const [rows, setRows] = useState([]);
   const [categories, setCategories] = useState([]);
@@ -53,6 +54,7 @@ export default function PdfImportDialog({ open, onClose, accountId, accountCurre
     if (!open) return;
     setStep(0);
     setFile(null);
+    setVencimiento("");
     setRows([]);
     setError(null);
     setImportCount(null);
@@ -73,7 +75,7 @@ export default function PdfImportDialog({ open, onClose, accountId, accountCurre
   };
 
   const handleExtract = async () => {
-    if (!file) return;
+    if (!file || !vencimiento) return;
     setStep(1);
     setError(null);
 
@@ -125,12 +127,13 @@ export default function PdfImportDialog({ open, onClose, accountId, accountCurre
     }
 
     const mapped = allExtracted.map((t) => {
+      const dateWithVencimiento = { ...t, date: vencimiento };
       const isDuplicate = existing.some(
         (ex) =>
-          String(ex.date).slice(0, 10) === t.date &&
+          String(ex.date).slice(0, 10) === vencimiento &&
           Math.abs(Math.abs(parseFloat(ex.amount)) - Math.abs(t.amount)) < 0.01
       );
-      return { ...t, checked: !isDuplicate, isDuplicate, type: "expense", category_id: "", target_account_id: "" };
+      return { ...dateWithVencimiento, checked: !isDuplicate, isDuplicate, type: "expense", category_id: "", target_account_id: "" };
     });
 
     setRows(mapped);
@@ -235,6 +238,17 @@ export default function PdfImportDialog({ open, onClose, accountId, accountCurre
                 Upload your credit card statement PDF. All charges (titular and adicionales) will be extracted.
               </Typography>
             )}
+            <TextField
+              label="Fecha de vencimiento del resumen"
+              type="date"
+              size="small"
+              value={vencimiento}
+              onChange={(e) => setVencimiento(e.target.value)}
+              InputLabelProps={{ shrink: true }}
+              helperText="Todas las transacciones se registrarán con esta fecha"
+              required
+              sx={{ maxWidth: 280 }}
+            />
           </Box>
         )}
 
@@ -389,7 +403,7 @@ export default function PdfImportDialog({ open, onClose, accountId, accountCurre
           {step === 3 ? "Close" : "Cancel"}
         </Button>
         {step === 0 && (
-          <Button variant="contained" onClick={handleExtract} disabled={!file}>
+          <Button variant="contained" onClick={handleExtract} disabled={!file || !vencimiento}>
             Extract
           </Button>
         )}
