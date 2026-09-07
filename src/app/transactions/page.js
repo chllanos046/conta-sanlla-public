@@ -7,6 +7,9 @@ import Tooltip from "@mui/material/Tooltip";
 import AddIcon from "@mui/icons-material/Add";
 import CameraAltIcon from "@mui/icons-material/CameraAlt";
 import UploadFileIcon from "@mui/icons-material/UploadFile";
+import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
+import ChevronRightIcon from "@mui/icons-material/ChevronRight";
+import { format } from "date-fns";
 import { useSearchParams } from "next/navigation";
 import axios from "axios";
 import { addRunningBalance } from "@/lib/balanceUtils";
@@ -31,8 +34,24 @@ export default function TransactionsPage() {
   const [accounts, setAccounts] = useState([]);
   const [categories, setCategories] = useState([]);
   const [openingBalance, setOpeningBalance] = useState(null);
+  const [closingBalance, setClosingBalance] = useState(null);
   const [total, setTotal] = useState(0);
   const [paginationModel, setPaginationModel] = useState({ page: 0, pageSize: 25 });
+  const [monthOffset, setMonthOffset] = useState(0);
+
+  const { dateFrom, dateTo, monthLabel } = useMemo(() => {
+    const d = new Date();
+    d.setDate(1);
+    d.setMonth(d.getMonth() + monthOffset);
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    const lastDay = new Date(y, d.getMonth() + 1, 0).getDate();
+    return {
+      dateFrom: `${y}-${m}-01`,
+      dateTo: `${y}-${m}-${String(lastDay).padStart(2, "0")}`,
+      monthLabel: format(d, "MMMM yyyy"),
+    };
+  }, [monthOffset]);
 
   const [filters, setFilters] = useState(() => ({
     type: "",
@@ -79,11 +98,11 @@ export default function TransactionsPage() {
   // so no setState is called synchronously in the effect body.
   const { type: af_type, account: af_account, sourceAccount: af_source, targetAccount: af_target, category: af_category } = appliedFilters;
   const { page, pageSize } = paginationModel;
-  const requestKey = `${af_type}|${af_account}|${af_source}|${af_target}|${af_category}|${refreshKey}|${page}|${pageSize}`;
+  const requestKey = `${af_type}|${af_account}|${af_source}|${af_target}|${af_category}|${refreshKey}|${page}|${pageSize}|${dateFrom}`;
   const loading = resolvedKey !== requestKey;
 
   useEffect(() => {
-    const params = { limit: pageSize, offset: page * pageSize };
+    const params = { limit: pageSize, offset: page * pageSize, dateFrom, dateTo };
     if (af_type) params.type = af_type;
     if (af_account) params.account = af_account;
     if (af_source) params.sourceAccount = af_source;
@@ -97,12 +116,13 @@ export default function TransactionsPage() {
       setAccounts(data.accounts || []);
       setCategories(data.categories || []);
       setOpeningBalance(data.opening_balance ?? null);
+      setClosingBalance(data.closing_balance ?? null);
       setTotal(data.total ?? 0);
     }).finally(() => {
       if (!cancelled) setResolvedKey(requestKey);
     });
     return () => { cancelled = true; };
-  }, [af_type, af_account, af_source, af_target, af_category, refreshKey, page, pageSize, requestKey]);
+  }, [af_type, af_account, af_source, af_target, af_category, refreshKey, page, pageSize, dateFrom, dateTo, requestKey]);
 
   const refresh = () => setRefreshKey((k) => k + 1);
 
@@ -140,6 +160,11 @@ export default function TransactionsPage() {
     return withBalance.reverse();
   }, [rows, openingBalance, appliedFilters.account]);
 
+  const changeMonth = (delta) => {
+    setMonthOffset((o) => o + delta);
+    setPaginationModel((m) => ({ ...m, page: 0 }));
+  };
+
   return (
     <>
       <Box
@@ -150,9 +175,20 @@ export default function TransactionsPage() {
           mb: 2,
         }}
       >
-        <Typography variant="h4">
-          {t("transactions.title")}{accountName ? ` — ${accountName}` : ""}
-        </Typography>
+        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+          <Typography variant="h4">
+            {t("transactions.title")}{accountName ? ` — ${accountName}` : ""}
+          </Typography>
+          <IconButton size="small" onClick={() => changeMonth(-1)}>
+            <ChevronLeftIcon />
+          </IconButton>
+          <Typography variant="body1" sx={{ minWidth: 130, textAlign: "center" }} suppressHydrationWarning>
+            {monthLabel}
+          </Typography>
+          <IconButton size="small" onClick={() => changeMonth(1)}>
+            <ChevronRightIcon />
+          </IconButton>
+        </Box>
         <Box sx={{ display: "flex", gap: 1 }}>
           <Tooltip title={t("common.importFromPhoto")}>
             <IconButton
@@ -227,7 +263,8 @@ export default function TransactionsPage() {
       <TransactionsTable
         rows={transactionsWithBalance}
         accounts={accounts}
-        openingBalance={openingBalance}
+        openingBalance={filteredAccount ? openingBalance : null}
+        closingBalance={filteredAccount ? closingBalance : null}
         onEditRow={openEditTx}
         onDeleteRow={handleDelete}
         displayCurrency={displayCurrency}

@@ -83,35 +83,53 @@ export async function GET(request) {
       [],
     );
 
-    // Compute opening_balance: balance of the filtered account as of the day before
-    // the earliest transaction in the current result set.
-    // When a single account filter is active, computes the true opening balance.
-    // Otherwise defaults to 0.
-    let opening_balance = 0;
-    if (account && transactions.length > 0) {
+    // opening_balance and closing_balance: only when a single account is filtered.
+    // opening = initial_balance + all transactions strictly before dateFrom (or earliest tx date).
+    // closing = initial_balance + all transactions up to and including dateTo.
+    let opening_balance = null;
+    let closing_balance = null;
+    if (account) {
       const acc = accounts.find((a) => String(a.id) === String(account));
       if (acc) {
-        // Query is ORDER BY t.date DESC, so the last element is the earliest date
-        const earliest = transactions[transactions.length - 1].date;
-        // Sum all transactions for this account strictly before the earliest date
-        const priorRows = await query(
+        const initial = parseFloat(acc.initial_balance) || 0;
+        const openCutoff = dateFrom || (transactions.length > 0 ? String(transactions[transactions.length - 1].date).slice(0, 10) : null);
+
+        if (openCutoff) {
+          const priorRows = await query(
+            `SELECT t.type, t.amount, t.source_account_id, t.target_account_id,
+                    t.exchange_rate, a1.currency as source_currency, a2.currency as target_currency
+             FROM transactions t
+             LEFT JOIN accounts a1 ON a1.id = t.source_account_id
+             LEFT JOIN accounts a2 ON a2.id = t.target_account_id
+             WHERE (t.source_account_id = ? OR t.target_account_id = ?) AND t.date < ?`,
+            [account, account, openCutoff],
+          );
+          opening_balance = priorRows.reduce((bal, tx) => bal + txContribution(tx, account), initial);
+        } else {
+          opening_balance = initial;
+        }
+
+        // Closing balance: sum all transactions up to dateTo
+        const closeParams = [account, account];
+        let closeWhere = "";
+        if (dateTo) {
+          closeWhere = " AND t.date <= ?";
+          closeParams.push(dateTo);
+        }
+        const closingRows = await query(
           `SELECT t.type, t.amount, t.source_account_id, t.target_account_id,
                   t.exchange_rate, a1.currency as source_currency, a2.currency as target_currency
            FROM transactions t
            LEFT JOIN accounts a1 ON a1.id = t.source_account_id
            LEFT JOIN accounts a2 ON a2.id = t.target_account_id
-           WHERE (t.source_account_id = ? OR t.target_account_id = ?) AND t.date < ?`,
-          [account, account, earliest],
+           WHERE (t.source_account_id = ? OR t.target_account_id = ?)${closeWhere}`,
+          closeParams,
         );
-        const prior = priorRows.reduce(
-          (bal, tx) => bal + txContribution(tx, account),
-          parseFloat(acc.initial_balance) || 0,
-        );
-        opening_balance = prior;
+        closing_balance = closingRows.reduce((bal, tx) => bal + txContribution(tx, account), initial);
       }
     }
 
-    return NextResponse.json({ transactions, accounts, categories, opening_balance, total });
+    return NextResponse.json({ transactions, accounts, categories, opening_balance, closing_balance, total });
   } catch (error) {
     return NextResponse.json(
       { error: "Failed to fetch transactions" },

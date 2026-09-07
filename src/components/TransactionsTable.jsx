@@ -13,6 +13,7 @@ export function TransactionsTable({
   rows,
   accounts,
   openingBalance,
+  closingBalance,
   onEditRow,
   onDeleteRow,
   displayCurrency = "USD",
@@ -114,7 +115,7 @@ export function TransactionsTable({
     },
   ];
 
-  const closingBalance = rows[0]?.balance ?? openingBalance;
+  const effectiveClosingBalance = closingBalance ?? rows[0]?.balance ?? openingBalance;
 
   return (
     <Box sx={{ width: "100%", overflow: "hidden" }}>
@@ -153,7 +154,7 @@ export function TransactionsTable({
               fontWeight={600}
               sx={{ color: closingBalance >= 0 ? "income.main" : "expense.main" }}
             >
-              {formatCurrency(closingBalance, displayCurrency)}
+              {formatCurrency(effectiveClosingBalance, displayCurrency)}
             </Typography>
           </Box>
         </Box>
