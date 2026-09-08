@@ -6,7 +6,10 @@ const isServerless = process.env.VERCEL === "1";
 
 if (!globalForDb._sql) {
   globalForDb._sql = postgres(process.env.SUPABASE_DB_URL, {
-    max: isServerless ? 1 : 10,
+    // max:1 forced every Promise.all query batch to queue serially on one
+    // connection; PgBouncer transaction mode is built for many pooled
+    // connections per function, so give routes room for real parallelism.
+    max: isServerless ? 5 : 10,
     idle_timeout: 20,
     connect_timeout: 10,
     prepare: false, // required for PgBouncer transaction mode

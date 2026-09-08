@@ -3,6 +3,9 @@ import { auth } from "@/auth";
 import { query } from "@/lib/db";
 import { calculateAccountBalance } from "@/lib/balanceUtils";
 
+// Route runs 7 queries in parallel; give it headroom past Vercel's default timeout.
+export const maxDuration = 30;
+
 export async function GET(request) {
   try {
     const session = await auth();
