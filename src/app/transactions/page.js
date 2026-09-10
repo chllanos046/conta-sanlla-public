@@ -7,10 +7,6 @@ import Tooltip from "@mui/material/Tooltip";
 import AddIcon from "@mui/icons-material/Add";
 import CameraAltIcon from "@mui/icons-material/CameraAlt";
 import UploadFileIcon from "@mui/icons-material/UploadFile";
-import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
-import ChevronRightIcon from "@mui/icons-material/ChevronRight";
-import { format } from "date-fns";
-import { useSearchParams } from "next/navigation";
 import axios from "axios";
 import { addRunningBalance } from "@/lib/balanceUtils";
 import { TransactionFilters } from "@/components/TransactionFilters";
@@ -22,9 +18,9 @@ import { useCurrency } from "@/hooks/useCurrency";
 import { useConfirm } from "@/components/ConfirmDialogProvider";
 import { useNotify } from "@/components/NotificationProvider";
 import { useTranslation } from "@/hooks/useTranslation";
+import { PeriodControls } from "@/components/PeriodControls";
 
 export default function TransactionsPage() {
-  const searchParams = useSearchParams();
   const confirm = useConfirm();
   const { notifySuccess, notifyError } = useNotify();
   const { t } = useTranslation();
@@ -37,32 +33,33 @@ export default function TransactionsPage() {
   const [closingBalance, setClosingBalance] = useState(null);
   const [total, setTotal] = useState(0);
   const [paginationModel, setPaginationModel] = useState({ page: 0, pageSize: 25 });
-  const [monthOffset, setMonthOffset] = useState(0);
+  const [period, setPeriod] = useState("month");
+  const [periodDate, setPeriodDate] = useState(new Date());
 
-  const { dateFrom, dateTo, monthLabel } = useMemo(() => {
-    const d = new Date();
-    d.setDate(1);
-    d.setMonth(d.getMonth() + monthOffset);
-    const y = d.getFullYear();
-    const m = String(d.getMonth() + 1).padStart(2, "0");
-    const lastDay = new Date(y, d.getMonth() + 1, 0).getDate();
+  const { dateFrom, dateTo } = useMemo(() => {
+    if (!periodDate) return {};
+    const y = periodDate.getFullYear();
+    if (period === "year") {
+      return { dateFrom: `${y}-01-01`, dateTo: `${y}-12-31` };
+    }
+    const m = String(periodDate.getMonth() + 1).padStart(2, "0");
+    const lastDay = new Date(y, periodDate.getMonth() + 1, 0).getDate();
     return {
       dateFrom: `${y}-${m}-01`,
       dateTo: `${y}-${m}-${String(lastDay).padStart(2, "0")}`,
-      monthLabel: format(d, "MMMM yyyy"),
     };
-  }, [monthOffset]);
+  }, [period, periodDate]);
 
   const [filters, setFilters] = useState(() => ({
     type: "",
-    account: searchParams.get("account") || "",
+    account: "",
     sourceAccount: "",
     targetAccount: "",
     category: "",
   }));
   const [appliedFilters, setAppliedFilters] = useState(() => ({
     type: "",
-    account: searchParams.get("account") || "",
+    account: "",
     sourceAccount: "",
     targetAccount: "",
     category: "",
@@ -82,23 +79,11 @@ export default function TransactionsPage() {
     }).catch(() => {});
   }, []);
 
-  // Sync URL account param during render (React-recommended alternative to an effect).
-  // When searchParams changes Next.js re-renders this component; we detect the drift
-  // here and update both filter states before the render completes.
-  const urlAccount = searchParams.get("account") || "";
-  const [prevUrlAccount, setPrevUrlAccount] = useState(urlAccount);
-  if (urlAccount !== prevUrlAccount) {
-    const updated = { type: "", account: urlAccount, sourceAccount: "", targetAccount: "", category: "" };
-    setPrevUrlAccount(urlAccount);
-    setFilters(updated);
-    setAppliedFilters(updated);
-  }
-
   // Reactive data loading — loading is derived by comparing requestKey to resolvedKey,
   // so no setState is called synchronously in the effect body.
   const { type: af_type, account: af_account, sourceAccount: af_source, targetAccount: af_target, category: af_category } = appliedFilters;
   const { page, pageSize } = paginationModel;
-  const requestKey = `${af_type}|${af_account}|${af_source}|${af_target}|${af_category}|${refreshKey}|${page}|${pageSize}|${dateFrom}`;
+  const requestKey = `${af_type}|${af_account}|${af_source}|${af_target}|${af_category}|${refreshKey}|${page}|${pageSize}|${dateFrom}|${dateTo}`;
   const loading = resolvedKey !== requestKey;
 
   useEffect(() => {
@@ -160,82 +145,51 @@ export default function TransactionsPage() {
     return withBalance.reverse();
   }, [rows, openingBalance, appliedFilters.account]);
 
-  const changeMonth = (delta) => {
-    setMonthOffset((o) => o + delta);
-    setPaginationModel((m) => ({ ...m, page: 0 }));
-  };
-
   return (
     <>
-      <Box
-        sx={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          mb: 2,
-        }}
-      >
-        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-          <Typography variant="h4">
-            {t("transactions.title")}{accountName ? ` — ${accountName}` : ""}
-          </Typography>
-          <IconButton size="small" onClick={() => changeMonth(-1)}>
-            <ChevronLeftIcon />
-          </IconButton>
-          <Typography variant="body1" sx={{ minWidth: 130, textAlign: "center" }} suppressHydrationWarning>
-            {monthLabel}
-          </Typography>
-          <IconButton size="small" onClick={() => changeMonth(1)}>
-            <ChevronRightIcon />
-          </IconButton>
-        </Box>
-        <Box sx={{ display: "flex", gap: 1 }}>
-          <Tooltip title={t("common.importFromPhoto")}>
-            <IconButton
-              color="primary"
-              onClick={() => setPhotoOpen(true)}
-              sx={{
-                bgcolor: "primary.main",
-                color: "primary.contrastText",
-                "&:hover": { bgcolor: "primary.dark" },
-                display: { xs: "none", sm: "flex" },
-              }}
-            >
-              <CameraAltIcon />
-            </IconButton>
-          </Tooltip>
-          {filteredAccount?.type === "credit" && (
-            <Tooltip title="Import PDF Statement">
+      <Typography variant="h4" sx={{ mb: 2 }}>
+        {t("transactions.title")}{accountName ? ` — ${accountName}` : ""}
+      </Typography>
+
+      <PeriodControls
+        period={period}
+        periodDate={periodDate}
+        onPeriodChange={(val) => { setPeriod(val); setPaginationModel((m) => ({ ...m, page: 0 })); }}
+        onDateChange={(fn) => { setPeriodDate(fn); setPaginationModel((m) => ({ ...m, page: 0 })); }}
+        rightSlot={
+          <Box sx={{ display: "flex", gap: 1 }}>
+            <Tooltip title={t("common.importFromPhoto")}>
               <IconButton
                 color="primary"
-                onClick={() => setPdfOpen(true)}
-                sx={{
-                  bgcolor: "primary.main",
-                  color: "primary.contrastText",
-                  "&:hover": { bgcolor: "primary.dark" },
-                  display: { xs: "none", sm: "flex" },
-                }}
+                onClick={() => setPhotoOpen(true)}
+                sx={{ bgcolor: "primary.main", color: "primary.contrastText", "&:hover": { bgcolor: "primary.dark" }, display: { xs: "none", sm: "flex" } }}
               >
-                <UploadFileIcon />
+                <CameraAltIcon />
               </IconButton>
             </Tooltip>
-          )}
-          <Tooltip title={t("transactions.newTransaction")}>
-            <IconButton
-              color="primary"
-              onClick={openNewTx}
-              sx={{
-                bgcolor: "primary.main",
-                color: "primary.contrastText",
-                "&:hover": { bgcolor: "primary.dark" },
-                display: { xs: "none", sm: "flex" },
-              }}
-            >
-              <AddIcon />
-            </IconButton>
-          </Tooltip>
-        </Box>
-      </Box>
+            {filteredAccount?.type === "credit" && (
+              <Tooltip title="Import PDF Statement">
+                <IconButton
+                  color="primary"
+                  onClick={() => setPdfOpen(true)}
+                  sx={{ bgcolor: "primary.main", color: "primary.contrastText", "&:hover": { bgcolor: "primary.dark" }, display: { xs: "none", sm: "flex" } }}
+                >
+                  <UploadFileIcon />
+                </IconButton>
+              </Tooltip>
+            )}
+            <Tooltip title={t("transactions.newTransaction")}>
+              <IconButton
+                color="primary"
+                onClick={openNewTx}
+                sx={{ bgcolor: "primary.main", color: "primary.contrastText", "&:hover": { bgcolor: "primary.dark" }, display: { xs: "none", sm: "flex" } }}
+              >
+                <AddIcon />
+              </IconButton>
+            </Tooltip>
+          </Box>
+        }
+      />
 
       <TransactionFilters
         filters={filters}

@@ -17,16 +17,14 @@ import CircularProgress from "@mui/material/CircularProgress";
 import Button from "@mui/material/Button";
 import TextField from "@mui/material/TextField";
 import DialogActions from "@mui/material/DialogActions";
-import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
-import ChevronRightIcon from "@mui/icons-material/ChevronRight";
 import AddIcon from "@mui/icons-material/Add";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
 import SettingsIcon from "@mui/icons-material/Settings";
 import RefreshIcon from "@mui/icons-material/Refresh";
 import axios from "axios";
-import { format, addMonths, subMonths } from "date-fns";
 import { useTranslation } from "@/hooks/useTranslation";
+import { PeriodControls } from "@/components/PeriodControls";
 import { useNotify } from "@/components/NotificationProvider";
 import { ExpensesGroupTable } from "@/components/ExpensesGroupTable";
 import { ExpenseTemplateDialog } from "@/components/ExpenseTemplateDialog";
@@ -116,35 +114,28 @@ export default function ExpensesPage() {
 
   return (
     <Box sx={{ p: { xs: 2, md: 3 } }}>
-      {/* Header */}
-      <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mb: 2 }}>
-        <Typography variant="h5" fontWeight={700}>{t("expenses.title")}</Typography>
-        <Box>
-          <Tooltip title={t("expenses.generateYear")}>
-            <IconButton onClick={() => { setGenerateYear(String(year)); setGenerateOpen(true); }}>
-              <RefreshIcon />
-            </IconButton>
-          </Tooltip>
-          <Tooltip title={t("expenses.manageTemplates")}>
-            <IconButton onClick={() => setManageOpen(true)}>
-              <SettingsIcon />
-            </IconButton>
-          </Tooltip>
-        </Box>
-      </Box>
+      <Typography variant="h5" fontWeight={700} sx={{ mb: 2 }}>{t("expenses.title")}</Typography>
 
-      {/* Month navigator */}
-      <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 3 }}>
-        <IconButton size="small" onClick={() => setPeriodDate((d) => subMonths(d, 1))}>
-          <ChevronLeftIcon />
-        </IconButton>
-        <Typography variant="h6" sx={{ minWidth: 160, textAlign: "center" }}>
-          {format(periodDate, "MMMM yyyy")}
-        </Typography>
-        <IconButton size="small" onClick={() => setPeriodDate((d) => addMonths(d, 1))}>
-          <ChevronRightIcon />
-        </IconButton>
-      </Box>
+      <PeriodControls
+        periodDate={periodDate}
+        onPeriodChange={() => {}}
+        onDateChange={setPeriodDate}
+        showYear={false}
+        rightSlot={
+          <Box sx={{ display: "flex", gap: 0.5 }}>
+            <Tooltip title={t("expenses.generateYear")}>
+              <IconButton onClick={() => { setGenerateYear(String(year)); setGenerateOpen(true); }}>
+                <RefreshIcon />
+              </IconButton>
+            </Tooltip>
+            <Tooltip title={t("expenses.manageTemplates")}>
+              <IconButton onClick={() => setManageOpen(true)}>
+                <SettingsIcon />
+              </IconButton>
+            </Tooltip>
+          </Box>
+        }
+      />
 
       {/* Expenses grouped tables */}
       {loading && <CircularProgress size={24} />}

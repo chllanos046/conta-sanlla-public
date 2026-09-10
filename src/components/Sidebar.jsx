@@ -213,7 +213,7 @@ export default function Sidebar({
                         <ListItem key={acc.id} disablePadding>
                           <ListItemButton
                             component={Link}
-                            href={`/transactions?account=${acc.id}`}
+                            href={`/accounts/${acc.id}`}
                             onClick={isMobile ? onMobileClose : undefined}
                             sx={{
                               px: 2,
@@ -262,7 +262,7 @@ export default function Sidebar({
                     <ListItem disablePadding>
                       <ListItemButton
                         component={Link}
-                        href={`/transactions?account=${acc.id}`}
+                        href={`/accounts/${acc.id}`}
                         onClick={isMobile ? onMobileClose : undefined}
                         sx={{ minHeight: 48, justifyContent: "center", px: 2.5 }}
                       >

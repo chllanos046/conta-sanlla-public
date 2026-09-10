@@ -1,22 +1,17 @@
 "use client";
-import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Box from "@mui/material/Box";
 import Grid from "@mui/material/Grid";
-import IconButton from "@mui/material/IconButton";
 import List from "@mui/material/List";
 import ListItem from "@mui/material/ListItem";
 import ListItemText from "@mui/material/ListItemText";
 import Typography from "@mui/material/Typography";
 import Divider from "@mui/material/Divider";
-import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
-import ChevronRightIcon from "@mui/icons-material/ChevronRight";
 import StatCard from "@/components/StatCard";
 import AccountTypeIcon from "@/components/AccountTypeIcon";
 import { getCurrencySymbol } from "@/lib/currency";
 
 export default function AccountCarousel({ accounts, balanceColor }) {
-  const [startIndex, setStartIndex] = useState(0);
   const router = useRouter();
 
   if (!accounts || accounts.length === 0) return null;
@@ -41,14 +36,9 @@ export default function AccountCarousel({ accounts, balanceColor }) {
     );
   };
 
-  const visibleCount = 3;
-  const visibleAccounts = accounts.slice(startIndex, startIndex + visibleCount);
-  const canGoPrev = startIndex > 0;
-  const canGoNext = startIndex + visibleCount < accounts.length;
-
   return (
     <>
-      {/* Mobile list — CSS hidden on sm+ */}
+      {/* Mobile list */}
       <Box sx={{ display: { xs: "block", sm: "none" } }}>
         <List
           disablePadding
@@ -115,34 +105,14 @@ export default function AccountCarousel({ accounts, balanceColor }) {
         </List>
       </Box>
 
-      {/* Desktop carousel — CSS hidden on xs */}
-      <Box sx={{ display: { xs: "none", sm: "flex" }, alignItems: "center", gap: 1 }}>
-        <IconButton
-          onClick={() => setStartIndex((i) => i - 1)}
-          disabled={!canGoPrev}
-          size="small"
-          sx={{ flexShrink: 0 }}
-        >
-          <ChevronLeftIcon />
-        </IconButton>
-
-        <Grid container spacing={2} sx={{ flex: 1 }}>
-          {visibleAccounts.map((acc) => (
-            <Grid key={acc.id} size={{ xs: 12, sm: 4 }}>
-              {renderAccountCard(acc)}
-            </Grid>
-          ))}
-        </Grid>
-
-        <IconButton
-          onClick={() => setStartIndex((i) => i + 1)}
-          disabled={!canGoNext}
-          size="small"
-          sx={{ flexShrink: 0 }}
-        >
-          <ChevronRightIcon />
-        </IconButton>
-      </Box>
+      {/* Desktop grid — 3 columns, wraps to multiple rows */}
+      <Grid container spacing={2} sx={{ display: { xs: "none", sm: "flex" } }}>
+        {accounts.map((acc) => (
+          <Grid key={acc.id} size={{ sm: 4 }}>
+            {renderAccountCard(acc)}
+          </Grid>
+        ))}
+      </Grid>
     </>
   );
 }

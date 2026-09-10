@@ -4,8 +4,6 @@ import Grid from "@mui/material/Grid";
 import Card from "@mui/material/Card";
 import CardContent from "@mui/material/CardContent";
 import Typography from "@mui/material/Typography";
-import ToggleButtonGroup from "@mui/material/ToggleButtonGroup";
-import ToggleButton from "@mui/material/ToggleButton";
 import Box from "@mui/material/Box";
 import IconButton from "@mui/material/IconButton";
 import Table from "@mui/material/Table";
@@ -14,17 +12,14 @@ import TableCell from "@mui/material/TableCell";
 import TableHead from "@mui/material/TableHead";
 import TableRow from "@mui/material/TableRow";
 import CircularProgress from "@mui/material/CircularProgress";
-import Chip from "@mui/material/Chip";
 import TrendingUpIcon from "@mui/icons-material/TrendingUp";
 import TrendingDownIcon from "@mui/icons-material/TrendingDown";
 import CreditCardIcon from "@mui/icons-material/CreditCard";
 import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
 import ChevronRightIcon from "@mui/icons-material/ChevronRight";
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
-import { DatePicker } from "@mui/x-date-pickers/DatePicker";
 import { ExpensesByCategoryChart } from "@/components/ExpensesByCategoryChart";
 import { ExpensesWidget } from "@/components/ExpensesWidget";
-import { format, subMonths, addMonths, isSameMonth } from "date-fns";
 import axios from "axios";
 import { SummaryStatCard } from "@/components/SummaryStatCard";
 import StatCard from "@/components/StatCard";
@@ -37,6 +32,7 @@ import { convertAmount } from "@/lib/currency";
 import { formatCurrency } from "@/lib/utils";
 import { getCurrencySymbol } from "@/lib/currency";
 import { useTranslation } from "@/hooks/useTranslation";
+import { PeriodControls } from "@/components/PeriodControls";
 
 const PULL_THRESHOLD = 80;
 
@@ -152,11 +148,6 @@ export default function Dashboard() {
     };
   }, [loadData]);
 
-  const handlePeriodChange = (_, val) => {
-    if (!val) return;
-    setPeriod(val);
-    setPeriodDate(new Date());
-  };
 
   const accountMap = Object.fromEntries(data.accounts.map((a) => [String(a.id), a]));
   const arsRate = rates.ARS || 1;
@@ -306,9 +297,6 @@ export default function Dashboard() {
     return "balance.main";
   };
 
-  const today = new Date();
-  const isCurrentMonth = periodDate ? isSameMonth(periodDate, today) : false;
-
   return (
       <Box sx={{ px: { xs: 2, sm: 0 }, pt: { xs: 1, sm: 0 } }}>
       {/* Pull-to-refresh indicator */}
@@ -347,95 +335,12 @@ export default function Dashboard() {
       )}
 
       {/* Period controls row */}
-      <Box
-        sx={{
-          mb: 3,
-          display: "flex",
-          flexDirection: { xs: "column", sm: "row" },
-          alignItems: { xs: "stretch", sm: "center" },
-          gap: 2,
-          flexWrap: { sm: "wrap" },
-          justifyContent: { sm: "space-between" },
-          bgcolor: "background.paper",
-          borderRadius: 1,
-          p: { xs: 1.5, sm: 1.5 },
-          border: "1px solid",
-          borderColor: "divider",
-        }}
-      >
-        {/* Toggle + date picker: same row on all sizes */}
-        <Box
-          sx={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            gap: 2,
-          }}
-        >
-          <ToggleButtonGroup
-            value={period}
-            exclusive
-            onChange={handlePeriodChange}
-            size="small"
-            color="primary"
-            sx={{
-              "& .MuiToggleButton-root.Mui-selected": {
-                bgcolor: "primary.main",
-                color: "#F1EBE1",
-                "&:hover": { bgcolor: "primary.dark" },
-              },
-            }}
-          >
-            {[
-              { value: "month", label: t("dashboard.month") },
-              { value: "year", label: t("dashboard.year") },
-            ].map((p) => (
-              <ToggleButton key={p.value} value={p.value}>
-                {p.label}
-              </ToggleButton>
-            ))}
-          </ToggleButtonGroup>
-
-          {period === "month" && periodDate && (
-            <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
-              <IconButton
-                size="small"
-                onClick={() => setPeriodDate((d) => subMonths(d, 1))}
-              >
-                <ChevronLeftIcon />
-              </IconButton>
-              <Chip
-                label={format(periodDate, "MMMM yyyy")}
-                variant="outlined"
-                size="small"
-                sx={{
-                  minWidth: 130,
-                  justifyContent: "center",
-                  fontWeight: 500,
-                }}
-              />
-              <IconButton
-                size="small"
-                onClick={() => setPeriodDate((d) => addMonths(d, 1))}
-                disabled={isCurrentMonth}
-              >
-                <ChevronRightIcon />
-              </IconButton>
-            </Box>
-          )}
-          {period === "year" && (
-            <DatePicker
-              label={t("dashboard.year")}
-              views={["year"]}
-              format="yyyy"
-              value={periodDate}
-              onChange={(v) => v && setPeriodDate(v)}
-              slotProps={{ textField: { size: "small" } }}
-            />
-          )}
-        </Box>
-
-        {rates.ARS && (
+      <PeriodControls
+        period={period}
+        periodDate={periodDate}
+        onPeriodChange={(val) => { setPeriod(val); setPeriodDate(new Date()); }}
+        onDateChange={setPeriodDate}
+        rightSlot={rates.ARS && (
           <Box
             sx={{
               display: "flex",
@@ -452,27 +357,17 @@ export default function Dashboard() {
             <Typography variant="body2" color="text.secondary">
               1 USD ={" "}
               <strong>
-                {rates.ARS.toLocaleString("en-US", {
-                  maximumFractionDigits: 2,
-                })}{" "}
-                ARS
+                {rates.ARS.toLocaleString("en-US", { maximumFractionDigits: 2 })} ARS
               </strong>
             </Typography>
-            {arsUp !== null &&
-              (arsUp ? (
-                <TrendingUpIcon
-                  fontSize="small"
-                  sx={{ color: "income.main" }}
-                />
-              ) : (
-                <TrendingDownIcon
-                  fontSize="small"
-                  sx={{ color: "expense.main" }}
-                />
-              ))}
+            {arsUp !== null && (arsUp ? (
+              <TrendingUpIcon fontSize="small" sx={{ color: "income.main" }} />
+            ) : (
+              <TrendingDownIcon fontSize="small" sx={{ color: "expense.main" }} />
+            ))}
           </Box>
         )}
-      </Box>
+      />
 
       {/* Summary stat cards with sparklines */}
       <Grid container spacing={3} sx={{ mb: 3 }}>

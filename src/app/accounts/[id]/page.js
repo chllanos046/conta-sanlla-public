@@ -12,8 +12,10 @@ import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import AddIcon from "@mui/icons-material/Add";
 import PaymentIcon from "@mui/icons-material/Payment";
 import UploadFileIcon from "@mui/icons-material/UploadFile";
+import CameraAltIcon from "@mui/icons-material/CameraAlt";
 import { TransactionFormDialog } from "@/components/TransactionFormDialog";
 import PdfImportDialog from "@/components/PdfImportDialog";
+import PhotoImportDialog from "@/components/PhotoImportDialog";
 import { TransactionsTable } from "@/components/TransactionsTable";
 import AccountTypeIcon from "@/components/AccountTypeIcon";
 import { getCurrencySymbol } from "@/lib/currency";
@@ -23,6 +25,7 @@ import { useConfirm } from "@/components/ConfirmDialogProvider";
 import { useNotify } from "@/components/NotificationProvider";
 import { useTranslation } from "@/hooks/useTranslation";
 import { formatCurrency } from "@/lib/utils";
+import { PeriodControls } from "@/components/PeriodControls";
 
 export default function AccountDetailPage() {
   const { id } = useParams();
@@ -41,11 +44,14 @@ export default function AccountDetailPage() {
   const [loading, setLoading] = useState(true);
   const [paginationModel, setPaginationModel] = useState({ page: 0, pageSize: 25 });
   const [refreshKey, setRefreshKey] = useState(0);
+  const [period, setPeriod] = useState("month");
+  const [periodDate, setPeriodDate] = useState(new Date());
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dialogProps, setDialogProps] = useState({});
   const [editingTx, setEditingTx] = useState(null);
   const [pdfImportOpen, setPdfImportOpen] = useState(false);
+  const [photoImportOpen, setPhotoImportOpen] = useState(false);
   const [arsRate, setArsRate] = useState(1);
 
   useEffect(() => {
@@ -59,10 +65,22 @@ export default function AccountDetailPage() {
   }, [id, refreshKey]);
 
   useEffect(() => {
+    if (!periodDate) return;
     const { page, pageSize } = paginationModel;
+    const y = periodDate.getFullYear();
+    let dateFrom, dateTo;
+    if (period === "year") {
+      dateFrom = `${y}-01-01`;
+      dateTo = `${y}-12-31`;
+    } else {
+      const m = String(periodDate.getMonth() + 1).padStart(2, "0");
+      const lastDay = new Date(y, periodDate.getMonth() + 1, 0).getDate();
+      dateFrom = `${y}-${m}-01`;
+      dateTo = `${y}-${m}-${String(lastDay).padStart(2, "0")}`;
+    }
     setLoading(true);
     axios
-      .get(`/api/transactions?account=${id}&limit=${pageSize}&offset=${page * pageSize}`)
+      .get(`/api/transactions`, { params: { account: id, limit: pageSize, offset: page * pageSize, dateFrom, dateTo } })
       .then(({ data }) => {
         const ascending = [...data.transactions].sort((a, b) => String(a.date).localeCompare(String(b.date)));
         setRows(addRunningBalance(ascending, data.opening_balance, id).reverse());
@@ -72,7 +90,7 @@ export default function AccountDetailPage() {
         setTotal(data.total);
       })
       .finally(() => setLoading(false));
-  }, [id, refreshKey, paginationModel]);
+  }, [id, refreshKey, paginationModel, period, periodDate]);
 
   const handleSaved = useCallback(() => {
     setDialogOpen(false);
@@ -205,26 +223,36 @@ export default function AccountDetailPage() {
         </Box>
       )}
 
-      {/* Action buttons */}
-      <Box sx={{ display: "flex", gap: 2, mb: 3 }}>
-        {isCreditCard ? (
-          <>
-            <Button variant="outlined" startIcon={<AddIcon />} onClick={openAddExpense}>
-              {t("transactions.addExpense")}
+      <PeriodControls
+        period={period}
+        periodDate={periodDate}
+        onPeriodChange={(val) => { setPeriod(val); setPaginationModel((m) => ({ ...m, page: 0 })); }}
+        onDateChange={(fn) => { setPeriodDate(fn); setPaginationModel((m) => ({ ...m, page: 0 })); }}
+        rightSlot={
+          <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
+            {isCreditCard ? (
+              <>
+                <Button variant="outlined" startIcon={<AddIcon />} onClick={openAddExpense}>
+                  {t("transactions.addExpense")}
+                </Button>
+                <Button variant="contained" startIcon={<PaymentIcon />} onClick={openPayCard}>
+                  {t("transactions.payCard")}
+                </Button>
+                <Button variant="outlined" startIcon={<UploadFileIcon />} onClick={() => setPdfImportOpen(true)}>
+                  Import PDF
+                </Button>
+              </>
+            ) : (
+              <Button variant="contained" startIcon={<AddIcon />} onClick={openNewTransaction}>
+                {t("transactions.newTransaction")}
+              </Button>
+            )}
+            <Button variant="outlined" startIcon={<CameraAltIcon />} onClick={() => setPhotoImportOpen(true)}>
+              {t("common.importFromPhoto")}
             </Button>
-            <Button variant="contained" startIcon={<PaymentIcon />} onClick={openPayCard}>
-              {t("transactions.payCard")}
-            </Button>
-            <Button variant="outlined" startIcon={<UploadFileIcon />} onClick={() => setPdfImportOpen(true)}>
-              Import PDF
-            </Button>
-          </>
-        ) : (
-          <Button variant="contained" startIcon={<AddIcon />} onClick={openNewTransaction}>
-            {t("transactions.newTransaction")}
-          </Button>
-        )}
-      </Box>
+          </Box>
+        }
+      />
 
       {/* Transactions table */}
       <TransactionsTable
@@ -254,6 +282,14 @@ export default function AccountDetailPage() {
       <PdfImportDialog
         open={pdfImportOpen}
         onClose={() => setPdfImportOpen(false)}
+        accountId={id}
+        accountCurrency={account?.currency ?? "ARS"}
+        onImported={handleSaved}
+      />
+
+      <PhotoImportDialog
+        open={photoImportOpen}
+        onClose={() => setPhotoImportOpen(false)}
         accountId={id}
         accountCurrency={account?.currency ?? "ARS"}
         onImported={handleSaved}

@@ -32,6 +32,31 @@ import CloudUploadIcon from "@mui/icons-material/CloudUpload";
 
 const STEPS = ["Upload", "Extracting", "Review & Map", "Done"];
 
+const MAX_DIMENSION = 1600;
+
+// ponytail: full-res mobile camera photos (often 8-12MB) blow past Vercel's
+// ~4.5MB request body limit and fail silently. Downscale client-side instead
+// of adding a server-side upload/streaming pipeline.
+function downscaleImage(file) {
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const img = new Image();
+      img.onload = () => {
+        const scale = Math.min(1, MAX_DIMENSION / Math.max(img.width, img.height));
+        const canvas = document.createElement("canvas");
+        canvas.width = img.width * scale;
+        canvas.height = img.height * scale;
+        canvas.getContext("2d").drawImage(img, 0, 0, canvas.width, canvas.height);
+        resolve(canvas.toDataURL("image/jpeg", 0.8));
+      };
+      img.onerror = () => resolve(ev.target.result);
+      img.src = ev.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
 export default function PhotoImportDialog({ open, onClose, accountId, accountCurrency = "USD", onImported }) {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
@@ -79,16 +104,7 @@ export default function PhotoImportDialog({ open, onClose, accountId, accountCur
     if (!selected.length) return;
     setFiles(selected);
     setError(null);
-    Promise.all(
-      selected.map(
-        (f) =>
-          new Promise((res) => {
-            const reader = new FileReader();
-            reader.onload = (ev) => res(ev.target.result);
-            reader.readAsDataURL(f);
-          })
-      )
-    ).then(setPreviews);
+    Promise.all(selected.map(downscaleImage)).then(setPreviews);
   };
 
   const handleExtract = async () => {
@@ -104,7 +120,7 @@ export default function PhotoImportDialog({ open, onClose, accountId, accountCur
         const base64 = previews[i].split(",")[1];
         const { data: aiData } = await axios.post("/api/ai/extract-transactions", {
           imageBase64: base64,
-          mimeType: files[i].type || "image/jpeg",
+          mimeType: "image/jpeg",
           accountCurrency: effectiveCurrency,
         });
         allExtracted = allExtracted.concat(aiData.transactions ?? []);
