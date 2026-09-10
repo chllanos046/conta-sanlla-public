@@ -5,14 +5,14 @@ const PROMPT = `Extract all financial transactions visible in this image.
 Rules:
 - Numbers may use dots as thousands separators and commas as decimals (e.g. "46.460" = 46460, "34,19" = 34.19). Normalize to standard decimal numbers.
 - Dates may appear as "23 Aug 2026" or similar — convert to YYYY-MM-DD.
-- Amounts are always positive numbers (strip any minus/negative sign).
-- Currency may appear as "USDc", "USDC", "USD Coin" — normalize all to "USD".
+- Amounts are always positive numbers (strip any minus/negative sign), EXCEPT for USDc/USDC/USDT/USD entries — for those, preserve the original sign (negative = money leaving the wallet, positive = money entering it).
+- Currency may appear as "USDc", "USDC", "USDT", "USD Coin" — normalize all to "USD".
 - When a "USDc → ARS" conversion row appears on the same date as a merchant/debit row whose ARS amount matches the ARS credit side of the conversion, they are ONE transaction. Output it once using the USDc amount and "USD" currency with the merchant row's description. Discard the duplicate ARS merchant row.
 - Ignore section headers, search bars, and UI chrome.
 Return ONLY a valid JSON array (no markdown, no explanation) where each element has:
   date (string, YYYY-MM-DD),
   description (string),
-  amount (positive number),
+  amount (positive number, except signed for USD entries per the rule above),
   currency (ISO 4217 code).
 If no transactions are found, return [].`;
 

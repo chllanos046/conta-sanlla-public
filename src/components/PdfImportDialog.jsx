@@ -147,12 +147,22 @@ export default function PdfImportDialog({ open, onClose, accountId, accountCurre
     setRows((prev) => prev.map((r, idx) => (idx === i ? { ...r, [field]: value } : r)));
 
   const handleImport = async () => {
-    setImporting(true);
     setError(null);
+    const checkedRows = rows.filter((r) => r.checked);
+
+    const incomplete = checkedRows.some((r) => {
+      if (!r.date || !String(r.description || "").trim() || r.amount == null) return true;
+      return r.type === "transfer" ? !r.target_account_id : !r.category_id;
+    });
+    if (incomplete) {
+      setError("All fields are required for every selected transaction (description, category or target account).");
+      return;
+    }
+
+    setImporting(true);
     const rate = needsRate && exchangeRate ? parseFloat(exchangeRate) : null;
 
-    const toImport = rows
-      .filter((r) => r.checked)
+    const toImport = checkedRows
       .map((r) => {
         const rawAmount = Math.abs(r.amount);
         const usdAmount = rate ? rawAmount / rate : rawAmount;

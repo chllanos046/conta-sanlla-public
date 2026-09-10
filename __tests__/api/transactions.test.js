@@ -6,10 +6,11 @@ import { NextRequest } from 'next/server'
 
 vi.mock('@/lib/db', () => ({
   query: vi.fn(),
+  getDefaultCategoryId: vi.fn(),
 }))
 vi.mock('@/auth', () => ({ auth: vi.fn() }))
 
-import { query } from '@/lib/db'
+import { query, getDefaultCategoryId } from '@/lib/db'
 import { auth } from '@/auth'
 
 const makeRequest = (method = 'GET', body = null, search = '') =>
@@ -21,6 +22,7 @@ const makeRequest = (method = 'GET', body = null, search = '') =>
 beforeEach(() => {
   vi.clearAllMocks()
   auth.mockResolvedValue({ user: { id: 1 } })
+  getDefaultCategoryId.mockResolvedValue(null)
 })
 
 describe('GET /api/transactions', () => {

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
-import { query } from "@/lib/db";
+import { query, getDefaultCategoryId } from "@/lib/db";
 import { txContribution } from "@/lib/balanceUtils";
 
 export async function GET(request) {
@@ -187,6 +187,8 @@ export async function POST(request) {
       }
     }
 
+    const resolvedCategoryId = category_id || (await getDefaultCategoryId(type));
+
     await query(
       "INSERT INTO transactions (type, amount, source_account_id, target_account_id, category_id, date, description, exchange_rate) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
       [
@@ -194,7 +196,7 @@ export async function POST(request) {
         numericAmount,
         source_account_id || null,
         target_account_id || null,
-        category_id || null,
+        resolvedCategoryId,
         date,
         description,
         exchange_rate ? parseFloat(exchange_rate) : null,

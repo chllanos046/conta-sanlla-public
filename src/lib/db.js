@@ -51,4 +51,13 @@ export async function withTransaction(callback) {
   return await sql.begin(async (txSql) => callback(txSql));
 }
 
+const DEFAULT_CATEGORY_NAME = { expense: "Varios", income: "Sueldos" };
+
+export async function getDefaultCategoryId(type) {
+  const name = DEFAULT_CATEGORY_NAME[type];
+  if (!name) return null;
+  const rows = await query("SELECT id FROM categories WHERE name = ? AND type = ?", [name, type]);
+  return rows[0]?.id ?? null;
+}
+
 export default sql;

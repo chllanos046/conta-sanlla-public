@@ -8,10 +8,11 @@ vi.mock("@/lib/db", () => ({
   query: vi.fn(),
   withTransaction: vi.fn(),
   queryConn: vi.fn(),
+  getDefaultCategoryId: vi.fn(),
 }));
 vi.mock("@/auth", () => ({ auth: vi.fn() }));
 
-import { query, withTransaction, queryConn } from "@/lib/db";
+import { query, withTransaction, queryConn, getDefaultCategoryId } from "@/lib/db";
 import { auth } from "@/auth";
 
 const makeRequest = (body) =>
@@ -27,6 +28,7 @@ beforeEach(() => {
   query.mockResolvedValue([]);
   withTransaction.mockImplementation(async (cb) => cb({}));
   queryConn.mockResolvedValue({ insertId: 1 });
+  getDefaultCategoryId.mockResolvedValue(null);
 });
 
 describe("POST /api/transactions/import", () => {

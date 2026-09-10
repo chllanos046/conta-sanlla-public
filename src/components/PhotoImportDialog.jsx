@@ -152,7 +152,15 @@ export default function PhotoImportDialog({ open, onClose, accountId, accountCur
             String(ex.date).slice(0, 10) === t.date &&
             Math.abs(Math.abs(parseFloat(ex.amount)) - Math.abs(t.amount)) < 0.01
         );
-        return { ...t, checked: !isDuplicate, isDuplicate, type: "expense", category_id: "", target_account_id: "" };
+        const isUsdTransfer = t.currency === "USD" && t.amount > 0;
+        return {
+          ...t,
+          checked: !isDuplicate,
+          isDuplicate,
+          type: isUsdTransfer ? "transfer" : "expense",
+          category_id: "",
+          target_account_id: "",
+        };
       });
 
       setRows(mapped);
@@ -170,12 +178,22 @@ export default function PhotoImportDialog({ open, onClose, accountId, accountCur
     setRows((prev) => prev.map((r, idx) => (idx === i ? { ...r, [field]: value } : r)));
 
   const handleImport = async () => {
-    setImporting(true);
     setError(null);
+    const checkedRows = rows.filter((r) => r.checked);
+
+    const incomplete = checkedRows.some((r) => {
+      if (!r.date || !String(r.description || "").trim() || r.amount == null) return true;
+      return r.type === "transfer" ? !r.target_account_id : !r.category_id;
+    });
+    if (incomplete) {
+      setError("All fields are required for every selected transaction (description, category or target account).");
+      return;
+    }
+
+    setImporting(true);
     const rate = needsRate && exchangeRate ? parseFloat(exchangeRate) : null;
 
-    const toImport = rows
-      .filter((r) => r.checked)
+    const toImport = checkedRows
       .map((r) => {
         const rawAmount = Math.abs(r.amount);
         const usdAmount = rate ? rawAmount / rate : rawAmount;

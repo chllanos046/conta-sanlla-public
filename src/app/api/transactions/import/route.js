@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
-import { query, withTransaction, queryConn } from "@/lib/db";
+import { query, withTransaction, queryConn, getDefaultCategoryId } from "@/lib/db";
 
 const VALID_TYPES = ["income", "expense", "transfer"];
 
@@ -65,6 +65,11 @@ export async function POST(request) {
       }
     }
 
+    const defaultCategoryIds = {
+      expense: await getDefaultCategoryId("expense"),
+      income: await getDefaultCategoryId("income"),
+    };
+
     const imported = await withTransaction(async (conn) => {
       let count = 0;
       for (const tx of transactions) {
@@ -77,7 +82,7 @@ export async function POST(request) {
             amount,
             tx.source_account_id || null,
             tx.target_account_id || null,
-            tx.category_id || null,
+            tx.category_id || defaultCategoryIds[tx.type] || null,
             tx.date,
             tx.description || null,
             tx.exchange_rate ? parseFloat(tx.exchange_rate) : null,

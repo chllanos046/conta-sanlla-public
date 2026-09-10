@@ -5,10 +5,10 @@ import { POST } from '@/app/api/transactions/route'
 import { PUT } from '@/app/api/transactions/[id]/route'
 import { NextRequest } from 'next/server'
 
-vi.mock('@/lib/db', () => ({ query: vi.fn() }))
+vi.mock('@/lib/db', () => ({ query: vi.fn(), getDefaultCategoryId: vi.fn() }))
 vi.mock('@/auth', () => ({ auth: vi.fn() }))
 
-import { query } from '@/lib/db'
+import { query, getDefaultCategoryId } from '@/lib/db'
 import { auth } from '@/auth'
 
 const makePostReq = (body) =>
@@ -28,6 +28,7 @@ const makePutReq = (id, body) =>
 beforeEach(() => {
   vi.clearAllMocks()
   auth.mockResolvedValue({ user: { id: 1 } })
+  getDefaultCategoryId.mockResolvedValue(null)
 })
 
 describe('Credit card account restrictions — POST', () => {

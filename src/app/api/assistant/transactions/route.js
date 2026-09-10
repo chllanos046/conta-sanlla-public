@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireApiToken } from "@/lib/apiAuth";
-import { query } from "@/lib/db";
+import { query, getDefaultCategoryId } from "@/lib/db";
 
 export async function POST(request) {
   const unauthorized = requireApiToken(request);
@@ -51,6 +51,8 @@ export async function POST(request) {
       }
     }
 
+    const resolvedCategoryId = category_id || (await getDefaultCategoryId(type));
+
     const result = await query(
       "INSERT INTO transactions (type, amount, source_account_id, target_account_id, category_id, date, description, exchange_rate) VALUES (?, ?, ?, ?, ?, ?, ?, ?) RETURNING id",
       [
@@ -58,7 +60,7 @@ export async function POST(request) {
         numericAmount,
         source_account_id || null,
         target_account_id || null,
-        category_id || null,
+        resolvedCategoryId,
         date,
         description,
         exchange_rate ? parseFloat(exchange_rate) : null,
