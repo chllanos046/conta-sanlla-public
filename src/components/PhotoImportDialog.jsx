@@ -168,12 +168,11 @@ export default function PhotoImportDialog({ open, onClose, accountId, accountCur
             String(ex.date).slice(0, 10) === t.date &&
             Math.abs(Math.abs(parseFloat(ex.amount)) - Math.abs(t.amount)) < 0.01
         );
-        const isUsdTransfer = t.currency === "USD" && t.amount > 0;
         return {
           ...t,
           checked: !isDuplicate,
           isDuplicate,
-          type: isUsdTransfer ? "transfer" : "expense",
+          type: "expense",
           category_id: "",
           target_account_id: "",
         };
