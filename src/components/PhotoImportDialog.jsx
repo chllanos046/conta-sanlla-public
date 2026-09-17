@@ -409,7 +409,23 @@ export default function PhotoImportDialog({ open, onClose, accountId, accountCur
                           />
                         </TableCell>
                         <TableCell align="right" sx={{ whiteSpace: "nowrap" }}>
-                          {effectiveCurrency} {Math.abs(row.amount).toFixed(2)}
+                          <TextField
+                            size="small"
+                            type="number"
+                            value={Math.abs(row.amount)}
+                            onChange={(e) => {
+                              const next = parseFloat(e.target.value);
+                              if (Number.isNaN(next)) return;
+                              const sign = row.amount < 0 ? -1 : 1;
+                              updateRow(i, "amount", sign * next);
+                            }}
+                            slotProps={{
+                              htmlInput: { step: "0.01", min: 0, style: { textAlign: "right" } },
+                              input: { startAdornment: `${effectiveCurrency} ` },
+                            }}
+                            variant="standard"
+                            sx={{ width: 130 }}
+                          />
                         </TableCell>
                         <TableCell>
                           <FormControl size="small" sx={{ minWidth: 100 }}>
