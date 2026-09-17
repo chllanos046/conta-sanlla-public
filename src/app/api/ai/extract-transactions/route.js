@@ -3,7 +3,7 @@ import { auth } from "@/auth";
 
 const PROMPT = `Extract all financial transactions visible in this image.
 Rules:
-- Numbers may use dots as thousands separators and commas as decimals (e.g. "46.460" = 46460, "34,19" = 34.19). Normalize to standard decimal numbers.
+- Numbers may use dots as thousands separators and commas as decimals (e.g. "46.460" = 46460, "34,19" = 34.19). Normalize to standard decimal numbers. This applies to ALL amounts, including USDc/USDC/USDT/USD entries — a dot is a thousands separator there too (e.g. "1.000" USDc = 1000, not 1), never assume US-style decimal-point notation.
 - Dates may appear as "23 Aug 2026" or similar — convert to YYYY-MM-DD.
 - Amounts are always positive numbers (strip any minus/negative sign), EXCEPT for USDc/USDC/USDT/USD entries — for those, preserve the original sign (negative = money leaving the wallet, positive = money entering it).
 - Currency may appear as "USDc", "USDC", "USDT", "USD Coin" — normalize all to "USD".
