@@ -26,6 +26,27 @@ function parseAIResponse(text) {
   return JSON.parse(stripped);
 }
 
+async function callGemini(apiKey, pdfBase64) {
+  const res = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${apiKey}`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contents: [{
+          parts: [
+            { text: PROMPT },
+            { inline_data: { mime_type: "application/pdf", data: pdfBase64 } },
+          ],
+        }],
+      }),
+    }
+  );
+  const json = await res.json();
+  if (!res.ok) throw new Error(json.error?.message ?? "Gemini error");
+  return json.candidates?.[0]?.content?.parts?.[0]?.text ?? "[]";
+}
+
 export async function POST(request) {
   const session = await auth();
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -40,24 +61,7 @@ export async function POST(request) {
 
   let rawText;
   try {
-    const res = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${apiKey}`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents: [{
-            parts: [
-              { text: PROMPT },
-              { inline_data: { mime_type: "application/pdf", data: pdfBase64 } },
-            ],
-          }],
-        }),
-      }
-    );
-    const json = await res.json();
-    if (!res.ok) throw new Error(json.error?.message ?? "Gemini error");
-    rawText = json.candidates?.[0]?.content?.parts?.[0]?.text ?? "[]";
+    rawText = await callGemini(apiKey, pdfBase64);
   } catch (err) {
     return NextResponse.json({ error: err.message }, { status: 502 });
   }

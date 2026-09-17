@@ -21,6 +21,50 @@ function parseAIResponse(text) {
   return JSON.parse(stripped);
 }
 
+async function callGemini(apiKey, imageBase64, mimeType) {
+  const res = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${apiKey}`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contents: [{
+          parts: [
+            { text: PROMPT },
+            { inline_data: { mime_type: mimeType, data: imageBase64 } },
+          ],
+        }],
+      }),
+    }
+  );
+  const json = await res.json();
+  if (!res.ok) throw new Error(json.error?.message ?? "Gemini error");
+  return json.candidates?.[0]?.content?.parts?.[0]?.text ?? "[]";
+}
+
+async function callGroq(apiKey, imageBase64, mimeType) {
+  const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({
+      model: "meta-llama/llama-4-scout-17b-16e-instruct",
+      messages: [{
+        role: "user",
+        content: [
+          { type: "text", text: PROMPT },
+          { type: "image_url", image_url: { url: `data:${mimeType};base64,${imageBase64}` } },
+        ],
+      }],
+    }),
+  });
+  const json = await res.json();
+  if (!res.ok) throw new Error(json.error?.message ?? "Groq error");
+  return json.choices?.[0]?.message?.content ?? "[]";
+}
+
 export async function POST(request) {
   const session = await auth();
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -38,26 +82,17 @@ export async function POST(request) {
 
   let rawText;
   try {
-    const res = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${apiKey}`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents: [{
-            parts: [
-              { text: PROMPT },
-              { inline_data: { mime_type: mimeType, data: imageBase64 } },
-            ],
-          }],
-        }),
-      }
-    );
-    const json = await res.json();
-    if (!res.ok) throw new Error(json.error?.message ?? "Gemini error");
-    rawText = json.candidates?.[0]?.content?.parts?.[0]?.text ?? "[]";
-  } catch (err) {
-    return NextResponse.json({ error: err.message }, { status: 502 });
+    rawText = await callGemini(apiKey, imageBase64, mimeType);
+  } catch (geminiErr) {
+    const groqKey = process.env.GROQ_API_KEY;
+    if (!groqKey) {
+      return NextResponse.json({ error: geminiErr.message }, { status: 502 });
+    }
+    try {
+      rawText = await callGroq(groqKey, imageBase64, mimeType);
+    } catch (groqErr) {
+      return NextResponse.json({ error: groqErr.message }, { status: 502 });
+    }
   }
 
   let transactions;
