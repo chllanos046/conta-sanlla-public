@@ -3,16 +3,16 @@ import { auth } from "@/auth";
 
 const PROMPT = `Extract all financial transactions visible in this image.
 Rules:
-- Numbers may use dots as thousands separators and commas as decimals (e.g. "46.460" = 46460, "34,19" = 34.19). Normalize to standard decimal numbers. This applies to ALL amounts, including USDc/USDC/USDT/USD entries — a dot is a thousands separator there too (e.g. "1.000" USDc = 1000, not 1), never assume US-style decimal-point notation.
+- Transcribe each amount EXACTLY as it appears on screen, digit for digit, including every dot, comma, and minus sign. Do NOT do any math or reformatting — just copy the string (e.g. if the screen shows "1.000" write "1.000", if it shows "34,19" write "34,19"). This applies to every currency, including USDc/USDC/USDT/USD.
 - Dates may appear as "23 Aug 2026" or similar — convert to YYYY-MM-DD.
-- Amounts are always positive numbers (strip any minus/negative sign), EXCEPT for USDc/USDC/USDT/USD entries — for those, preserve the original sign (negative = money leaving the wallet, positive = money entering it).
+- For USDc/USDC/USDT/USD entries, keep the sign shown (negative = money leaving the wallet, positive = money entering it). For all other currencies, drop any minus sign — those amounts are always output positive.
 - Currency may appear as "USDc", "USDC", "USDT", "USD Coin" — normalize all to "USD".
 - When a "USDc → ARS" conversion row appears on the same date as a merchant/debit row whose ARS amount matches the ARS credit side of the conversion, they are ONE transaction. Output it once using the USDc amount and "USD" currency with the merchant row's description. Discard the duplicate ARS merchant row.
 - Ignore section headers, search bars, and UI chrome.
 Return ONLY a valid JSON array (no markdown, no explanation) where each element has:
   date (string, YYYY-MM-DD),
   description (string),
-  amount (positive number, except signed for USD entries per the rule above),
+  amount (string, transcribed exactly as shown per the rule above),
   currency (ISO 4217 code).
 If no transactions are found, return [].`;
 
@@ -23,7 +23,17 @@ function parseRetrySeconds(message) {
 
 function parseAIResponse(text) {
   const stripped = text.replace(/```json\s*/gi, "").replace(/```\s*/g, "").trim();
-  return JSON.parse(stripped);
+  const transactions = JSON.parse(stripped);
+  return transactions.map((t) => ({ ...t, amount: normalizeAmount(t.amount) }));
+}
+
+// Converts a transcribed amount string to a number, treating "." as a thousands
+// separator and "," as the decimal separator (es-AR convention), regardless of
+// currency — e.g. "1.000" -> 1000, "-34,19" -> -34.19, "1.234,56" -> 1234.56.
+function normalizeAmount(raw) {
+  if (typeof raw === "number") return raw;
+  const cleaned = String(raw).trim().replace(/\./g, "").replace(",", ".");
+  return parseFloat(cleaned);
 }
 
 async function callGemini(apiKey, imageBase64, mimeType) {
