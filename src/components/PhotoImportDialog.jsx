@@ -67,6 +67,7 @@ export default function PhotoImportDialog({ open, onClose, accountId, accountCur
   const [previews, setPreviews] = useState([]);
   const [extractProgress, setExtractProgress] = useState("");
   const [error, setError] = useState(null);
+  const [failedFiles, setFailedFiles] = useState([]); // [{ file, preview, error }]
   const [rows, setRows] = useState([]);
   const [categories, setCategories] = useState([]);
   const [accounts, setAccounts] = useState([]);
@@ -87,6 +88,7 @@ export default function PhotoImportDialog({ open, onClose, accountId, accountCur
     setPreviews([]);
     setRows([]);
     setError(null);
+    setFailedFiles([]);
     setImportCount(null);
     setExchangeRate("");
     setSelectedAccountId("");
@@ -112,22 +114,36 @@ export default function PhotoImportDialog({ open, onClose, accountId, accountCur
     setStep(1);
     setError(null);
     let allExtracted = [];
-    try {
-      for (let i = 0; i < files.length; i++) {
-        setExtractProgress(
-          files.length > 1 ? `Analyzing image ${i + 1} of ${files.length}…` : "Analyzing photo…"
-        );
-        const base64 = previews[i].split(",")[1];
+    const failed = [];
+    for (let i = 0; i < files.length; i++) {
+      setExtractProgress(
+        files.length > 1 ? `Analyzing image ${i + 1} of ${files.length}…` : "Analyzing photo…"
+      );
+      const base64 = previews[i].split(",")[1];
+      try {
         const { data: aiData } = await axios.post("/api/ai/extract-transactions", {
           imageBase64: base64,
           mimeType: "image/jpeg",
           accountCurrency: effectiveCurrency,
         });
         allExtracted = allExtracted.concat(aiData.transactions ?? []);
+      } catch (err) {
+        failed.push({
+          file: files[i],
+          preview: previews[i],
+          error: err.response?.data?.error ?? err.message ?? "Extraction failed",
+        });
       }
+    }
+    setFailedFiles(failed);
 
+    try {
       if (allExtracted.length === 0) {
-        setError("No transactions found in these images. Try clearer photos.");
+        setError(
+          failed.length > 0
+            ? `No transactions extracted — ${failed.length} photo(s) failed.`
+            : "No transactions found in these images. Try clearer photos."
+        );
         setStep(0);
         return;
       }
@@ -169,6 +185,16 @@ export default function PhotoImportDialog({ open, onClose, accountId, accountCur
       setError(err.response?.data?.error ?? err.message ?? "Extraction failed");
       setStep(0);
     }
+  };
+
+  const handleRetryFailed = () => {
+    setFiles(failedFiles.map((f) => f.file));
+    setPreviews(failedFiles.map((f) => f.preview));
+    setFailedFiles([]);
+    setRows([]);
+    setError(null);
+    setImportCount(null);
+    setStep(0);
   };
 
   const toggleRow = (i) =>
@@ -321,6 +347,12 @@ export default function PhotoImportDialog({ open, onClose, accountId, accountCur
         {/* Step 2 — Review & Map */}
         {step === 2 && (
           <Box>
+            {failedFiles.length > 0 && (
+              <Alert severity="warning" sx={{ mb: 2 }}>
+                {failedFiles.length} photo{failedFiles.length !== 1 ? "s" : ""} could not be processed and{" "}
+                {failedFiles.length !== 1 ? "were" : "was"} skipped. You can retry {failedFiles.length !== 1 ? "them" : "it"} after importing.
+              </Alert>
+            )}
             <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
               {rows.length} transaction{rows.length !== 1 ? "s" : ""} found.
               {rows.some((r) => r.isDuplicate) && " Duplicates are pre-deselected."}
@@ -452,6 +484,11 @@ export default function PhotoImportDialog({ open, onClose, accountId, accountCur
             <Typography color="text.secondary">
               Your transactions have been added to this account.
             </Typography>
+            {failedFiles.length > 0 && (
+              <Button variant="outlined" sx={{ mt: 2 }} onClick={handleRetryFailed}>
+                Retry {failedFiles.length} failed photo{failedFiles.length !== 1 ? "s" : ""}
+              </Button>
+            )}
           </Box>
         )}
       </DialogContent>
