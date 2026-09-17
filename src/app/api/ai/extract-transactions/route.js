@@ -7,13 +7,15 @@ Rules:
 - Dates may appear as "23 Aug 2026" or similar — convert to YYYY-MM-DD.
 - For USDc/USDC/USDT/USD entries, keep the sign shown (negative = money leaving the wallet, positive = money entering it). For all other currencies, drop any minus sign — those amounts are always output positive.
 - Currency may appear as "USDc", "USDC", "USDT", "USD Coin" — normalize all to "USD".
-- When a "USDc → ARS" conversion row appears on the same date as a merchant/debit row whose ARS amount matches the ARS credit side of the conversion, they are ONE transaction. Output it once using the USDc amount and "USD" currency with the merchant row's description. Discard the duplicate ARS merchant row.
+- Do NOT merge, de-duplicate, or discard any rows yourself — output every visible row exactly as it appears, even if two rows seem to represent the same event.
+- When a row is a "USDc → ARS" (or similar) wallet conversion that shows both the USDc/USD side and its ARS equivalent, also transcribe that ARS number into "ars_equivalent" (same digit-for-digit rule). Leave "ars_equivalent" out entirely for rows that are not this kind of conversion.
 - Ignore section headers, search bars, and UI chrome.
 Return ONLY a valid JSON array (no markdown, no explanation) where each element has:
   date (string, YYYY-MM-DD),
   description (string),
   amount (string, transcribed exactly as shown per the rule above),
-  currency (ISO 4217 code).
+  currency (ISO 4217 code),
+  ars_equivalent (string, optional — only for USDc/USD conversion rows per the rule above).
 If no transactions are found, return [].`;
 
 function parseRetrySeconds(message) {
@@ -21,10 +23,12 @@ function parseRetrySeconds(message) {
   return match ? Math.ceil(Number(match[1])) : null;
 }
 
+const normCurrency = (c) => c?.toUpperCase().replace(/C$/, "") || "";
+
 function parseAIResponse(text) {
   const stripped = text.replace(/```json\s*/gi, "").replace(/```\s*/g, "").trim();
-  const transactions = JSON.parse(stripped);
-  return transactions.map((t) => ({ ...t, amount: normalizeAmount(t.amount) }));
+  const transactions = JSON.parse(stripped).map((t) => ({ ...t, amount: normalizeAmount(t.amount) }));
+  return mergeConversionRows(transactions);
 }
 
 // Converts a transcribed amount string to a number, treating "." as a thousands
@@ -32,8 +36,40 @@ function parseAIResponse(text) {
 // currency — e.g. "1.000" -> 1000, "-34,19" -> -34.19, "1.234,56" -> 1234.56.
 function normalizeAmount(raw) {
   if (typeof raw === "number") return raw;
-  const cleaned = String(raw).trim().replace(/\./g, "").replace(",", ".");
+  const digitsOnly = String(raw).trim().replace(/[^0-9,.\-]/g, "");
+  const cleaned = digitsOnly.replace(/\./g, "").replace(",", ".");
   return parseFloat(cleaned);
+}
+
+// The model used to merge a "USDc -> ARS" wallet conversion with its duplicate
+// ARS merchant row itself, but doing that reasoning inside structured JSON
+// output turned out unreliable — it stopped merging altogether. Instead the
+// model now emits every row untouched plus an "ars_equivalent" on conversion
+// rows, and we do the matching/merging deterministically here: for each USD
+// conversion row, find a same-date non-USD row whose amount matches its ARS
+// equivalent, adopt that row's description, and drop the duplicate.
+function mergeConversionRows(transactions) {
+  const dropped = new Set();
+  const merged = transactions.map((t, i) => {
+    if (dropped.has(i)) return null;
+    if (normCurrency(t.currency) !== "USD" || t.ars_equivalent == null || t.ars_equivalent === "") {
+      return t;
+    }
+    const arsValue = Math.abs(normalizeAmount(t.ars_equivalent));
+    const matchIdx = transactions.findIndex(
+      (other, j) =>
+        j !== i &&
+        !dropped.has(j) &&
+        other.date === t.date &&
+        normCurrency(other.currency) !== "USD" &&
+        Math.abs(Math.abs(other.amount) - arsValue) < 1
+    );
+    if (matchIdx === -1) return t;
+    dropped.add(matchIdx);
+    const { ars_equivalent, ...rest } = t;
+    return { ...rest, description: transactions[matchIdx].description || t.description };
+  });
+  return merged.filter(Boolean).map(({ ars_equivalent, ...rest }) => rest);
 }
 
 async function callGemini(apiKey, imageBase64, mimeType) {
@@ -49,6 +85,23 @@ async function callGemini(apiKey, imageBase64, mimeType) {
             { inline_data: { mime_type: mimeType, data: imageBase64 } },
           ],
         }],
+        generationConfig: {
+          responseMimeType: "application/json",
+          responseSchema: {
+            type: "ARRAY",
+            items: {
+              type: "OBJECT",
+              properties: {
+                date: { type: "STRING" },
+                description: { type: "STRING" },
+                amount: { type: "STRING" },
+                currency: { type: "STRING" },
+                ars_equivalent: { type: "STRING" },
+              },
+              required: ["date", "description", "amount", "currency"],
+            },
+          },
+        },
       }),
     }
   );
@@ -132,7 +185,6 @@ export async function POST(request) {
     return NextResponse.json({ error: "AI returned invalid JSON", raw: rawText }, { status: 502 });
   }
 
-  const normCurrency = (c) => c?.toUpperCase().replace(/C$/, "") || "";
   const filtered = accountCurrency
     ? transactions.filter((t) => !t.currency || normCurrency(t.currency) === normCurrency(accountCurrency))
     : transactions;

@@ -512,6 +512,11 @@ export default function PhotoImportDialog({ open, onClose, accountId, accountCur
         <Button onClick={onClose} disabled={importing}>
           {step === 3 ? "Close" : "Cancel"}
         </Button>
+        {step === 0 && failedFiles.length > 0 && (
+          <Button onClick={handleRetryFailed}>
+            Retry {failedFiles.length} failed photo{failedFiles.length !== 1 ? "s" : ""}
+          </Button>
+        )}
         {step === 0 && (
           <Button variant="contained" onClick={handleExtract} disabled={!canExtract}>
             Extract
@@ -522,6 +527,11 @@ export default function PhotoImportDialog({ open, onClose, accountId, accountCur
             <Button onClick={() => { setStep(0); setRows([]); }}>
               Back
             </Button>
+            {failedFiles.length > 0 && (
+              <Button onClick={handleRetryFailed} disabled={importing}>
+                Retry {failedFiles.length} failed photo{failedFiles.length !== 1 ? "s" : ""}
+              </Button>
+            )}
             <Button
               variant="contained"
               onClick={handleImport}
