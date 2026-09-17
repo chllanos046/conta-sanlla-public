@@ -106,11 +106,11 @@ export default function AccountDetailPage() {
     setDialogOpen(true);
   }, []);
 
-  const handleDelete = useCallback(async (tx) => {
+  const handleDelete = useCallback(async (id) => {
     const ok = await confirm(t("transactions.deleteConfirm"));
     if (!ok) return;
     try {
-      await axios.delete(`/api/transactions/${tx.id}`);
+      await axios.delete(`/api/transactions/${id}`);
       notifySuccess(t("transactions.deleted"));
       setRefreshKey((k) => k + 1);
       window.dispatchEvent(new CustomEvent("accounts-updated"));
