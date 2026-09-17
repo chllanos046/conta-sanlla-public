@@ -16,6 +16,11 @@ Return ONLY a valid JSON array (no markdown, no explanation) where each element 
   currency (ISO 4217 code).
 If no transactions are found, return [].`;
 
+function parseRetrySeconds(message) {
+  const match = message?.match(/in\s+(\d+(?:\.\d+)?)\s*s\b/i);
+  return match ? Math.ceil(Number(match[1])) : null;
+}
+
 function parseAIResponse(text) {
   const stripped = text.replace(/```json\s*/gi, "").replace(/```\s*/g, "").trim();
   return JSON.parse(stripped);
@@ -38,7 +43,10 @@ async function callGemini(apiKey, imageBase64, mimeType) {
     }
   );
   const json = await res.json();
-  if (!res.ok) throw new Error(json.error?.message ?? "Gemini error");
+  if (!res.ok) {
+    console.error("[extract-transactions] Gemini error:", res.status, JSON.stringify(json.error));
+    throw new Error(json.error?.message ?? "Gemini error");
+  }
   return json.candidates?.[0]?.content?.parts?.[0]?.text ?? "[]";
 }
 
@@ -50,7 +58,7 @@ async function callGroq(apiKey, imageBase64, mimeType) {
       Authorization: `Bearer ${apiKey}`,
     },
     body: JSON.stringify({
-      model: "meta-llama/llama-4-scout-17b-16e-instruct",
+      model: "qwen/qwen3.8-27b",
       messages: [{
         role: "user",
         content: [
@@ -61,7 +69,10 @@ async function callGroq(apiKey, imageBase64, mimeType) {
     }),
   });
   const json = await res.json();
-  if (!res.ok) throw new Error(json.error?.message ?? "Groq error");
+  if (!res.ok) {
+    console.error("[extract-transactions] Groq error:", res.status, JSON.stringify(json.error));
+    throw new Error(json.error?.message ?? "Groq error");
+  }
   return json.choices?.[0]?.message?.content ?? "[]";
 }
 
@@ -91,6 +102,15 @@ export async function POST(request) {
     try {
       rawText = await callGroq(groqKey, imageBase64, mimeType);
     } catch (groqErr) {
+      const retryDelays = [parseRetrySeconds(geminiErr.message), parseRetrySeconds(groqErr.message)]
+        .filter((s) => s !== null);
+      if (retryDelays.length > 0) {
+        const retryAfter = Math.min(...retryDelays);
+        return NextResponse.json(
+          { error: `Both providers are rate-limited. Retry in ${retryAfter} seconds.`, retryAfter },
+          { status: 429 }
+        );
+      }
       return NextResponse.json({ error: groqErr.message }, { status: 502 });
     }
   }
