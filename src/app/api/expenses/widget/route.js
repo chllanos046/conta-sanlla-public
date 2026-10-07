@@ -10,7 +10,6 @@ export async function GET() {
 
     const today = new Date();
     const todayStr = today.toISOString().split("T")[0];
-    const monthStart = `${todayStr.slice(0, 7)}-01`;
     const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
     const monthEnd = `${todayStr.slice(0, 7)}-${String(lastDay).padStart(2, "0")}`;
 
@@ -21,7 +20,7 @@ export async function GET() {
        JOIN expense_groups g ON g.id = t.group_id
        WHERE i.due_date BETWEEN ? AND ? AND i.paid = FALSE
        ORDER BY i.due_date, g.name`,
-      [monthStart, monthEnd]
+      [todayStr, monthEnd]
     );
 
     const overdue = await query(

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { query } from "@/lib/db";
-import { calculateAccountBalance } from "@/lib/balanceUtils";
+import { calculateAllAccountBalances } from "@/lib/balanceUtils";
 
 // Route runs 7 queries in parallel; give it headroom past Vercel's default timeout.
 export const maxDuration = 30;
@@ -91,16 +91,18 @@ export async function GET(request) {
 
     const total = parseInt(countRows[0]?.total, 10) || 0;
 
+    const balances = calculateAllAccountBalances(accountRows, txForBalance);
     const accounts = accountRows.map((acc) => ({
       ...acc,
-      current_balance: calculateAccountBalance(acc.initial_balance, txForBalance, acc.id),
+      current_balance: balances[String(acc.id)],
     }));
 
     let accountsWithPeriodBalance = accounts;
     if (period === "custom" && dateFrom) {
+      const periodBalances = calculateAllAccountBalances(accountRows, txForBalance, dateFrom);
       accountsWithPeriodBalance = accounts.map((acc) => ({
         ...acc,
-        current_balance: calculateAccountBalance(acc.initial_balance, txForBalance, acc.id, dateFrom),
+        current_balance: periodBalances[String(acc.id)],
       }));
     }
 

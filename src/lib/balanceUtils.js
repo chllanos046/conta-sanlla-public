@@ -68,6 +68,37 @@ export function calculateAccountBalance(initialBalance, transactions, accountId,
 }
 
 /**
+ * Computes balances for multiple accounts in a single pass over `transactions`,
+ * instead of re-scanning the full array once per account.
+ *
+ * @param {object[]} accounts - Accounts with `id` and `initial_balance`
+ * @param {object[]} transactions - All transactions involving any of the accounts (any order)
+ * @param {string|Date|null} upToDate - If provided, only transactions strictly before this date are included (exclusive)
+ * @returns {Object.<string, number>} - Map of accountId (string) -> balance
+ */
+export function calculateAllAccountBalances(accounts, transactions, upToDate = null) {
+  const balances = {};
+  for (const acc of accounts) {
+    balances[String(acc.id)] = parseFloat(acc.initial_balance) || 0;
+  }
+
+  let filtered = transactions;
+  if (upToDate) {
+    const cutoff = String(upToDate).slice(0, 10);
+    filtered = transactions.filter((tx) => String(tx.date).slice(0, 10) < cutoff);
+  }
+
+  for (const tx of filtered) {
+    const sourceId = String(tx.source_account_id);
+    const targetId = String(tx.target_account_id);
+    if (sourceId in balances) balances[sourceId] += txContribution(tx, sourceId);
+    if (targetId in balances) balances[targetId] += txContribution(tx, targetId);
+  }
+
+  return balances;
+}
+
+/**
  * Adds a running `balance` field to each transaction row.
  *
  * Rows must be sorted ASCENDING by date before calling.

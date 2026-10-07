@@ -32,6 +32,7 @@
 import {
   txContribution,
   calculateAccountBalance,
+  calculateAllAccountBalances,
   addRunningBalance,
 } from "@/lib/balanceUtils";
 
@@ -187,6 +188,39 @@ describe("calculateAccountBalance", () => {
   test("upToDate includes transfer that happened before cutoff", () => {
     // acc2 up to 2024-02-01: initial 200 + tx3(-50) + tx4(+200) = 350
     expect(calculateAccountBalance(acc2.initial_balance, allTx, 2, "2024-02-01")).toBe(350);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// calculateAllAccountBalances — single-pass equivalent of calculateAccountBalance
+// ---------------------------------------------------------------------------
+
+describe("calculateAllAccountBalances", () => {
+  const accounts = [acc1, acc2, acc3, acc4, acc5, acc6];
+
+  test("matches calculateAccountBalance for each account, all-time", () => {
+    const all = calculateAllAccountBalances(accounts, allTx);
+    for (const acc of accounts) {
+      expect(all[String(acc.id)]).toBe(
+        calculateAccountBalance(acc.initial_balance, allTx, acc.id)
+      );
+    }
+  });
+
+  test("matches calculateAccountBalance with an upToDate cutoff", () => {
+    const all = calculateAllAccountBalances(accounts, allTx, "2024-02-01");
+    for (const acc of accounts) {
+      expect(all[String(acc.id)]).toBe(
+        calculateAccountBalance(acc.initial_balance, allTx, acc.id, "2024-02-01")
+      );
+    }
+  });
+
+  test("matches calculateAccountBalance for cross-currency transfers", () => {
+    const xferTx = [txXferUsdToArs, txXferArsToUsd];
+    const all = calculateAllAccountBalances([acc1, acc6], xferTx);
+    expect(all["1"]).toBe(calculateAccountBalance(acc1.initial_balance, xferTx, 1));
+    expect(all["6"]).toBe(calculateAccountBalance(acc6.initial_balance, xferTx, 6));
   });
 });
 
