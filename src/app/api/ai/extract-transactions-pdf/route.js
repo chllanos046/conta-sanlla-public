@@ -21,8 +21,16 @@ Return ONLY a valid JSON array (no markdown, no explanation) where each element 
 
 If no transactions are found, return [].`;
 
+function parseRetrySeconds(message) {
+  const match = message?.match(/in\s+(\d+(?:\.\d+)?)\s*s\b/i);
+  return match ? Math.ceil(Number(match[1])) : null;
+}
+
 function parseAIResponse(text) {
-  const stripped = text.replace(/```json\s*/gi, "").replace(/```\s*/g, "").trim();
+  const stripped = text
+    .replace(/```json\s*/gi, "")
+    .replace(/```\s*/g, "")
+    .trim();
   return JSON.parse(stripped);
 }
 
@@ -33,49 +41,153 @@ async function callGemini(apiKey, pdfBase64) {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        contents: [{
-          parts: [
-            { text: PROMPT },
-            { inline_data: { mime_type: "application/pdf", data: pdfBase64 } },
-          ],
-        }],
+        contents: [
+          {
+            parts: [
+              { text: PROMPT },
+              {
+                inline_data: { mime_type: "application/pdf", data: pdfBase64 },
+              },
+            ],
+          },
+        ],
       }),
-    }
+    },
   );
   const json = await res.json();
-  if (!res.ok) throw new Error(json.error?.message ?? "Gemini error");
+  if (!res.ok) {
+    console.error(
+      "[extract-transactions-pdf] Gemini error:",
+      res.status,
+      JSON.stringify(json.error),
+    );
+    throw new Error(json.error?.message ?? "Gemini error");
+  }
   return json.candidates?.[0]?.content?.parts?.[0]?.text ?? "[]";
+}
+
+async function callOpenAICompatible({ name, url, apiKey, model }, pdfBase64) {
+  const res = await fetch(url, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({
+      model,
+      messages: [
+        {
+          role: "user",
+          content: [
+            { type: "text", text: PROMPT },
+            {
+              type: "file",
+              file: {
+                filename: "statement.pdf",
+                file_data: `data:application/pdf;base64,${pdfBase64}`,
+              },
+            },
+          ],
+        },
+      ],
+    }),
+  });
+  const json = await res.json();
+  if (!res.ok) {
+    console.error(
+      `[extract-transactions-pdf] ${name} error:`,
+      res.status,
+      JSON.stringify(json.error),
+    );
+    throw new Error(json.error?.message ?? `${name} error`);
+  }
+  return json.choices?.[0]?.message?.content ?? "[]";
+}
+
+function fallbackProviders() {
+  return [
+    {
+      name: "Groq",
+      url: "https://api.groq.com/openai/v1/chat/completions",
+      apiKey: process.env.GROQ_API_KEY,
+      model: "qwen/qwen3.8-27b",
+    },
+    {
+      name: "OpenRouter",
+      url: "https://openrouter.ai/api/v1/chat/completions",
+      apiKey: process.env.OPENROUTER_API_KEY,
+      model: process.env.OPENROUTER_MODEL || "google/gemma-3-27b-it:free",
+    },
+  ].filter((provider) => provider.apiKey);
 }
 
 export async function POST(request) {
   const session = await auth();
-  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!session)
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
-    return NextResponse.json({ error: "GEMINI_API_KEY is not set." }, { status: 500 });
+    return NextResponse.json(
+      { error: "GEMINI_API_KEY is not set." },
+      { status: 500 },
+    );
   }
 
   const { pdfBase64, accountCurrency } = await request.json();
-  if (!pdfBase64) return NextResponse.json({ error: "pdfBase64 required" }, { status: 400 });
+  if (!pdfBase64)
+    return NextResponse.json({ error: "pdfBase64 required" }, { status: 400 });
 
   let rawText;
+  const errors = [];
   try {
     rawText = await callGemini(apiKey, pdfBase64);
   } catch (err) {
-    return NextResponse.json({ error: err.message }, { status: 502 });
+    errors.push(err);
+    for (const provider of fallbackProviders()) {
+      try {
+        rawText = await callOpenAICompatible(provider, pdfBase64);
+        break;
+      } catch (fallbackErr) {
+        errors.push(fallbackErr);
+      }
+    }
+  }
+
+  if (rawText === undefined) {
+    const retryDelays = errors
+      .map((err) => parseRetrySeconds(err.message))
+      .filter((seconds) => seconds !== null);
+    if (errors.length > 1 && retryDelays.length > 0) {
+      const retryAfter = Math.min(...retryDelays);
+      return NextResponse.json(
+        {
+          error: `All providers are rate-limited. Retry in ${retryAfter} seconds.`,
+          retryAfter,
+        },
+        { status: 429 },
+      );
+    }
+    return NextResponse.json({ error: errors.at(-1).message }, { status: 502 });
   }
 
   let transactions;
   try {
     transactions = parseAIResponse(rawText);
   } catch {
-    return NextResponse.json({ error: "AI returned invalid JSON", raw: rawText }, { status: 502 });
+    return NextResponse.json(
+      { error: "AI returned invalid JSON", raw: rawText },
+      { status: 502 },
+    );
   }
 
   const normCurrency = (c) => c?.toUpperCase() || "";
   const filtered = accountCurrency
-    ? transactions.filter((t) => !t.currency || normCurrency(t.currency) === normCurrency(accountCurrency))
+    ? transactions.filter(
+        (t) =>
+          !t.currency ||
+          normCurrency(t.currency) === normCurrency(accountCurrency),
+      )
     : transactions;
 
   return NextResponse.json({ transactions: filtered });
