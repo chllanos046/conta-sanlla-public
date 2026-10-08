@@ -173,4 +173,6 @@ Required in `.env.local`:
 DB_HOST, DB_PORT, DB_USER, DB_PASSWORD, DB_NAME
 JWT_SECRET
 ASSISTANT_API_TOKEN  # long-lived token for /api/assistant/* routes, generate with `openssl rand -hex 32`
+GEMINI_API_KEY        # photo import (primary)
+GROQ_API_KEY, OPENROUTER_API_KEY  # optional photo-import fallbacks; OPENROUTER_MODEL overrides free model
 ```

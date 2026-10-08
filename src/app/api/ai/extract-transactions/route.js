@@ -113,15 +113,15 @@ async function callGemini(apiKey, imageBase64, mimeType) {
   return json.candidates?.[0]?.content?.parts?.[0]?.text ?? "[]";
 }
 
-async function callGroq(apiKey, imageBase64, mimeType) {
-  const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+async function callOpenAICompatible({ name, url, apiKey, model }, imageBase64, mimeType) {
+  const res = await fetch(url, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
       Authorization: `Bearer ${apiKey}`,
     },
     body: JSON.stringify({
-      model: "qwen/qwen3.8-27b",
+      model,
       messages: [{
         role: "user",
         content: [
@@ -133,10 +133,29 @@ async function callGroq(apiKey, imageBase64, mimeType) {
   });
   const json = await res.json();
   if (!res.ok) {
-    console.error("[extract-transactions] Groq error:", res.status, JSON.stringify(json.error));
-    throw new Error(json.error?.message ?? "Groq error");
+    console.error(`[extract-transactions] ${name} error:`, res.status, JSON.stringify(json.error));
+    throw new Error(json.error?.message ?? `${name} error`);
   }
   return json.choices?.[0]?.message?.content ?? "[]";
+}
+
+// Fallbacks tried in order after Gemini; each is skipped when its key is unset.
+function fallbackProviders() {
+  return [
+    {
+      name: "Groq",
+      url: "https://api.groq.com/openai/v1/chat/completions",
+      apiKey: process.env.GROQ_API_KEY,
+      model: "qwen/qwen3.8-27b",
+    },
+    {
+      name: "OpenRouter",
+      url: "https://openrouter.ai/api/v1/chat/completions",
+      apiKey: process.env.OPENROUTER_API_KEY,
+      // Free models churn often — override via env without a deploy.
+      model: process.env.OPENROUTER_MODEL || "google/gemma-3-27b-it:free",
+    },
+  ].filter((p) => p.apiKey);
 }
 
 export async function POST(request) {
@@ -155,27 +174,31 @@ export async function POST(request) {
   if (!imageBase64) return NextResponse.json({ error: "imageBase64 required" }, { status: 400 });
 
   let rawText;
+  const errors = [];
   try {
     rawText = await callGemini(apiKey, imageBase64, mimeType);
-  } catch (geminiErr) {
-    const groqKey = process.env.GROQ_API_KEY;
-    if (!groqKey) {
-      return NextResponse.json({ error: geminiErr.message }, { status: 502 });
-    }
-    try {
-      rawText = await callGroq(groqKey, imageBase64, mimeType);
-    } catch (groqErr) {
-      const retryDelays = [parseRetrySeconds(geminiErr.message), parseRetrySeconds(groqErr.message)]
-        .filter((s) => s !== null);
-      if (retryDelays.length > 0) {
-        const retryAfter = Math.min(...retryDelays);
-        return NextResponse.json(
-          { error: `Both providers are rate-limited. Retry in ${retryAfter} seconds.`, retryAfter },
-          { status: 429 }
-        );
+  } catch (err) {
+    errors.push(err);
+    for (const provider of fallbackProviders()) {
+      try {
+        rawText = await callOpenAICompatible(provider, imageBase64, mimeType);
+        break;
+      } catch (fallbackErr) {
+        errors.push(fallbackErr);
       }
-      return NextResponse.json({ error: groqErr.message }, { status: 502 });
     }
+  }
+
+  if (rawText === undefined) {
+    const retryDelays = errors.map((e) => parseRetrySeconds(e.message)).filter((s) => s !== null);
+    if (errors.length > 1 && retryDelays.length > 0) {
+      const retryAfter = Math.min(...retryDelays);
+      return NextResponse.json(
+        { error: `All providers are rate-limited. Retry in ${retryAfter} seconds.`, retryAfter },
+        { status: 429 }
+      );
+    }
+    return NextResponse.json({ error: errors.at(-1).message }, { status: 502 });
   }
 
   let transactions;
