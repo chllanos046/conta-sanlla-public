@@ -405,7 +405,7 @@ export default function Dashboard() {
             acc[a.currency] = (acc[a.currency] || 0) + Math.abs(parseFloat(a.current_balance));
             return acc;
           }, {});
-        const currencies = Object.keys(creditDebts);
+        const currencies = Object.keys(creditDebts).filter((c) => creditDebts[c].toFixed(2) !== "0.00");
         if (!currencies.length) return null;
         return (
           <Box sx={{ mb: 3 }}>
